@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "DocFlow Recorder",
+  "version": "1.0.0.14",
+  "description": "Capture website and web application workflows for automated documentation generation.",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "tabCapture",
+    "offscreen",
+    "alarms",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://*.routectrl.com/*",
+    "https://*.azurewebsites.net/*",
+    "https://*.marklite.com/*",
+    "http://localhost/*",
+    "https://*.dynamics.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.routectrl.com/*",
+        "https://*.azurewebsites.net/*",
+        "https://*.marklite.com/*",
+        "http://localhost/*",
+        "https://*.dynamics.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/brand-icon.png",
+      "48": "icons/brand-icon.png",
+      "128": "icons/brand-icon.png"
+    }
+  },
+  "icons": {
+    "16": "icons/brand-icon.png",
+    "48": "icons/brand-icon.png",
+    "128": "icons/brand-icon.png"
+  }
+}

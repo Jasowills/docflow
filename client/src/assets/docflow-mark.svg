@@ -1,0 +1,20 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="docflowMarkPanel" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6DE2FF"/>
+      <stop offset="0.45" stop-color="#2B7FFF"/>
+      <stop offset="1" stop-color="#09162E"/>
+    </linearGradient>
+    <linearGradient id="docflowMarkFlow" x1="31" y1="38" x2="96" y2="90" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FCFF"/>
+      <stop offset="1" stop-color="#C8E7FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="30" fill="url(#docflowMarkPanel)"/>
+  <rect x="10.5" y="10.5" width="107" height="107" rx="29.5" stroke="white" stroke-opacity="0.12"/>
+  <path d="M37 39H58.5C73.6878 39 86 51.3122 86 66.5C86 81.6878 73.6878 94 58.5 94H37V39Z" fill="white" fill-opacity="0.08"/>
+  <path d="M35 40C35 36.6863 37.6863 34 41 34H63.5C81.4493 34 96 48.5507 96 66.5C96 84.4493 81.4493 99 63.5 99H41C37.6863 99 35 96.3137 35 93V40Z" stroke="url(#docflowMarkFlow)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M69 48H95" stroke="#BEEBFF" stroke-width="8" stroke-linecap="round"/>
+  <path d="M69 67H88" stroke="#BEEBFF" stroke-width="8" stroke-linecap="round"/>
+  <path d="M69 85H80" stroke="#BEEBFF" stroke-width="8" stroke-linecap="round"/>
+</svg>

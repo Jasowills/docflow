@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocFlow Recorder</title>
+    <style>
+      @font-face {
+        font-family: "Inter";
+        src: url("./Inter-VariableFont_opsz,wght.ttf") format("truetype-variations");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Inter";
+        src: url("./Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype-variations");
+        font-weight: 100 900;
+        font-style: italic;
+        font-display: swap;
+      }
+
+      :root {
+        --bg: #f4f7fc;
+        --surface: #ffffff;
+        --surface-soft: #f8fafc;
+        --text: #0f172a;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --divider: #edf2f7;
+
+        --primary: #0b61d8;
+        --primary-hover: #0954bc;
+        --danger: #d92d20;
+        --danger-hover: #b42318;
+
+        --success-bg: #ecfdf3;
+        --success-fg: #067647;
+        --success-border: #b7ebc9;
+
+        --warn-bg: #fff4ed;
+        --warn-fg: #c2410c;
+        --warn-border: #f7c9b3;
+
+        --radius: 4px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        width: 400px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .shell {
+        margin: 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        background: linear-gradient(135deg, rgba(11, 97, 216, 0.08), rgba(11, 97, 216, 0));
+        border-bottom: 1px solid var(--divider);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .header-logo {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+        display: block;
+      }
+
+      .title {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .studio-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #94a3b8;
+      }
+
+      .studio-tag.connected {
+        background: var(--success-bg);
+        color: var(--success-fg);
+        border-color: var(--success-border);
+      }
+
+      .studio-tag.connected .dot {
+        background: #16a34a;
+      }
+
+      .studio-tag.disconnected {
+        background: var(--warn-bg);
+        color: var(--warn-fg);
+        border-color: var(--warn-border);
+      }
+
+      .studio-tag.disconnected .dot {
+        background: #f97316;
+      }
+
+      .status-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--divider);
+        background: var(--surface-soft);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #64748b;
+        flex: 0 0 auto;
+      }
+
+      .status-copy {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .status-strip.recording {
+        background: #fff1f2;
+      }
+
+      .status-strip.recording .status-dot {
+        background: var(--danger);
+        animation: pulse 1.5s infinite;
+      }
+
+      .status-strip.stopped {
+        background: var(--success-bg);
+      }
+
+      .status-strip.stopped .status-dot {
+        background: #16a34a;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 0.65;
+        }
+      }
+
+      .section {
+        padding: 14px;
+      }
+
+      .section + .section {
+        border-top: 1px solid var(--divider);
+      }
+
+      .field + .field,
+      .field + details,
+      details + button,
+      .btn-group,
+      .btn-group + .field,
+      .meta-panel .field + .field {
+        margin-top: 10px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: #64748b;
+        text-transform: uppercase;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        font-family: inherit;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: #ffffff;
+        color: var(--text);
+        font-size: 13px;
+        outline: none;
+      }
+
+      input,
+      select {
+        height: 38px;
+        padding: 8px 10px;
+      }
+
+      textarea {
+        min-height: 68px;
+        padding: 8px 10px;
+        resize: vertical;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: rgba(11, 97, 216, 0.55);
+      }
+
+      details {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-soft);
+      }
+
+      summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 10px;
+        font-size: 12px;
+        color: var(--primary);
+        font-weight: 700;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .meta-panel {
+        padding: 0 10px 10px;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .meta-grid .field {
+        margin-top: 0 !important;
+      }
+
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-soft);
+        padding: 8px 10px;
+        margin: 0;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .toggle-main {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .mic-icon {
+        width: 16px;
+        height: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+      }
+
+      .mic-icon svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+      }
+
+      input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        accent-color: var(--primary);
+      }
+
+      .field-help {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.3;
+      }
+
+      button {
+        width: 100%;
+        height: 38px;
+        border-radius: var(--radius);
+        border: 1px solid transparent;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: #ffffff;
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-hover);
+      }
+
+      .btn-danger {
+        background: var(--danger);
+        color: #ffffff;
+      }
+
+      .btn-danger:hover {
+        background: var(--danger-hover);
+      }
+
+      .btn-outline {
+        background: #ffffff;
+        color: var(--text);
+        border-color: var(--border);
+      }
+
+      .btn-outline:hover {
+        background: var(--surface-soft);
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn-group > button {
+        flex: 1 1 0;
+      }
+
+      .action-stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .upload-progress {
+        margin-top: 10px;
+      }
+
+      .upload-progress-track {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+      }
+
+      .upload-progress-fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #0b61d8, #1d4ed8);
+        transition: width 0.15s ease;
+      }
+
+      .upload-progress-copy {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .stats {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--divider);
+        background: var(--surface-soft);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .stats strong {
+        color: var(--text);
+      }
+
+      .source-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        padding: 4px 8px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface-soft);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .source-chip strong {
+        color: var(--text);
+      }
+
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--divider);
+      }
+
+      .footer-copy {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .version {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="shell">
+      <header class="header">
+        <div class="brand">
+          <img src="icons/brand-icon.png" alt="DocFlow" class="header-logo" />
+          <div class="title">DocFlow Recorder</div>
+        </div>
+        <span id="studioTag" class="studio-tag disconnected">
+          <span class="dot" aria-hidden="true"></span>
+          Not Connected
+        </span>
+      </header>
+
+      <div id="statusBar" class="status-strip idle">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-copy" id="statusSubText">Ready to start a new recording</span>
+      </div>
+
+      <div id="idleSection">
+        <section class="section">
+          <div class="field">
+            <label for="title">Session Title</label>
+            <input id="title" type="text" placeholder="e.g. How to create a subplan" />
+          </div>
+
+          <details>
+            <summary>Advanced metadata</summary>
+            <div class="meta-panel">
+              <div class="field">
+                <label for="description">Description</label>
+                <textarea id="description" rows="2" placeholder="Short context for this recording"></textarea>
+              </div>
+
+              <div class="meta-grid">
+                <div class="field">
+                  <label for="productArea">Product Area</label>
+                  <select id="productArea">
+                    <option value="dashboard">Dashboard</option>
+                    <option value="device_management">Device Management</option>
+                    <option value="alerts">Alerts</option>
+                    <option value="reporting">Reporting</option>
+                    <option value="settings">Settings</option>
+                    <option value="user_management">User Management</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="environment">Environment</label>
+                  <select id="environment">
+                    <option value="production">Production</option>
+                    <option value="staging">Staging</option>
+                    <option value="development">Development</option>
+                    <option value="test">Test</option>
+                    <option value="demo">Demo</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="productVersion">Product Version</label>
+                  <input id="productVersion" type="text" placeholder="4.2.1" />
+                </div>
+
+                <div class="field">
+                  <label for="locale">Locale</label>
+                  <input id="locale" type="text" value="en-US" />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="tags">Tags</label>
+                <input id="tags" type="text" placeholder="routes, subplans" />
+              </div>
+
+              <div class="field">
+                <label for="captureMic">Audio Transcript</label>
+                <label class="toggle-row" for="captureMic">
+                  <span class="toggle-main">
+                    <span class="mic-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="2.5" width="6" height="12" rx="3"></rect>
+                        <path d="M5 11a7 7 0 0 0 14 0"></path>
+                        <line x1="12" y1="18" x2="12" y2="22"></line>
+                        <line x1="8.5" y1="22" x2="15.5" y2="22"></line>
+                      </svg>
+                    </span>
+                    Capture microphone audio
+                  </span>
+                  <input id="captureMic" type="checkbox" checked />
+                </label>
+                <div class="field-help">Optional. Turn off to record only on-screen events.</div>
+              </div>
+
+              <div class="field">
+                <label for="captureScreenshots">Key Screenshots</label>
+                <label class="toggle-row" for="captureScreenshots">
+                  <span class="toggle-main">
+                    Capture focused key screenshots
+                  </span>
+                  <input id="captureScreenshots" type="checkbox" checked />
+                </label>
+                <div class="field-help">Recommended. Captures important UI moments for documentation steps.</div>
+              </div>
+
+              <div class="field">
+                <label>Screenshot Image Settings</label>
+                <div class="meta-grid">
+                  <div class="field">
+                    <label for="screenshotWidth">Width</label>
+                    <input id="screenshotWidth" type="number" min="960" max="3840" step="16" value="2560" />
+                  </div>
+                  <div class="field">
+                    <label for="screenshotHeight">Height</label>
+                    <input id="screenshotHeight" type="number" min="540" max="2160" step="16" value="1440" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="screenshotQuality">JPEG Quality</label>
+                  <input id="screenshotQuality" type="number" min="60" max="100" step="1" value="100" />
+                </div>
+                <div class="field-help">Higher values increase clarity and upload size.</div>
+              </div>
+            </div>
+          </details>
+
+          <button id="btnStart" class="btn-primary">Start Recording</button>
+        </section>
+      </div>
+
+      <div id="recordingSection" class="hidden">
+        <div class="stats">
+          <div>Events: <strong id="eventCount">0</strong></div>
+          <div>Duration: <strong id="duration">00:00</strong></div>
+        </div>
+        <section class="section">
+          <button id="btnStop" class="btn-danger">Stop Recording</button>
+        </section>
+      </div>
+
+      <div id="stoppedSection" class="hidden">
+        <div class="stats">
+          <div>Events captured: <strong id="finalEventCount">0</strong></div>
+        </div>
+        <section class="section">
+          <div class="action-stack">
+            <div class="btn-group">
+              <button id="btnDownload" class="btn-primary">Download JSON</button>
+              <button id="btnUpload" class="btn-outline">Upload to Studio</button>
+            </div>
+            <button id="btnReset" class="btn-outline">New Recording</button>
+          </div>
+          <div id="uploadProgress" class="upload-progress hidden">
+            <div class="upload-progress-track" aria-hidden="true">
+              <div id="uploadProgressFill" class="upload-progress-fill"></div>
+            </div>
+            <div class="upload-progress-copy">
+              <span id="uploadProgressText">Preparing upload...</span>
+              <span id="uploadProgressPct">0%</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="section">
+        <button id="btnClearToken" class="btn-outline">Clear Connection</button>
+        <div class="footer">
+          <span id="authStatus" class="footer-copy">Not connected</span>
+          <span class="version">v0.1.0</span>
+        </div>
+      </section>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

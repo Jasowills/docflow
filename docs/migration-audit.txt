@@ -1,0 +1,215 @@
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:3:  “RouteCTRL Documentation Capture and Generator”
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:5:The overall goal is to provide a clean, maintainable, professional and enterprise-ready way of creating and managing RouteCTRL documentation and release notes, based on recordings of actual product usage plus optional narrated voice.
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:59:The system’s purpose is to simplify and organize the process of generating documentation for RouteCTRL. Technical writing and testing teams should be able to:
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:73:- Database: Azure Cosmos DB using the MongoDB API in RU mode.
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:148:         "productName": "RouteCTRL",
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:150:         "applicationVersion": "optional string",
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:157:           "url": "https://app.routectrl.com/calendar",
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:158:           "title": "RouteCTRL Calendar",
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:207:   - Implement Microsoft login using MSAL / equivalent.
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:219:     - Persist to Cosmos DB (Mongo API) with appropriate partitioning scheme (e.g. by userId/tenantId + recordingId).
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:249:     - Generated documents into Cosmos DB, linked to:
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:269:   - Configuration should be stored in Cosmos DB (or config collection) and cached in memory by the backend with invalidation on change.
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:315:     - Cosmos DB connection and database/collection names.
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:338:   - Description of main data models and Cosmos DB collections.
+C:\Users\JasonAmadi\Desktop\DocFlow\PROMPT.md:380:     - Creating Cosmos DB MongoDB RU resources.
+C:\Users\JasonAmadi\Desktop\DocFlow\docs\ROADMAP.md:12:- Remove RouteCTRL, Business Central, and ERP-specific product language
+C:\Users\JasonAmadi\Desktop\DocFlow\docs\ROADMAP.md:19:- Replace Microsoft Entra / MSAL with JWT-based application auth
+C:\Users\JasonAmadi\Desktop\DocFlow\docs\ROADMAP.md:25:- Replace Cosmos DB repositories with Supabase/Postgres repositories
+C:\Users\JasonAmadi\Desktop\DocFlow\docs\ROADMAP.md:47:- Remove RouteCTRL-only domain restrictions
+C:\Users\JasonAmadi\Desktop\DocFlow\server\tsconfig.json:8:      "@docflow/shared": ["./src/shared"]
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:2:import type { RecordingDocument, DocumentTypeConfig } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:12:      createdBy: 'tester@routectrl.com',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:13:      productName: 'RouteCTRL',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:15:      applicationVersion: '4.2.0',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:22:        url: 'https://app.routectrl.com/calendar',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:23:        title: 'RouteCTRL Calendar',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:63:  const globalPrompt = 'You are a professional technical writer for RouteCTRL.';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:109:    expect(user).toContain('RouteCTRL');
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\prompt-builder.service.spec.ts:113:    expect(user).toContain('tester@routectrl.com');
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\documents.service.spec.ts:12:import type { RecordingDocument, SystemConfig, UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\documents.service.spec.ts:24:    email: 'tester@routectrl.com',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\documents.service.spec.ts:34:      createdBy: 'tester@routectrl.com',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\documents.service.spec.ts:35:      productName: 'RouteCTRL',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\test\documents.service.spec.ts:42:        url: 'https://app.routectrl.com/calendar',
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\publish.mjs:90:  const blobName = `routectrl-recorder/${version}/${zipFileName}`;
+C:\Users\JasonAmadi\Desktop\DocFlow\client\tsconfig.json:20:      "@docflow/shared": ["./src/shared"]
+C:\Users\JasonAmadi\Desktop\DocFlow\README.md:5:This repository is a fork-in-progress from the earlier RouteCTRL-focused documenter. Phase 1 establishes the new product workspace, branding, environment contracts, and migration plan. JWT auth, Supabase storage, team workspaces, and the public landing page are the next major implementation phases.
+C:\Users\JasonAmadi\Desktop\DocFlow\README.md:43:- RouteCTRL-specific business assumptions still exist in many client/server/extension files and will be removed incrementally
+C:\Users\JasonAmadi\Desktop\DocFlow\README.md:104:- The current codebase still contains RouteCTRL-specific references and Microsoft ERP assumptions. Those are expected to be removed in later phases.
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\types.ts:2: * Shared types for the RouteCTRL Recorder extension.
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\types.ts:3: * Mirrors a subset of @docflow/shared models for standalone use.
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\manifest.json:16:    "https://*.routectrl.com/*",
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\manifest.json:18:    "https://*.marklite.com/*",
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\manifest.json:29:        "https://*.routectrl.com/*",
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\manifest.json:31:        "https://*.marklite.com/*",
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:2: * RouteCTRL Recorder - Popup Script
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:54:    applicationVersion?: string;
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:94:const CAPTURE_MIC_KEY = 'routectrlCaptureMicrophoneEnabled';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:95:const CAPTURE_SCREENSHOTS_KEY = 'routectrlCaptureScreenshotsEnabled';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:96:const SCREENSHOT_WIDTH_KEY = 'routectrlScreenshotWidth';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:97:const SCREENSHOT_HEIGHT_KEY = 'routectrlScreenshotHeight';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:98:const SCREENSHOT_QUALITY_KEY = 'routectrlScreenshotQuality';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:283:    a.download = `routectrl_${safeName}_${Date.now()}.json`;
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:740:      name: toShortString(metadata.title) || 'RouteCTRL Recording',
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:743:      productName: 'RouteCTRL',
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\popup.ts:745:      applicationVersion: toShortString(metadata.productVersion) || undefined,
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\admin\admin.service.ts:12:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\admin\admin.repository.ts:4:import type { SystemConfig, DocumentTypeConfig, FolderConfig } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\admin\admin.repository.ts:6:const DEFAULT_GLOBAL_PROMPT = `You are a professional technical writer for RouteCTRL, a waste management and logistics software platform.
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\admin\admin.controller.ts:22:import type { UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\common\services\audit.service.ts:54:        'Falling back to _id sort for audit logs due to Cosmos DB indexing policy on timestamp.',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\speech\speech.service.ts:4:import type { SpeechTranscriptSegment } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\common\filters\global-exception.filter.ts:10:import type { ApiErrorResponse } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:2: * RouteCTRL Recorder – Content Script
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:4: * Injected into RouteCTRL pages. Captures DOM events (clicks, navigation,
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:105:const PCM_WORKLET_PROCESSOR = 'routectrl-pcm-capture-processor';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:147:  if (data.source !== 'routectrl-doc-studio') {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:154:        source: 'routectrl-recorder-extension',
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:173:          source: 'routectrl-recorder-extension',
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:193:        source: 'routectrl-recorder-extension',
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:207:  debugLogContent('[RouteCTRL][CONTENT] startCapture');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:236:  debugLogContent('[RouteCTRL][CONTENT] stopCapture begin');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:250:  debugLogContent('[RouteCTRL][CONTENT] stopCapture done');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:566:  if (erpSystem === 'bc') return 'Dynamics 365 Business Central';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:567:  if (erpSystem === 'scm') return 'Dynamics 365 Supply Chain Management';
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:818:  debugLogContent('[RouteCTRL][CONTENT] startSpeechCapture');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:827:  debugLogContent('[RouteCTRL][CONTENT] stopSpeechCapture done');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:839:  debugLogContent('[RouteCTRL][CONTENT] browser speech fallback available');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:902:  debugLogContent('[RouteCTRL][CONTENT] mic capture start requested');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:913:    debugLogContent('[RouteCTRL][CONTENT] mic stream granted');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:916:    console.error('[RouteCTRL][CONTENT] mic getUserMedia failed', error);
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:930:    console.error('[RouteCTRL][CONTENT] AudioContext unavailable');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:948:      debugLogContent('[RouteCTRL][CONTENT] mic audio context resumed');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:950:      console.warn('[RouteCTRL][CONTENT] failed to resume audio context', error);
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:953:  debugLogContent('[RouteCTRL][CONTENT] mic audio context created', {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:986:          console.warn('[RouteCTRL][CONTENT] worklet produced no frames; switching to ScriptProcessor');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:990:      debugLogContent('[RouteCTRL][CONTENT] using AudioWorklet capture path');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:993:      console.warn('[RouteCTRL][CONTENT] AudioWorklet capture failed; falling back to ScriptProcessor');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1011:  debugLogContent('[RouteCTRL][CONTENT] stopMicrophoneCapture begin');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1073:    console.warn('[RouteCTRL][CONTENT] no PCM chunks captured; using MediaRecorder fallback');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1077:      console.error('[RouteCTRL][CONTENT] MediaRecorder fallback decode failed', error);
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1089:    console.warn('[RouteCTRL][CONTENT] no WAV audio produced from mic capture');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1099:  debugLogContent('[RouteCTRL][CONTENT] WAV prepared', {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1109:  debugLogContent('[RouteCTRL][CONTENT] AUDIO_DATA sent to background');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1140:    console.warn('[RouteCTRL][CONTENT] MediaRecorder init failed', error);
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1151:    console.warn('[RouteCTRL][CONTENT] MediaRecorder error', event);
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1156:    debugLogContent('[RouteCTRL][CONTENT] MediaRecorder started', {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1160:    console.warn('[RouteCTRL][CONTENT] MediaRecorder start failed', error);
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1193:  debugLogContent('[RouteCTRL][CONTENT] MediaRecorder stopped', {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\content.ts:1273:  debugLogContent('[RouteCTRL][CONTENT] using ScriptProcessor capture path');
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\background.ts:2: * RouteCTRL Recorder - Background Service Worker (Manifest V3)
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\background.ts:103:const CONTENT_SCRIPT_ELIGIBLE_URL = /^(https:\/\/[^/]+\.(routectrl\.com|azurewebsites\.net|marklite\.com)\/|https:\/\/[^/]+\.dynamics\.com\/|http:\/\/localhost\/)/i;
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\background.ts:120:      debugLogBg('[RouteCTRL][BG] START_RECORDING', {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\background.ts:130:      debugLogBg('[RouteCTRL][BG] captureReady', { tabId: meta.tabId, captureReady });
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\background.ts:176:      debugLogBg('[RouteCTRL][BG] STOP_RECORDING', {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\background.ts:193:      debugLogBg('[RouteCTRL][BG] recording finalized', {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\background.ts:233:        debugLogBg('[RouteCTRL][BG] AUDIO_DATA received', {
+C:\Users\JasonAmadi\Desktop\DocFlow\extension\src\background.ts:260:      debugLogBg('[RouteCTRL][BG] DOWNLOAD_RECORDING', {
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\auth\getting-started.ts:3:const GETTING_STARTED_KEY_PREFIX = 'routectrl.gettingStarted.completed';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\state\realtime-store.tsx:15:import type { AuditLogEntry } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\auth\session-events.ts:1:export const SESSION_EXPIRED_EVENT = 'routectrl:session-expired';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\extensions\extensions.service.ts:4:import type { ExtensionReleaseInfo, UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\common\controllers\audit.controller.ts:5:import type { AuditLogEntry } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\extensions\extensions.repository.ts:4:import type { ExtensionReleaseInfo } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\state\client-data-store.tsx:21:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\state\client-data-store.tsx:99:              productName: 'RouteCTRL',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\extensions\extensions.controller.ts:8:import type { UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\components\layout\Layout.tsx:4:import lightLogo from "../../assets/routectrl-logo-light.svg";
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\components\layout\Layout.tsx:5:import darkLogo from "../../assets/routectrl-logo-dark.png";
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\components\layout\Layout.tsx:175:        data.source !== "routectrl-recorder-extension" ||
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\components\layout\Layout.tsx:249:            alt="RouteCTRL"
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\lib\extension-bridge.ts:1:export const EXTENSION_CONNECTED_UNTIL_KEY = 'routectrl.extension.connectedUntilUtc';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\lib\extension-bridge.ts:2:const EXTENSION_PING_MISS_COUNT_KEY = 'routectrl.extension.pingMissCount';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\lib\extension-bridge.ts:74:      if (data.source !== 'routectrl-recorder-extension') return;
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\lib\extension-bridge.ts:85:        source: 'routectrl-doc-studio',
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\lib\extension-bridge.ts:147:      if (data.source !== 'routectrl-recorder-extension') return;
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\lib\extension-bridge.ts:158:        source: 'routectrl-doc-studio',
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\lib\extension-bridge.ts:189:      if (data.source !== 'routectrl-recorder-extension') return;
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\lib\extension-bridge.ts:199:        source: 'routectrl-doc-studio',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\extensions\dto\publish-extension-release.dto.ts:9:  @ApiProperty({ example: 'https://cdn.example.com/routectrl-recorder/0.1.3.zip' })
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\hooks\use-api.ts:18:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\shared\index.ts:2:// @docflow/shared — barrel export
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\upload-token.service.ts:3:import type { UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\upload-token.service.ts:34:      audience: 'routectrl-extension-upload',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\upload-token.service.ts:35:      issuer: 'routectrl-doc-studio',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\upload-token.service.ts:40:      audience: 'routectrl-extension-upload',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\upload-token.service.ts:41:      issuer: 'routectrl-doc-studio',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\upload-token.service.ts:56:        audience: 'routectrl-extension-upload',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\upload-token.service.ts:57:        issuer: 'routectrl-doc-studio',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\azure-ad.strategy.ts:6:import type { UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\shared\models\recording.ts:5:/** Supported RouteCTRL product areas */
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\shared\models\recording.ts:36:  applicationVersion?: string;
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\shared\models\recording.d.ts:1:/** Supported RouteCTRL product areas */
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\shared\models\recording.d.ts:15:    applicationVersion?: string;
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\roles.guard.ts:4:import type { UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\auth.controller.ts:5:import type { UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\auth\decorators.ts:2:import type { UserContext } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\documents\prompt-builder.service.ts:6:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\documents\prompt-builder.service.ts:99:    if (recording.metadata.applicationVersion) {
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\documents\prompt-builder.service.ts:100:      sections.push(`- Version: ${recording.metadata.applicationVersion}`);
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\documents\documents.controller.ts:20:import type { UserContext, DocumentListQuery } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\shared\index.ts:2:// @docflow/shared — barrel export
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\shared\models\recording.d.ts:1:/** Supported RouteCTRL product areas */
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\shared\models\recording.d.ts:15:    applicationVersion?: string;
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\shared\models\recording.ts:5:/** Supported RouteCTRL product areas */
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\shared\models\recording.ts:36:  applicationVersion?: string;
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\documents\documents.repository.ts:9:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\documents\documents.repository.ts:98:          'Falling back to _id sort for documents list due to Cosmos DB indexing policy on createdAtUtc.',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\documents\documents.service.ts:27:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\recordings\recordings.controller.ts:19:import type { UserContext, RecordingListQuery } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\config\app-config.ts:9:  // -- Cosmos DB ----------------------------------
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\config\app-config.ts:14:    return this.configService.get<string>('COSMOS_DATABASE_NAME', 'routectrl_docs');
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:9:import type { Recording } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:138:      name: typeof metadata.title === 'string' && metadata.title.trim() ? metadata.title.trim() : 'RouteCTRL Recording',
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:141:      productName: 'RouteCTRL',
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:143:      applicationVersion: typeof metadata.productVersion === 'string' ? metadata.productVersion : undefined,
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:197:        data.source === 'routectrl-recorder-extension'
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:308:          Upload a recording JSON file exported from the RouteCTRL Recorder extension.
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:344:            Status: {isExtensionConnected ? 'RouteCTRL Recorder Extension Connected' : 'Not connected'}
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:354:                ? 'RouteCTRL Recorder Extension Connected'
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\UploadRecordingPage.tsx:355:                : 'Connect RouteCTRL Recorder Extension'}
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\recordings\recordings.service.ts:19:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\recordings\recordings.repository.ts:9:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\recordings\recordings.repository.ts:100:          'Falling back to _id sort for recordings list due to Cosmos DB indexing policy on uploadedAtUtc.',
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DocumentsListPage.tsx:10:import type { DocumentSummary, DocumentListQuery, FolderConfig } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DocumentsListPage.tsx:391:  const area = docs[0]?.productArea || 'RouteCTRL';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DocumentDetailPage.tsx:21:import type { GeneratedDocument } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DocumentDetailPage.tsx:784:  const areaPath = 'marklite-routectrl\\Application Testing';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DashboardPage.tsx:15:import type { PaginatedResponse, DocumentSummary } from "@docflow/shared";
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DashboardPage.tsx:72:      if (data.source !== "routectrl-recorder-extension") return;
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DashboardPage.tsx:164:            Welcome to RouteCTRL Doc Studio
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DashboardPage.tsx:227:            RouteCTRL Recorder Extension
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DashboardPage.tsx:235:                ? "RouteCTRL Recorder Extension Connected"
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\DashboardPage.tsx:251:                  ? "RouteCTRL Recorder Extension Connected"
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\AdminConfigPage.tsx:34:} from "@docflow/shared";
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\AdminConfigPage.tsx:723:                placeholder="e.g. RouteCTRL application documentation"
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GettingStartedPage.tsx:67:            Set up RouteCTRL Recorder once, then you can capture and upload recordings anytime.
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GettingStartedPage.tsx:98:              {downloading ? 'Starting download...' : 'Download RouteCTRL Recorder'}
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GettingStartedPage.tsx:112:              <li>Load the extension package and pin RouteCTRL Recorder.</li>
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GettingStartedPage.tsx:134:                <li>Click Load unpacked and select the extension `RouteCTRL Recorder` folder.</li>
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GettingStartedPage.tsx:135:                <li>Pin RouteCTRL Recorder from the extensions menu.</li>
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GettingStartedPage.tsx:143:                <li>Click Load unpacked and select the extension `RouteCTRL Recorder` folder.</li>
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GettingStartedPage.tsx:144:                <li>Pin RouteCTRL Recorder for quick access.</li>
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\RecordingDetailPage.tsx:22:import type { RecordingDocument, RecordingEvent } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\RecordingDetailPage.tsx:185:            <Row label="Version" value={recording.metadata.applicationVersion || 'N/A'} />
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\LoginPage.tsx:8:import lightLogo from '../assets/routectrl-logo-light.svg';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\LoginPage.tsx:9:import darkLogo from '../assets/routectrl-logo-dark.png';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\LoginPage.tsx:52:            <img src={lightLogo} alt="RouteCTRL" className="h-10 w-auto dark:hidden" />
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\LoginPage.tsx:53:            <img src={darkLogo} alt="RouteCTRL" className="h-10 w-auto hidden dark:block" />
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GenerateDocPage.tsx:19:} from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GenerateDocPage.tsx:454:    'RouteCTRL workflow';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GenerateDocPage.tsx:460:    .trim() || 'RouteCTRL workflow';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GenerateDocPage.tsx:485:  const productArea = recording.metadata.productArea || 'RouteCTRL';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GenerateDocPage.tsx:509:  if (normalized.includes('bc')) return 'Business Central administrator';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GenerateDocPage.tsx:510:  if (normalized.includes('d365')) return 'Dynamics 365 user';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GenerateDocPage.tsx:515:  return 'RouteCTRL user';
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\GenerateDocPage.tsx:522:    recording.metadata.applicationVersion ? `Version: ${recording.metadata.applicationVersion}` : '',
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\recordings\dto\upload-recording.dto.ts:4:import type { RecordingEventType } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\recordings\dto\upload-recording.dto.ts:23:  @ApiPropertyOptional() @IsOptional() @IsString() applicationVersion?: string;
+C:\Users\JasonAmadi\Desktop\DocFlow\client\src\pages\RecordingsListPage.tsx:11:import type { RecordingSummary, RecordingListQuery } from '@docflow/shared';
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\database\database.providers.ts:14:          retryWrites: false, // Cosmos DB MongoDB API in RU mode
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\database\database.providers.ts:30:        logger.log(`Connected to Cosmos DB: ${config.cosmosDatabaseName}`);
+C:\Users\JasonAmadi\Desktop\DocFlow\server\src\database\database.providers.ts:33:        logger.error('Failed to connect to Cosmos DB', error);
+
+

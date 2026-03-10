@@ -1,0 +1,32 @@
+{
+  "name": "docflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DocFlow workflow capture and AI documentation platform",
+  "workspaces": [
+    "server",
+    "client",
+    "extension"
+  ],
+  "scripts": {
+    "start": "npm --prefix server run start:prod",
+    "dev": "concurrently \"npm --prefix server run start:dev\" \"npm --prefix client run dev\"",
+    "build": "npm --prefix client install && npm --prefix client run build && npx shx rm -rf server/build && npx shx cp -r client/dist server/build && npm --prefix server install && npm --prefix server run build",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "build:extension": "npm --prefix extension run build",
+    "clean": "npx shx rm -rf node_modules client/dist client/node_modules server/dist server/node_modules extension/dist extension/node_modules",
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install && npm --prefix extension install",
+    "dev:server": "npm --prefix server run start:dev",
+    "dev:client": "npm --prefix client run dev",
+    "test:server": "npm --prefix server run test",
+    "lint": "npm --prefix server run lint && npm --prefix client run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "shx": "^0.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,40 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Extension build
+packages/extension/dist/
+
+# Extension font assets (local only)
+packages/extension/src/static/
+packages/extension/src/Inter-VariableFont_opsz,wght.ttf
+packages/extension/src/Inter-Italic-VariableFont_opsz,wght.ttf
+packages/extension/Routectrl-recorder/static/

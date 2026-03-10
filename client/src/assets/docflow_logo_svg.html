@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" fill="none">
+  <defs>
+    <linearGradient id="flowGrad" x1="36" y1="112" x2="190" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#19C2FF"/>
+      <stop offset="1" stop-color="#43E6FF"/>
+    </linearGradient>
+    <linearGradient id="flowGrad2" x1="32" y1="164" x2="196" y2="164" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#18B8FF"/>
+      <stop offset="1" stop-color="#2D8CFF"/>
+    </linearGradient>
+    <linearGradient id="flowGrad3" x1="82" y1="206" x2="238" y2="206" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#20CBFF"/>
+      <stop offset="1" stop-color="#2F79FF"/>
+    </linearGradient>
+    <filter id="softGlow" x="0" y="0" width="280" height="280" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0.72  0 0 1 0 0.95  0 0 0 0.16 0" result="glow"/>
+      <feBlend in="SourceGraphic" in2="glow" mode="screen"/>
+    </filter>
+  </defs>
+
+  <!-- Transparent background -->
+
+  <!-- Symbol -->
+  <g transform="translate(48 40)" filter="url(#softGlow)">
+    <!-- Document shell -->
+    <path d="M118 24H14v176h154V70L118 24Z" fill="#082E7D"/>
+    <path d="M118 24V70h50" fill="#082E7D"/>
+    <path d="M118 24V70h50" stroke="#0D4FB8" stroke-width="2" stroke-linejoin="round"/>
+
+    <!-- Negative bars inside doc -->
+    <rect x="54" y="96" width="58" height="12" rx="3" fill="#071A45"/>
+    <rect x="54" y="122" width="72" height="12" rx="3" fill="#071A45"/>
+
+    <!-- Flow arrows / structured movement -->
+    <path d="M0 82H66V64L110 98L66 132V114H0L14 82Z" fill="url(#flowGrad)"/>
+    <path d="M4 126H54L82 152H0L4 126Z" fill="url(#flowGrad2)" opacity="0.98"/>
+    <path d="M22 150H140L118 184H58L22 150Z" fill="url(#flowGrad3)" opacity="0.98"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(330 0)">
+    <text x="0" y="193" fill="#FFFFFF" font-size="118" font-family="Inter, Arial, Helvetica, sans-serif" font-weight="800" letter-spacing="1.2">DOCFLOW</text>
+  </g>
+</svg>
