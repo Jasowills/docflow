@@ -105,7 +105,14 @@ export function TestPlansPage() {
         {loading ? <Spinner className="text-primary mt-1" /> : null}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      <div className="context-help-card">
+        <p className="text-sm font-medium text-foreground">Bridge generated QA assets into execution.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Test plans tie repositories, environments, and future automated runs together. Connect the GitHub App in Settings, select repos for the workspace, then use plans to organize release validation and regression coverage.
+        </p>
+      </div>
+
+      <div className="grid gap-5 2xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">

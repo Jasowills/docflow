@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { passportJwtSecret } from 'jwks-rsa';
@@ -12,6 +12,7 @@ type StrategyPayload = Record<string, unknown> & JWTPayload;
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+  private readonly logger = new Logger(JwtStrategy.name);
   private readonly logtoJwks: ReturnType<typeof createRemoteJWKSet> | null;
   private readonly logtoSecretProvider:
     | ReturnType<typeof passportJwtSecret>
@@ -38,19 +39,27 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         rawToken: string,
         done: (error: Error | null, secret?: string | Buffer) => void,
       ) => {
+        const header = readUnverifiedHeader(rawToken);
         const issuer = readUnverifiedIssuer(rawToken);
+        this.logger.log(
+          `Evaluating bearer token. alg=${String(header?.alg || '')} typ=${String(
+            header?.typ || '',
+          )} iss=${String(issuer || '')}`,
+        );
         if (issuer === config.logtoIssuer) {
           if (logtoSecretProvider) {
+            this.logger.log('Using Logto JWKS secret provider for bearer token.');
             return logtoSecretProvider(req, rawToken, done);
           }
           return done(new UnauthorizedException('Logto authentication is not configured.'));
         }
+        this.logger.log('Using DocFlow JWT secret for bearer token.');
         done(null, config.jwtAccessTokenSecret);
       },
       passReqToCallback: true,
       issuer: undefined,
       audience: undefined,
-      algorithms: ['HS256', 'RS256'],
+      algorithms: ['HS256', 'RS256', 'ES256', 'ES384', 'ES512'],
     });
 
     this.logtoJwks = config.logtoJwksUri
@@ -61,7 +70,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       : null;
   }
 
-  async validate(req: { headers?: { authorization?: string } }, payload: StrategyPayload): Promise<UserContext> {
+  async validate(
+    req: { headers?: { authorization?: string }; method?: string; url?: string },
+    payload: StrategyPayload,
+  ): Promise<UserContext> {
+    this.logger.log(`Validated bearer token for ${req.method || 'UNKNOWN'} ${req.url || ''}`);
     if (this.isDocFlowToken(payload)) {
       return {
         userId: (payload.sub as string) || '',
@@ -86,17 +99,21 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!subject) {
       throw new UnauthorizedException('Invalid access token subject.');
     }
+    const existing = await this.authService.findLogtoUserContext(subject);
+    if (existing) {
+      return existing;
+    }
 
-    const email = this.extractClaim(verified, ['email', 'username']) || `${subject}@logto.local`;
-    const displayName =
-      this.extractClaim(verified, ['name', 'username', 'email']) || email.split('@')[0] || 'DocFlow User';
-    const user = await this.authService.resolveLogtoUser({
-      subject,
-      email,
-      displayName,
-    });
-
-    return this.authService.buildUserContext(user);
+    return {
+      userId: '',
+      email: '',
+      displayName: '',
+      roles: [],
+      workspaceId: undefined,
+      authProvider: 'logto',
+      externalSubject: subject,
+      provisioned: false,
+    };
   }
 
   private isDocFlowToken(payload: StrategyPayload): boolean {
@@ -113,36 +130,71 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('Logto authentication is not configured.');
     }
 
+    const candidateAudiences = [
+      this.config.logtoApiResource || undefined,
+      this.config.logtoAppId || undefined,
+      undefined,
+    ];
+
     try {
-      const { payload } = await jwtVerify(token, this.logtoJwks, {
-        issuer: this.config.logtoIssuer,
-        audience: this.config.logtoApiResource || undefined,
-      });
-      return payload as StrategyPayload;
-    } catch {
+      let lastError: unknown = null;
+      for (const audience of candidateAudiences) {
+        try {
+          const { payload } = await jwtVerify(token, this.logtoJwks, {
+            issuer: this.config.logtoIssuer,
+            audience,
+          });
+          return payload as StrategyPayload;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      const unverified = readUnverifiedPayload(token);
+      this.logger.warn(
+        `Logto token rejected. issuer=${String(unverified?.iss || '')} aud=${JSON.stringify(
+          unverified?.aud || null,
+        )} azp=${String(unverified?.azp || '')} expectedResource=${this.config.logtoApiResource} expectedAppId=${this.config.logtoAppId} reason=${
+          lastError instanceof Error ? lastError.message : 'unknown'
+        }`,
+      );
+      throw new UnauthorizedException('Invalid Logto access token.');
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid Logto access token.');
     }
-  }
-
-  private extractClaim(payload: StrategyPayload, keys: string[]): string | undefined {
-    for (const key of keys) {
-      const value = payload[key];
-      if (typeof value === 'string' && value.trim()) {
-        return value.trim();
-      }
-    }
-    return undefined;
   }
 }
 
 function readUnverifiedIssuer(token: string): string | undefined {
+  const payload = readUnverifiedPayload(token);
+  return typeof payload?.iss === 'string' ? payload.iss : undefined;
+}
+
+function readUnverifiedHeader(
+  token: string,
+): { alg?: string; typ?: string; kid?: string } | null {
   const parts = token.split('.');
-  if (parts.length < 2) return undefined;
+  if (parts.length < 1) return null;
+  try {
+    const headerJson = Buffer.from(parts[0], 'base64url').toString('utf8');
+    return JSON.parse(headerJson) as { alg?: string; typ?: string; kid?: string };
+  } catch {
+    return null;
+  }
+}
+
+function readUnverifiedPayload(
+  token: string,
+): { iss?: string; aud?: string | string[]; azp?: string } | null {
+  const parts = token.split('.');
+  if (parts.length < 2) return null;
   try {
     const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8');
-    const payload = JSON.parse(payloadJson) as { iss?: string };
-    return typeof payload.iss === 'string' ? payload.iss : undefined;
+    return JSON.parse(payloadJson) as { iss?: string; aud?: string | string[]; azp?: string };
   } catch {
-    return undefined;
+    return null;
   }
 }

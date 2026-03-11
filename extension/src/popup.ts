@@ -1,5 +1,5 @@
 /**
- * RouteCTRL Recorder - Popup Script
+ * DocFlow Recorder - Popup Script
  * Controls recording UI and token-based authorized upload.
  */
 

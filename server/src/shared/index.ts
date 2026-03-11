@@ -9,5 +9,6 @@ export * from "./models/api";
 export * from "./models/workspace";
 export * from "./models/integration";
 export * from "./models/test-plan";
+export * from "./models/dashboard";
 
 

@@ -17,6 +17,7 @@ import { ExtensionsModule } from './extensions/extensions.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { TestPlansModule } from './test-plans/test-plans.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     IntegrationsModule,
     TestPlansModule,
     WorkspacesModule,
+    DashboardModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

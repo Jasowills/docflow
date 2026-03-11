@@ -34,11 +34,18 @@ export interface WorkspaceSummary {
   workspaceId: string;
   name: string;
   accountType: AccountType;
+  githubInstallationId?: number;
+  githubConnectedAtUtc?: string;
+  githubAccountLogin?: string;
 }
 
 export interface WorkspaceDetails extends WorkspaceSummary {
   members: WorkspaceMember[];
   invitations: WorkspaceInvitation[];
+}
+
+export interface UpdateWorkspaceRequest {
+  name: string;
 }
 
 export interface InviteWorkspaceMemberRequest {

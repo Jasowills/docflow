@@ -48,3 +48,15 @@ export class RefreshTokenDto {
   @IsString()
   refreshToken!: string;
 }
+
+export class LogtoProfileSyncDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  displayName?: string;
+}

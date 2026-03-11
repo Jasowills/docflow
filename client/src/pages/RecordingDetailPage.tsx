@@ -290,7 +290,7 @@ export function RecordingDetailPage() {
               {recording.speechTranscripts.map((segment, index) => (
                 <div key={`${segment.timestampMs}-${index}`} className="px-3 py-2 text-sm">
                   <p className="text-xs text-muted-foreground mb-1">
-                    {segment.speaker} â€¢ {segment.timestampMs}ms
+                    {segment.speaker} • {segment.timestampMs}ms
                   </p>
                   <p>{segment.text}</p>
                 </div>

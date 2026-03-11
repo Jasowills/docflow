@@ -17,21 +17,23 @@ export function HeroScene() {
     renderer.setClearColor(0x000000, 0);
     mount.appendChild(renderer.domElement);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.9);
-    const point = new THREE.PointLight(0x60a5fa, 8, 20);
-    point.position.set(2.5, 2.5, 4);
-    scene.add(ambient, point);
+    const ambient = new THREE.AmbientLight(0xd9ffe8, 0.85);
+    const keyLight = new THREE.PointLight(0x2ce67d, 8, 22);
+    keyLight.position.set(2.8, 2.1, 4.2);
+    const fillLight = new THREE.PointLight(0x7cffc4, 2.6, 18);
+    fillLight.position.set(-2.4, -1.6, 3.4);
+    scene.add(ambient, keyLight, fillLight);
 
     const group = new THREE.Group();
     scene.add(group);
 
     const ringMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x2f6bff,
-      roughness: 0.18,
-      metalness: 0.4,
+      color: 0x14c76b,
+      roughness: 0.14,
+      metalness: 0.5,
       clearcoat: 1,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.94,
     });
 
     const ring = new THREE.Mesh(
@@ -45,11 +47,11 @@ export function HeroScene() {
     const ribbon = new THREE.Mesh(
       new THREE.TorusKnotGeometry(0.88, 0.11, 220, 26, 2, 5),
       new THREE.MeshStandardMaterial({
-        color: 0x8bc4ff,
-        emissive: 0x0d3cff,
-        emissiveIntensity: 0.35,
-        roughness: 0.3,
-        metalness: 0.15,
+        color: 0x9ef7c4,
+        emissive: 0x0f8d4c,
+        emissiveIntensity: 0.42,
+        roughness: 0.24,
+        metalness: 0.2,
       }),
     );
     ribbon.rotation.x = 0.8;
@@ -59,10 +61,10 @@ export function HeroScene() {
     const particles = new THREE.Points(
       new THREE.BufferGeometry(),
       new THREE.PointsMaterial({
-        color: 0xd8f1ff,
-        size: 0.035,
+        color: 0xd8ffea,
+        size: 0.03,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.78,
       }),
     );
     const count = 140;
@@ -93,12 +95,13 @@ export function HeroScene() {
     const start = performance.now();
     const animate = () => {
       const elapsed = (performance.now() - start) / 1000;
-      ring.rotation.z = elapsed * 0.25;
-      ribbon.rotation.y = elapsed * 0.45;
-      ribbon.rotation.x = 0.8 + Math.sin(elapsed * 0.8) * 0.14;
-      group.rotation.y = Math.sin(elapsed * 0.4) * 0.28;
-      group.position.y = Math.sin(elapsed * 0.9) * 0.12;
-      particles.rotation.y = -elapsed * 0.07;
+      ring.rotation.z = elapsed * 0.22;
+      ribbon.rotation.y = elapsed * 0.38;
+      ribbon.rotation.x = 0.8 + Math.sin(elapsed * 0.72) * 0.12;
+      group.rotation.y = Math.sin(elapsed * 0.33) * 0.2;
+      group.position.y = Math.sin(elapsed * 0.72) * 0.1;
+      particles.rotation.y = -elapsed * 0.05;
+      particles.rotation.x = Math.sin(elapsed * 0.18) * 0.08;
       renderer.render(scene, camera);
       frameId = window.requestAnimationFrame(animate);
     };

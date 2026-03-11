@@ -1,339 +1,398 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useApi } from "../hooks/use-api";
-import { useClientDataStore } from "../state/client-data-store";
+import { gsap } from "gsap";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
+  ArrowRight,
+  ClipboardCheck,
+  FileText,
+  FolderGit2,
+  Sparkles,
+  Upload,
+  Users,
+} from "lucide-react";
+import type { DashboardSummary } from "@docflow/shared";
+import { useApi } from "../hooks/use-api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Spinner } from "../components/ui/spinner";
-import { Upload, Sparkles, FileText, PlugZap, Github, ClipboardCheck } from "lucide-react";
-import type { PaginatedResponse, DocumentSummary } from "@docflow/shared";
-import {
-  EXTENSION_CONNECTED_UNTIL_KEY,
-  clearExtensionConnectionCache,
-  getExtensionUploadAuthStatus,
-  sendExtensionUploadAuth,
-} from "../lib/extension-bridge";
-import { getApiBaseUrl } from "../config/runtime-config";
 
 export function DashboardPage() {
-  const TOKEN_REVALIDATE_INTERVAL_MS = 30000;
-  const { listDocuments, listRecordings, createExtensionUploadToken } =
-    useApi();
-  const { dashboard, ensureDashboard } = useClientDataStore();
-  const [loadingDashboard, setLoadingDashboard] = useState(!dashboard);
-  const [connectingExtension, setConnectingExtension] = useState(false);
-  const [extensionConnectedUntilUtc, setExtensionConnectedUntilUtc] = useState<
-    string | null
-  >(null);
-  const [extensionStatus, setExtensionStatus] =
-    useState<string>("Not connected");
-  const pendingExpiryUtcRef = useRef<string | null>(null);
+  const { getDashboardSummary } = useApi();
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const getDashboardSummaryRef = useRef(getDashboardSummary);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const syncConnectionFromToken = async () => {
-      const status = await getExtensionUploadAuthStatus();
-      if (!status.connected || !status.expiresAtUtc) {
-        clearExtensionConnectionCache();
-        setExtensionConnectedUntilUtc(null);
-        setExtensionStatus("Not connected");
-        return;
-      }
+    getDashboardSummaryRef.current = getDashboardSummary;
+  }, [getDashboardSummary]);
 
-      const expiryMs = new Date(status.expiresAtUtc).getTime();
-      if (!Number.isFinite(expiryMs) || expiryMs <= Date.now()) {
-        clearExtensionConnectionCache();
-        setExtensionConnectedUntilUtc(null);
-        setExtensionStatus("Not connected");
-        return;
-      }
+  useEffect(() => {
+    if (!headerRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
 
-      localStorage.setItem(EXTENSION_CONNECTED_UNTIL_KEY, status.expiresAtUtc);
-      setExtensionConnectedUntilUtc(status.expiresAtUtc);
-      setExtensionStatus(
-        `Connected until ${new Date(status.expiresAtUtc).toLocaleTimeString()}`,
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        "[data-dashboard-hero]",
+        {
+          opacity: 0,
+          y: 18,
+          filter: "blur(12px)",
+        },
+        {
+          opacity: 1,
+          y: 0,
+          filter: "blur(0px)",
+          duration: 0.8,
+          ease: "power2.out",
+          stagger: 0.12,
+        },
       );
-    };
-
-    void syncConnectionFromToken();
-
-    const onMessage = (event: MessageEvent) => {
-      if (event.source !== window || !event.data) return;
-      const data = event.data as {
-        source?: string;
-        type?: string;
-        ok?: boolean;
-      };
-      if (data.source !== "docflow-recorder-extension") return;
-      if (data.type !== "SET_EXTENSION_UPLOAD_AUTH_RESULT") return;
-
-      if (data.ok) {
-        const expiryUtc =
-          pendingExpiryUtcRef.current ||
-          localStorage.getItem(EXTENSION_CONNECTED_UNTIL_KEY);
-        if (expiryUtc) {
-          localStorage.setItem(EXTENSION_CONNECTED_UNTIL_KEY, expiryUtc);
-          setExtensionConnectedUntilUtc(expiryUtc);
-          setExtensionStatus(
-            `Connected until ${new Date(expiryUtc).toLocaleTimeString()}`,
-          );
-        } else {
-          setExtensionStatus("Extension connected.");
-        }
-      } else {
-        setExtensionStatus("Connection failed. Reload extension and retry.");
-      }
-    };
-    const onWindowFocus = () => {
-      void syncConnectionFromToken();
-    };
-    window.addEventListener("message", onMessage);
-    window.addEventListener("focus", onWindowFocus);
-    const revalidateTimer = window.setInterval(
-      () => {
-        void syncConnectionFromToken();
-      },
-      TOKEN_REVALIDATE_INTERVAL_MS,
-    );
-    void ensureDashboard(async () => {
-      const [docsRes, recordingsRes] = await Promise.all([
-        listDocuments({ pageSize: 5 }),
-        listRecordings({ pageSize: 1 }),
-      ]);
-      return {
-        recentDocs: (docsRes as PaginatedResponse<DocumentSummary>).items,
-        docCount: docsRes.total,
-        recordingCount: recordingsRes.total,
-      };
-    }).finally(() => setLoadingDashboard(false));
+    }, headerRef);
 
     return () => {
-      window.removeEventListener("message", onMessage);
-      window.removeEventListener("focus", onWindowFocus);
-      window.clearInterval(revalidateTimer);
+      ctx.revert();
     };
-  }, [dashboard, ensureDashboard, listDocuments, listRecordings]);
+  }, []);
 
-  const handleConnectExtension = async () => {
-    setConnectingExtension(true);
-    setExtensionStatus("Connecting extension. This can take a few seconds on first load...");
-    try {
-      const { token, expiresAtUtc } = await createExtensionUploadToken();
-      const apiBaseUrl = getApiBaseUrl();
-      const ok = await sendExtensionUploadAuth(
-        { apiBaseUrl, bearerToken: token },
-        { attempts: 20, pingTimeoutMs: 1000, ackTimeoutMs: 1300, retryDelayMs: 450 },
-      );
-      if (!ok) {
-        setExtensionStatus("Extension is still initializing. Keep this page open and click Connect Extension again in a few seconds.");
-        return;
-      }
-      pendingExpiryUtcRef.current = null;
-      localStorage.setItem(EXTENSION_CONNECTED_UNTIL_KEY, expiresAtUtc);
-      setExtensionConnectedUntilUtc(expiresAtUtc);
-      setExtensionStatus(
-        `Connected until ${new Date(expiresAtUtc).toLocaleTimeString()}`,
-      );
-    } catch (error: unknown) {
-      setExtensionStatus(
-        error instanceof Error ? error.message : "Failed to connect extension",
-      );
-    } finally {
-      setConnectingExtension(false);
-    }
-  };
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
 
-  const isExtensionConnected =
-    !!extensionConnectedUntilUtc &&
-    new Date(extensionConnectedUntilUtc).getTime() > Date.now();
-  const recordingCount = dashboard?.recordingCount;
-  const docCount = dashboard?.docCount;
-  const recentDocs = dashboard?.recentDocs || [];
+    getDashboardSummaryRef.current()
+      .then((response) => {
+        if (!mounted) return;
+        setSummary(response);
+      })
+      .catch((loadError) => {
+        if (!mounted) return;
+        setError(loadError instanceof Error ? loadError.message : "Unable to load dashboard.");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const metrics = useMemo(
+    () => [
+      {
+        label: "Recordings",
+        value: summary?.metrics.recordings ?? 0,
+        copy: "Captured flows in the workspace",
+        icon: Upload,
+      },
+      {
+        label: "Documents",
+        value: summary?.metrics.documents ?? 0,
+        copy: "Generated operational assets",
+        icon: FileText,
+      },
+      {
+        label: "Test Plans",
+        value: summary?.metrics.activeTestPlans ?? 0,
+        copy: "Active execution plans",
+        icon: ClipboardCheck,
+      },
+      {
+        label: "Connected Repos",
+        value: summary?.metrics.connectedRepos ?? 0,
+        copy: "Workspace-selected repositories",
+        icon: FolderGit2,
+      },
+      {
+        label: "Members",
+        value: summary?.metrics.teamMembers ?? 0,
+        copy: "Workspace collaborators",
+        icon: Users,
+      },
+    ],
+    [summary],
+  );
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="space-y-6">
+      <div ref={headerRef} className="app-page-header">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Welcome to DocFlow
+          <p data-dashboard-hero className="app-page-eyebrow">Workspace operations</p>
+          <h1 data-dashboard-hero className="app-page-title">Operations dashboard</h1>
+          <p data-dashboard-hero className="app-page-copy">
+            Track capture volume, generated assets, team activity, and repository readiness from one place.
           </p>
         </div>
-        {loadingDashboard ? <Spinner className="text-primary mt-1" /> : null}
+        {loading ? <Spinner className="text-primary" /> : null}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      {error ? (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Recordings
-            </CardTitle>
-            <Upload className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              {recordingCount ?? "--"}
-              {loadingDashboard && recordingCount == null ? (
-                <Spinner className="h-4 w-4 text-primary" />
-              ) : null}
+          <CardContent className="pt-6">
+            <p className="text-sm text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div className="app-metric-grid">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <div key={metric.label} className="app-metric-card">
+              <div className="flex items-center justify-between">
+                <span className="app-metric-label">{metric.label}</span>
+                <Icon className="h-4 w-4 text-primary" />
+              </div>
+              <div className="app-metric-value">{metric.value}</div>
+              <p className="app-metric-copy">{metric.copy}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Documents Generated
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              {docCount ?? "--"}
-              {loadingDashboard && docCount == null ? (
-                <Spinner className="h-4 w-4 text-primary" />
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Quick Actions
-            </CardTitle>
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            <Link to="/app/recordings/upload">
-              <Button variant="outline" size="sm">
-                Upload
-              </Button>
-            </Link>
-            <Link to="/app/generate">
-              <Button size="sm">Generate</Button>
-            </Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              GitHub
-            </CardTitle>
-            <Github className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-sm font-medium">Connect repositories</div>
-            <p className="text-xs text-muted-foreground">
-              Link GitHub to browse repos and create repo-aware test plans.
-            </p>
-            <Link to="/app/github">
-              <Button variant="outline" size="sm">Open GitHub</Button>
-            </Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Test Plans
-            </CardTitle>
-            <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-sm font-medium">Plan execution</div>
-            <p className="text-xs text-muted-foreground">
-              Organize planned validation by repository, branch, and environment.
-            </p>
-            <Link to="/app/test-plans">
-              <Button variant="outline" size="sm">Open Test Plans</Button>
-            </Link>
-          </CardContent>
-        </Card>
+          );
+        })}
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-lg">
-            DocFlow Recorder Extension
-          </CardTitle>
-          <PlugZap className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Badge variant={isExtensionConnected ? "secondary" : "outline"}>
-              {isExtensionConnected
-                ? "DocFlow Recorder Extension Connected"
-                : "Not connected"}
-            </Badge>
-            <span className="text-sm text-muted-foreground">
-              {extensionStatus}
-            </span>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              onClick={handleConnectExtension}
-              loading={connectingExtension}
-              disabled={isExtensionConnected}
-            >
-              {connectingExtension
-                ? "Connecting..."
-                : isExtensionConnected
-                  ? "DocFlow Recorder Extension Connected"
-                  : "Connect Extension"}
-            </Button>
-            <Link to="/app/recordings/upload">
-              <Button variant="outline">Open Upload Page</Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.25fr)_360px]">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between space-y-0">
+              <div>
+                <CardTitle>Activity trend</CardTitle>
+                <CardDescription>Recent workspace output across recordings and generated assets.</CardDescription>
+              </div>
+              <Badge variant="secondary">7 days</Badge>
+            </CardHeader>
+            <CardContent className="grid gap-8 xl:grid-cols-2">
+              <div>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Recordings</span>
+                  <span className="text-xs text-muted-foreground">Capture volume</span>
+                </div>
+                <div className="app-inline-chart">
+                  {(summary?.recordingsTrend || []).map((point) => (
+                    <div key={point.label} className="flex flex-1 flex-col items-center gap-2">
+                      <div
+                        className="app-inline-bar w-full"
+                        style={{ height: `${Math.max(12, point.value * 22)}px` }}
+                      />
+                      <span className="text-[11px] text-muted-foreground">{point.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Documents</span>
+                  <span className="text-xs text-muted-foreground">Generation volume</span>
+                </div>
+                <div className="app-inline-chart">
+                  {(summary?.documentsTrend || []).map((point) => (
+                    <div key={point.label} className="flex flex-1 flex-col items-center gap-2">
+                      <div
+                        className="app-inline-bar w-full bg-emerald-400/85"
+                        style={{ height: `${Math.max(12, point.value * 22)}px` }}
+                      />
+                      <span className="text-[11px] text-muted-foreground">{point.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Recent Documents */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Recent Documents</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingDashboard && recentDocs.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Loading recent documents...
-            </p>
-          ) : recentDocs.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No documents generated yet. Upload a recording and generate your
-              first document.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {recentDocs.map((doc) => (
-                <Link
-                  key={doc.documentId}
-                  to={`/app/documents/${doc.documentId}`}
-                  className="flex flex-col gap-2 rounded-md border p-3 transition-colors hover:bg-accent sm:flex-row sm:items-center sm:justify-between"
+          <div className="grid gap-6 xl:grid-cols-2">
+            <ActivityCard
+              title="Recent recordings"
+              description="Latest captured flows in the workspace"
+              emptyText="No recordings yet. Install the extension or upload your first session."
+              items={(summary?.recentRecordings || []).map((recording) => ({
+                key: recording.recordingId,
+                title: recording.metadata.name,
+                description: `${recording.eventCount} events · ${recording.transcriptCount} transcripts`,
+                href: `/app/recordings/${recording.recordingId}`,
+                badge: recording.metadata.productArea,
+              }))}
+            />
+
+            <ActivityCard
+              title="Recent documents"
+              description="Newly generated workflow assets"
+              emptyText="No documents yet. Generate docs or test cases from a recording."
+              items={(summary?.recentDocuments || []).map((document) => ({
+                key: document.documentId,
+                title: document.documentTitle,
+                description: `${document.documentType} · ${document.recordingName}`,
+                href: `/app/documents/${document.documentId}`,
+                badge: document.folder || "Unfiled",
+              }))}
+            />
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent workspace activity</CardTitle>
+              <CardDescription>Latest changes across recordings, generated docs, and test plans.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(summary?.recentActivity || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No recent activity yet.</p>
+              ) : (
+                summary?.recentActivity.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-border/80 bg-background/55 px-4 py-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">{item.type}</Badge>
+                      <span className="text-sm font-medium text-foreground">{item.title}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      {new Date(item.timestampUtc).toLocaleString()}
+                    </p>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick actions</CardTitle>
+              <CardDescription>Move the workspace forward from the main bottlenecks.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <QuickAction to="/app/recordings/upload" icon={Upload} label="Upload recording" />
+              <QuickAction to="/app/generate" icon={Sparkles} label="Generate documents" />
+              <QuickAction to="/app/test-plans" icon={ClipboardCheck} label="Create test plan" />
+              <QuickAction to="/app/settings?section=github" icon={FolderGit2} label="Connect GitHub App" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Setup status</CardTitle>
+              <CardDescription>What still needs attention in this workspace.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant={summary?.setup.githubConnected ? "secondary" : "outline"}>
+                  {summary?.setup.githubConnected ? "GitHub connected" : "GitHub pending"}
+                </Badge>
+                <Badge
+                  variant={summary?.setup.onboardingCompleted ? "secondary" : "outline"}
                 >
-                  <div>
-                    <div className="font-medium text-sm">
-                      {doc.documentTitle}
+                  {summary?.setup.onboardingCompleted ? "Onboarding done" : "Onboarding active"}
+                </Badge>
+              </div>
+
+              {(summary?.setup.missingSteps || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">Workspace setup is in a strong state.</p>
+              ) : (
+                <div className="space-y-2">
+                  {summary?.setup.missingSteps.map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-2xl border border-border/80 bg-background/50 px-4 py-3 text-sm text-muted-foreground"
+                    >
+                      {item}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {doc.documentType} &middot; {doc.recordingName}
-                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plan readiness</CardTitle>
+              <CardDescription>Current test plan distribution across the workspace.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(summary?.testPlanStatus || []).map((status) => (
+                <div key={status.label} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="capitalize text-foreground">{status.label}</span>
+                    <span className="text-muted-foreground">{status.value}</span>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(doc.createdAtUtc).toLocaleDateString()}
+                  <div className="h-2 rounded-full bg-background/80">
+                    <div
+                      className="h-2 rounded-full bg-primary"
+                      style={{ width: `${Math.min(100, status.value * 28)}%` }}
+                    />
                   </div>
-                </Link>
+                </div>
               ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
 
+function QuickAction({
+  to,
+  icon: Icon,
+  label,
+}: {
+  to: string;
+  icon: typeof Upload;
+  label: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center justify-between rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-accent/70"
+    >
+      <span className="flex items-center gap-3">
+        <Icon className="h-4 w-4 text-primary" />
+        {label}
+      </span>
+      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
+  );
+}
 
+function ActivityCard({
+  title,
+  description,
+  emptyText,
+  items,
+}: {
+  title: string;
+  description: string;
+  emptyText: string;
+  items: Array<{ key: string; title: string; description: string; href: string; badge?: string }>;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{emptyText}</p>
+        ) : (
+          items.map((item) => (
+            <Link
+              key={item.key}
+              to={item.href}
+              className="block rounded-2xl border border-border/80 bg-background/55 px-4 py-3 transition hover:bg-accent/70"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-foreground">{item.title}</span>
+                {item.badge ? <Badge variant="outline">{item.badge}</Badge> : null}
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+            </Link>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}

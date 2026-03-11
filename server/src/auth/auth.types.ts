@@ -14,4 +14,6 @@ export interface AuthUserRecord {
   roles: string[];
   createdAtUtc: string;
   lastLoginAtUtc?: string;
+  onboardingCompletedAt?: string;
+  onboardingState?: Record<string, unknown>;
 }

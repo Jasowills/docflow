@@ -1,5 +1,7 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
   ArrowRight,
   CheckCircle2,
@@ -76,11 +78,122 @@ const productFrames = [
   },
 ];
 
+const heroTitleWords = [
+  'Turn',
+  'captured',
+  'product',
+  'flows',
+  'into',
+  'docs,',
+  'test',
+  'cases,',
+  'plans,',
+  'and',
+  'release-ready',
+  'assets.',
+];
+
 export function LandingPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!rootRef.current) return;
+    if (typeof window === 'undefined') return;
+
+    gsap.registerPlugin(ScrollTrigger);
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.landing-hero-copy > :not(.landing-hero-title)',
+        { y: 32, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.85,
+          stagger: 0.08,
+          ease: 'power3.out',
+        },
+      );
+
+      gsap.fromTo(
+        '.landing-hero-title-word-inner',
+        {
+          yPercent: 120,
+          opacity: 0,
+          rotateX: -72,
+        },
+        {
+          yPercent: 0,
+          opacity: 1,
+          rotateX: 0,
+          duration: 0.88,
+          stagger: 0.045,
+          ease: 'power3.out',
+          delay: 0.08,
+        },
+      );
+
+      gsap.fromTo(
+        '.landing-hero-visual > *',
+        { y: 24, opacity: 0, scale: 0.96 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 1.1,
+          stagger: 0.12,
+          ease: 'power3.out',
+          delay: 0.18,
+        },
+      );
+
+      gsap.utils.toArray<HTMLElement>('[data-reveal-section]').forEach((section: HTMLElement) => {
+        gsap.fromTo(
+          section,
+          { y: 44, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.95,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 82%',
+              once: true,
+            },
+          },
+        );
+      });
+
+      gsap.utils.toArray<HTMLElement>('[data-reveal-stagger]').forEach((container: HTMLElement) => {
+        const children = Array.from(container.children);
+        gsap.fromTo(
+          children,
+          { y: 28, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: container,
+              start: 'top 84%',
+              once: true,
+            },
+          },
+        );
+      });
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, []);
 
   return (
-    <div className="landing-shell">
+    <div className="landing-shell" ref={rootRef}>
       <header className="landing-nav">
         <Link to="/" className="landing-brand">
           <img src={docflowLogo} alt="DocFlow" className="landing-brand-logo" />
@@ -129,7 +242,11 @@ export function LandingPage() {
               AI workflow documentation for product teams
             </div>
             <h1 className="landing-hero-title">
-              Turn captured product flows into docs, test cases, plans, and release-ready assets.
+              {heroTitleWords.map((word) => (
+                <span key={word} className="landing-hero-title-word">
+                  <span className="landing-hero-title-word-inner">{word}</span>
+                </span>
+              ))}
             </h1>
             <p className="landing-hero-body">
               DocFlow helps product, QA, and ops teams capture web workflows once, then turn them
@@ -185,12 +302,12 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section" id="features">
+        <section className="landing-section" id="features" data-reveal-section>
           <div className="landing-section-head">
             <div className="landing-section-eyebrow">Core capabilities</div>
             <h2>One capture flow, multiple delivery outputs.</h2>
           </div>
-          <div className="landing-feature-grid">
+          <div className="landing-feature-grid" data-reveal-stagger>
             {featureCards.map((card) => {
               const Icon = card.icon;
               return (
@@ -206,12 +323,12 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section landing-section-band" id="workflow">
+        <section className="landing-section landing-section-band" id="workflow" data-reveal-section>
           <div className="landing-section-head">
             <div className="landing-section-eyebrow">How it works</div>
             <h2>Capture. Generate. Review. Organize.</h2>
           </div>
-          <div className="landing-workflow-grid">
+          <div className="landing-workflow-grid" data-reveal-stagger>
             {workflowSteps.map((step, index) => (
               <div key={step} className="landing-workflow-step">
                 <div className="landing-step-index">0{index + 1}</div>
@@ -221,12 +338,12 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section" id="product">
+        <section className="landing-section" id="product" data-reveal-section>
           <div className="landing-section-head">
             <div className="landing-section-eyebrow">Product visuals</div>
             <h2>A clean operating surface for recording, planning, and delivery.</h2>
           </div>
-          <div className="landing-product-grid">
+          <div className="landing-product-grid" data-reveal-stagger>
             {productFrames.map((frame, index) => (
               <article
                 key={frame.title}
@@ -255,7 +372,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section landing-section-tight">
+        <section className="landing-section landing-section-tight" data-reveal-section>
           <div className="landing-integrations">
             <div className="landing-integrations-copy">
               <div className="landing-section-eyebrow">Linked execution</div>
@@ -291,8 +408,8 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section">
-          <div className="landing-proof-grid">
+        <section className="landing-section" data-reveal-section>
+          <div className="landing-proof-grid" data-reveal-stagger>
             <article className="landing-proof-card">
               <div className="landing-section-eyebrow">Individuals</div>
               <h3>Start alone, structure later.</h3>
@@ -317,7 +434,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section landing-section-band" id="roadmap">
+        <section className="landing-section landing-section-band" id="roadmap" data-reveal-section>
           <div className="landing-roadmap">
             <div>
               <div className="landing-section-eyebrow">Roadmap</div>
@@ -344,7 +461,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section">
+        <section className="landing-section" data-reveal-section>
           <div className="landing-final-cta">
             <div className="landing-final-cta-copy">
               <div className="landing-section-eyebrow">Start now</div>
@@ -390,7 +507,7 @@ export function LandingPage() {
               <span>Access</span>
               <Link to="/login">Sign in</Link>
               <Link to="/login">Start free</Link>
-              <Link to="/app/getting-started">Getting started</Link>
+              <Link to="/login">Onboarding</Link>
             </div>
             <div className="landing-footer-column">
               <span>Platform</span>

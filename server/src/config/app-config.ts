@@ -39,6 +39,11 @@ export class AppConfig {
     return issuer ? `${issuer}/jwks` : '';
   }
 
+  get logtoUserInfoEndpoint(): string {
+    const issuer = this.logtoIssuer;
+    return issuer ? `${issuer}/me` : '';
+  }
+
   get logtoAppId(): string {
     return this.configService.get<string>('LOGTO_APP_ID', '');
   }
@@ -61,6 +66,38 @@ export class AppConfig {
 
   get logtoGithubSignInUrl(): string {
     return this.configService.get<string>('LOGTO_GITHUB_SIGN_IN_URL', '');
+  }
+
+  get githubAppId(): string {
+    return this.configService.get<string>('GITHUB_APP_ID', '');
+  }
+
+  get githubAppSlug(): string {
+    return this.configService.get<string>('GITHUB_APP_SLUG', '');
+  }
+
+  get githubAppClientId(): string {
+    return this.configService.get<string>('GITHUB_APP_CLIENT_ID', '');
+  }
+
+  get githubAppClientSecret(): string {
+    return this.configService.get<string>('GITHUB_APP_CLIENT_SECRET', '');
+  }
+
+  get githubAppPrivateKey(): string {
+    return this.configService.get<string>('GITHUB_APP_PRIVATE_KEY', '');
+  }
+
+  get githubAppWebhookSecret(): string {
+    return this.configService.get<string>('GITHUB_APP_WEBHOOK_SECRET', '');
+  }
+
+  get githubAppSetupUrl(): string {
+    return this.configService.get<string>('GITHUB_APP_SETUP_URL', '');
+  }
+
+  get docflowWebBaseUrl(): string {
+    return this.configService.get<string>('DOCFLOW_WEB_BASE_URL', 'http://localhost:5173');
   }
 
   get jwtAccessTokenSecret(): string {

@@ -12,6 +12,10 @@ create table if not exists public.docflow_users (
   last_login_at_utc timestamptz
 );
 
+alter table public.docflow_users
+  add column if not exists onboarding_completed_at timestamptz,
+  add column if not exists onboarding_state jsonb not null default '{}'::jsonb;
+
 create table if not exists public.workspaces (
   workspace_id text primary key,
   name text not null,
@@ -21,6 +25,11 @@ create table if not exists public.workspaces (
   updated_at_utc timestamptz not null default timezone('utc', now()),
   created_by_user_id text not null
 );
+
+alter table public.workspaces
+  add column if not exists github_installation_id bigint,
+  add column if not exists github_connected_at_utc timestamptz,
+  add column if not exists github_account_login text;
 
 create table if not exists public.workspace_members (
   workspace_id text not null references public.workspaces(workspace_id) on delete cascade,
@@ -62,6 +71,21 @@ create table if not exists public.github_connections (
   access_token text not null,
   connected_at_utc timestamptz not null default timezone('utc', now())
 );
+
+create table if not exists public.workspace_repo_selections (
+  workspace_id text not null references public.workspaces(workspace_id) on delete cascade,
+  repository_id text not null,
+  full_name text not null,
+  owner_login text not null,
+  default_branch text,
+  private boolean not null default false,
+  html_url text not null,
+  selected_at_utc timestamptz not null default timezone('utc', now()),
+  primary key (workspace_id, repository_id)
+);
+
+create index if not exists idx_workspace_repo_selections_workspace_id
+  on public.workspace_repo_selections(workspace_id);
 
 create table if not exists public.test_plans (
   plan_id text primary key,

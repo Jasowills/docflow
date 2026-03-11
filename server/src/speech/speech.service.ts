@@ -123,7 +123,7 @@ export class SpeechService {
         resolve(segments);
       };
 
-      recognizer.recognized = (_sender, event) => {
+      recognizer.recognized = (_sender: unknown, event: any) => {
         if (
           event.result.reason === sdk.ResultReason.RecognizedSpeech &&
           event.result.text
@@ -136,7 +136,7 @@ export class SpeechService {
         }
       };
 
-      recognizer.canceled = (_sender, event) => {
+      recognizer.canceled = (_sender: unknown, event: any) => {
         if (event.reason === sdk.CancellationReason.Error) {
           const details = event.errorDetails || 'Unknown SDK cancellation error';
           this.logger.error(
@@ -156,7 +156,7 @@ export class SpeechService {
         () => {
           this.logger.debug('Speech recognition started');
         },
-        (error) => {
+        (error: unknown) => {
           const msg = String(error);
           this.logger.error(`Failed to start speech recognition: ${msg}`);
           finishReject(new Error(msg));

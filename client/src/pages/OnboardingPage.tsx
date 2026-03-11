@@ -1,0 +1,305 @@
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Circle, FolderGit2, Sparkles, UploadCloud, Users } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/auth-context";
+import { useApi } from "../hooks/use-api";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+
+type OnboardingStepKey =
+  | "workspace"
+  | "github"
+  | "extension"
+  | "recording"
+  | "generation";
+
+export function OnboardingPage() {
+  const { user, refreshUser } = useAuth();
+  const {
+    updateOnboarding,
+    getGithubInstallUrl,
+    updateCurrentWorkspace,
+  } = useApi();
+  const navigate = useNavigate();
+  const [workspaceName, setWorkspaceName] = useState(user?.workspaceName || "");
+  const [localOnboardingState, setLocalOnboardingState] = useState<Record<string, unknown>>(
+    () => ({ ...(user?.onboardingState || {}) }),
+  );
+  const [savingWorkspace, setSavingWorkspace] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setWorkspaceName(user?.workspaceName || "");
+    setLocalOnboardingState({ ...(user?.onboardingState || {}) });
+  }, [user?.workspaceName, user?.onboardingState]);
+
+  const onboardingState = localOnboardingState as Partial<Record<OnboardingStepKey, boolean>>;
+  const completedSteps = useMemo(
+    () => new Set(Object.entries(onboardingState).filter(([, value]) => !!value).map(([key]) => key as OnboardingStepKey)),
+    [onboardingState],
+  );
+
+  const markStep = async (step: OnboardingStepKey) => {
+    const nextState = {
+      ...localOnboardingState,
+      [step]: true,
+    };
+    setLocalOnboardingState(nextState);
+    await updateOnboarding({
+      state: nextState,
+    });
+  };
+
+  const handleSaveWorkspace = async () => {
+    if (!workspaceName.trim()) {
+      setError("Workspace name is required.");
+      return;
+    }
+    setSavingWorkspace(true);
+    setError(null);
+    try {
+      await updateCurrentWorkspace({ name: workspaceName.trim() });
+      await markStep("workspace");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save workspace.");
+    } finally {
+      setSavingWorkspace(false);
+    }
+  };
+
+  const handleConnectGithub = async () => {
+    setError(null);
+    try {
+      await markStep("github");
+      const { installUrl } = await getGithubInstallUrl();
+      window.location.assign(installUrl);
+    } catch (connectError) {
+      setError(connectError instanceof Error ? connectError.message : "Unable to start GitHub setup.");
+    }
+  };
+
+  const handleCompleteOnboarding = async () => {
+    setCompleting(true);
+    setError(null);
+    try {
+      const nextState = {
+        ...localOnboardingState,
+        workspace: true,
+        extension: true,
+        recording: true,
+        generation: true,
+      };
+      setLocalOnboardingState(nextState);
+      await updateOnboarding({
+        completed: true,
+        state: nextState,
+      });
+      await refreshUser();
+      navigate("/app/dashboard", { replace: true });
+    } catch (completeError) {
+      setError(completeError instanceof Error ? completeError.message : "Unable to complete onboarding.");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="app-page-header">
+        <div>
+          <p className="app-page-eyebrow">Onboarding</p>
+          <h1 className="app-page-title">Set up your workspace once</h1>
+          <p className="app-page-copy">
+            {user?.accountType === "team"
+              ? "Get your team workspace ready for capture, generation, GitHub linking, and test planning."
+              : "Finish your personal workspace setup, then move straight into recordings, docs, and test plans."}
+          </p>
+        </div>
+        <Badge variant="secondary">
+          {completedSteps.size}/5 steps
+        </Badge>
+      </div>
+
+      {error ? (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>1. Workspace basics</CardTitle>
+              <CardDescription>Name the workspace your team or personal operating area will use.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="workspace-name">Workspace name</Label>
+                <Input
+                  id="workspace-name"
+                  value={workspaceName}
+                  onChange={(event) => setWorkspaceName(event.target.value)}
+                />
+              </div>
+              <div className="pt-2">
+                <Button onClick={() => void handleSaveWorkspace()} disabled={savingWorkspace}>
+                  {savingWorkspace ? "Saving..." : completedSteps.has("workspace") ? "Update workspace" : "Save workspace"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>2. Connect GitHub App</CardTitle>
+              <CardDescription>Authorize repository access for the workspace without personal access tokens.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                GitHub installation powers repository-aware test plans and future automation. You can manage selected repositories later in Settings.
+              </p>
+              <div className="pt-2">
+                <Button variant="outline" onClick={() => void handleConnectGithub()}>
+                  Connect GitHub App
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>3. Install the recorder</CardTitle>
+                <CardDescription>Capture web flows with the DocFlow browser extension.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Install the extension, connect it once, then capture recordings directly from product flows.
+                </p>
+                <div className="pt-2">
+                  <Link to="/app/recordings/upload" onClick={() => void markStep("extension")}>
+                    <Button variant="outline">Open recorder setup</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>4. Capture your first recording</CardTitle>
+                <CardDescription>Build the first workflow artifact for your workspace.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Upload a test recording or capture a live product flow to seed your workspace activity.
+                </p>
+                <div className="pt-2">
+                  <Link to="/app/recordings" onClick={() => void markStep("recording")}>
+                    <Button variant="outline">Open recordings</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>5. Generate your first asset</CardTitle>
+              <CardDescription>Create documentation, test cases, release notes, or a test plan from recorded work.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Generation is the core DocFlow loop: capture, generate, review, and operationalize.
+              </p>
+              <div className="pt-2">
+                <Link to="/app/generate" onClick={() => void markStep("generation")}>
+                  <Button>Open generate</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Progress</CardTitle>
+              <CardDescription>Finish these steps once. Contextual guidance appears in the relevant pages afterward.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <OnboardingStepItem
+                icon={Users}
+                label="Workspace basics"
+                done={completedSteps.has("workspace")}
+              />
+              <OnboardingStepItem
+                icon={FolderGit2}
+                label="GitHub App connection"
+                done={completedSteps.has("github")}
+              />
+              <OnboardingStepItem
+                icon={UploadCloud}
+                label="Recorder setup"
+                done={completedSteps.has("extension")}
+              />
+              <OnboardingStepItem
+                icon={CheckCircle2}
+                label="First recording"
+                done={completedSteps.has("recording")}
+              />
+              <OnboardingStepItem
+                icon={Sparkles}
+                label="First generated asset"
+                done={completedSteps.has("generation")}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Finish later?</CardTitle>
+              <CardDescription>DocFlow recommends finishing setup now so the dashboard reflects a fully operational workspace.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Once completed, onboarding disappears from navigation and help shows contextually inside Recordings, Documents, Test Plans, and Settings.
+              </p>
+              <div className="pt-2">
+                <Button onClick={() => void handleCompleteOnboarding()} disabled={completing}>
+                  {completing ? "Completing..." : "Complete onboarding"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OnboardingStepItem({
+  icon: Icon,
+  label,
+  done,
+}: {
+  icon: typeof Users;
+  label: string;
+  done: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-background/55 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <Icon className="h-4 w-4 text-primary" />
+        <span className="text-sm text-foreground">{label}</span>
+      </div>
+      {done ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
+    </div>
+  );
+}

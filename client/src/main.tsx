@@ -1,4 +1,3 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { LogtoProvider, type LogtoConfig } from '@logto/react';
 import { AuthProvider } from './auth/auth-context';
@@ -26,6 +25,7 @@ const logtoConfig: LogtoConfig | null =
     ? {
         endpoint: getLogtoEndpoint(),
         appId: getLogtoAppId(),
+        scopes: ['openid', 'profile', 'email'],
         resources: getLogtoApiResource() ? [getLogtoApiResource()!] : undefined,
       }
     : null;
@@ -43,13 +43,11 @@ function AppProviders() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    {logtoConfig ? (
-      <LogtoProvider config={logtoConfig}>
-        <AppProviders />
-      </LogtoProvider>
-    ) : (
+  logtoConfig ? (
+    <LogtoProvider config={logtoConfig}>
       <AppProviders />
-    )}
-  </React.StrictMode>,
+    </LogtoProvider>
+  ) : (
+    <AppProviders />
+  ),
 );

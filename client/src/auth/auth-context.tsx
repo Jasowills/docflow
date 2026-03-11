@@ -4,18 +4,19 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
-} from 'react';
-import { useLogto } from '@logto/react';
-import { emitSessionExpired } from './session-events';
+} from "react";
+import { useLogto } from "@logto/react";
+import { emitSessionExpired } from "./session-events";
 import {
   getApiBaseUrl,
   getAuthMode,
   getLogtoApiResource,
   getLogtoCallbackUrl,
-} from '../config/runtime-config';
-import type { AccountType } from '@docflow/shared';
+} from "../config/runtime-config";
+import type { AccountType } from "@docflow/shared";
 
 export interface AuthUser {
   userId: string;
@@ -26,6 +27,8 @@ export interface AuthUser {
   teamName?: string;
   workspaceId?: string;
   workspaceName?: string;
+  onboardingCompletedAt?: string;
+  onboardingState?: Record<string, unknown>;
 }
 
 interface AuthResponse {
@@ -55,16 +58,17 @@ interface AuthContextValue {
   register: (payload?: RegisterPayload) => Promise<void>;
   logout: () => void;
   getAccessToken: () => Promise<string>;
+  refreshUser: () => Promise<void>;
 }
 
-const ACCESS_TOKEN_KEY = 'docflow.auth.accessToken';
-const REFRESH_TOKEN_KEY = 'docflow.auth.refreshToken';
-const USER_KEY = 'docflow.auth.user';
+const ACCESS_TOKEN_KEY = "docflow.auth.accessToken";
+const REFRESH_TOKEN_KEY = "docflow.auth.refreshToken";
+const USER_KEY = "docflow.auth.user";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  return getAuthMode() === 'logto' ? (
+  return getAuthMode() === "logto" ? (
     <LogtoManagedAuthProvider>{children}</LogtoManagedAuthProvider>
   ) : (
     <JwtAuthProvider>{children}</JwtAuthProvider>
@@ -112,9 +116,9 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (payload?: LoginPayload) => {
       if (!payload) {
-        throw new Error('Email and password are required.');
+        throw new Error("Email and password are required.");
       }
-      const response = await fetchJson<AuthResponse>('/auth/login', payload);
+      const response = await fetchJson<AuthResponse>("/auth/login", payload);
       persistAuth(response);
     },
     [persistAuth],
@@ -123,9 +127,9 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (payload?: RegisterPayload) => {
       if (!payload) {
-        throw new Error('Registration details are required.');
+        throw new Error("Registration details are required.");
       }
-      const response = await fetchJson<AuthResponse>('/auth/register', payload);
+      const response = await fetchJson<AuthResponse>("/auth/register", payload);
       persistAuth(response);
     },
     [persistAuth],
@@ -134,25 +138,25 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async (): Promise<string> => {
     if (!refreshToken) {
       logout();
-      throw new Error('No refresh token available');
+      throw new Error("No refresh token available");
     }
 
     try {
-      const response = await fetchJson<AuthResponse>('/auth/refresh', {
+      const response = await fetchJson<AuthResponse>("/auth/refresh", {
         refreshToken,
       });
       persistAuth(response);
       return response.accessToken;
     } catch (error) {
       logout();
-      emitSessionExpired('Session expired. Please sign in again.');
+      emitSessionExpired("Session expired. Please sign in again.");
       throw error;
     }
   }, [refreshToken, persistAuth, logout]);
 
   const getAccessToken = useCallback(async (): Promise<string> => {
     if (!accessToken) {
-      throw new Error('No authenticated session');
+      throw new Error("No authenticated session");
     }
 
     if (!isJwtExpired(accessToken)) {
@@ -161,6 +165,13 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
 
     return refresh();
   }, [accessToken, refresh]);
+
+  const refreshUser = useCallback(async () => {
+    const token = await getAccessToken();
+    const profile = await fetchMe(token);
+    setUser(profile);
+    localStorage.setItem(USER_KEY, JSON.stringify(profile));
+  }, [getAccessToken]);
 
   const value = useMemo(
     () => ({
@@ -171,8 +182,9 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       getAccessToken,
+      refreshUser,
     }),
-    [user, isLoading, login, register, logout, getAccessToken],
+    [user, isLoading, login, register, logout, getAccessToken, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -185,9 +197,29 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     getAccessToken: getLogtoAccessToken,
+    fetchUserInfo,
   } = useLogto();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    try {
+      const storedUser = localStorage.getItem(USER_KEY);
+      return storedUser ? (JSON.parse(storedUser) as AuthUser) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const getLogtoAccessTokenRef = useRef(getLogtoAccessToken);
+  const fetchUserInfoRef = useRef(fetchUserInfo);
+  const lastBootstrappedTokenRef = useRef<string | null>(null);
+  const bootstrapInFlightRef = useRef<Promise<void> | null>(null);
+
+  useEffect(() => {
+    getLogtoAccessTokenRef.current = getLogtoAccessToken;
+  }, [getLogtoAccessToken]);
+
+  useEffect(() => {
+    fetchUserInfoRef.current = fetchUserInfo;
+  }, [fetchUserInfo]);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -198,57 +230,123 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
   const getAccessToken = useCallback(async (): Promise<string> => {
     const resource = getLogtoApiResource();
     const token = resource
-      ? await getLogtoAccessToken(resource)
-      : await getLogtoAccessToken();
+      ? await getLogtoAccessTokenRef.current(resource)
+      : await getLogtoAccessTokenRef.current();
     if (!token) {
-      throw new Error('No authenticated session');
+      throw new Error("No authenticated session");
     }
     return token;
-  }, [getLogtoAccessToken]);
+  }, []);
 
-  const bootstrapUser = useCallback(async () => {
-    if (!isAuthenticated) {
-      setUser(null);
-      clearStoredAuth();
-      setIsBootstrapping(false);
+  const bootstrapLogtoUser = useCallback(async (token: string): Promise<AuthUser> => {
+    const userInfo = await fetchUserInfoRef.current().catch(() => null);
+
+    const email =
+      typeof userInfo?.email === "string" && userInfo.email.trim()
+        ? userInfo.email.trim()
+        : undefined;
+    const displayName =
+      (typeof userInfo?.name === "string" && userInfo.name.trim()) ||
+      (typeof userInfo?.username === "string" && userInfo.username.trim()) ||
+      email;
+
+    if (!email && !displayName) {
+      throw new Error("Logto profile did not include usable identity fields.");
+    }
+
+    const apiBaseUrl = getApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/api/auth/logto-bootstrap`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        displayName,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(
+        errorBody.message || `Request failed with status ${response.status}`,
+      );
+    }
+
+    return response.json() as Promise<AuthUser>;
+  }, []);
+
+  useEffect(() => {
+    if (isLogtoLoading) {
       return;
     }
 
-    try {
-      const token = await getAccessToken();
-      const profile = await fetchMe(token);
-      setUser(profile);
-      localStorage.setItem(USER_KEY, JSON.stringify(profile));
-      localStorage.setItem(ACCESS_TOKEN_KEY, token);
-    } catch (error) {
-      setUser(null);
+    if (!isAuthenticated) {
       clearStoredAuth();
-      emitSessionExpired('Unable to restore your DocFlow session. Please sign in again.');
-      throw error;
-    } finally {
+      setUser(null);
       setIsBootstrapping(false);
+      lastBootstrappedTokenRef.current = null;
+      bootstrapInFlightRef.current = null;
+      return;
     }
-  }, [getAccessToken, isAuthenticated]);
 
-  useEffect(() => {
-    void bootstrapUser().catch(() => {
-      void signOut(`${window.location.origin}/login`);
-    });
-  }, [bootstrapUser, signOut]);
+    if (bootstrapInFlightRef.current) {
+      return;
+    }
+
+    setIsBootstrapping(true);
+    const run = async () => {
+      try {
+        const token = await getAccessToken();
+        if (user && lastBootstrappedTokenRef.current === token) {
+          return;
+        }
+
+        const profile =
+          lastBootstrappedTokenRef.current === token
+            ? await fetchMe(token)
+            : await bootstrapLogtoUser(token);
+
+        setUser(profile);
+        localStorage.setItem(USER_KEY, JSON.stringify(profile));
+        localStorage.setItem(ACCESS_TOKEN_KEY, token);
+        lastBootstrappedTokenRef.current = token;
+      } catch {
+        setUser(null);
+        clearStoredAuth();
+      } finally {
+        setIsBootstrapping(false);
+        bootstrapInFlightRef.current = null;
+      }
+    };
+
+    bootstrapInFlightRef.current = run();
+    void bootstrapInFlightRef.current;
+  }, [bootstrapLogtoUser, getAccessToken, isAuthenticated, isLogtoLoading, user]);
+
+  const refreshUser = useCallback(async () => {
+    const token = await getAccessToken();
+    const profile = await fetchMe(token);
+    setUser(profile);
+    localStorage.setItem(USER_KEY, JSON.stringify(profile));
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+    lastBootstrappedTokenRef.current = token;
+  }, [getAccessToken]);
 
   const login = useCallback(async () => {
     await signIn({
       redirectUri: getLogtoCallbackUrl(),
-      firstScreen: 'sign_in',
-      interactionMode: 'signIn',
+      firstScreen: "sign_in",
+      interactionMode: "signIn",
     });
   }, [signIn]);
 
   const register = useCallback(async () => {
     await signIn({
       redirectUri: getLogtoCallbackUrl(),
-      firstScreen: 'identifier:register',
-      interactionMode: 'signUp',
+      firstScreen: "identifier:register",
+      interactionMode: "signUp",
     });
   }, [signIn]);
 
@@ -261,6 +359,7 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       getAccessToken,
+      refreshUser,
     }),
     [
       user,
@@ -271,6 +370,7 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       getAccessToken,
+      refreshUser,
     ],
   );
 
@@ -280,7 +380,7 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }
@@ -288,8 +388,8 @@ export function useAuth() {
 async function fetchJson<T>(path: string, body: unknown): Promise<T> {
   const apiBaseUrl = getApiBaseUrl();
   const response = await fetch(`${apiBaseUrl}/api${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
@@ -323,9 +423,11 @@ async function fetchMe(accessToken: string): Promise<AuthUser> {
 
 function isJwtExpired(token: string): boolean {
   try {
-    const payload = token.split('.')[1];
+    const payload = token.split(".")[1];
     if (!payload) return true;
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+    const decoded = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+    ) as {
       exp?: number;
     };
     if (!decoded.exp) return true;

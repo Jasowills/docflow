@@ -231,13 +231,13 @@ export function DocumentsListPage() {
   }, [folderFilter, folderConfigByKey]);
 
   return (
-    <div className="space-y-6 rounded-md border border-border bg-card p-5 text-foreground shadow-sm md:p-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-6 rounded-md border border-border bg-card p-4 text-foreground shadow-sm md:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight">Documents</h1>
           <p className="mt-1 text-sm text-muted-foreground">Organize documents by application folder.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {folderFilter ? (
             <button
               onClick={() => setFolderFilter('')}
@@ -256,8 +256,15 @@ export function DocumentsListPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 items-center flex-wrap">
-        <div className="relative flex-1 max-w-sm">
+      <div className="context-help-card">
+        <p className="text-sm font-medium text-foreground">Review generated assets in one place.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Documents collect AI-generated references, tutorials, test cases, and release notes. Use folders to group by product area or release stream, then export or attach the output to test planning workflows.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search documents..."
@@ -268,7 +275,7 @@ export function DocumentsListPage() {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {['', 'user_reference', 'tutorial', 'test_case_suite', 'release_notes'].map((type) => (
             <Badge
               key={type}

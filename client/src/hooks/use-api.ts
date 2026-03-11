@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { createApiClient, createPublicApiClient } from '../services/api-client';
 import { useAccessToken } from '../auth/use-access-token';
 import type {
@@ -16,14 +16,19 @@ import type {
   UpsertFolderConfigRequest,
   ExtensionReleaseInfo,
   AuthProviderConfig,
+  DashboardSummary,
   GithubConnectionStatus,
+  GithubInstallUrlResponse,
+  GithubRepoSelection,
   GithubRepositorySummary,
   ConnectGithubRequest,
+  UpdateGithubRepoSelectionsRequest,
   CreateTestPlanRequest,
   TestPlan,
   WorkspaceDetails,
   InviteWorkspaceMemberRequest,
   UpdateWorkspaceMemberRoleRequest,
+  UpdateWorkspaceRequest,
   WorkspaceInvitation,
 } from '@docflow/shared';
 
@@ -32,7 +37,17 @@ import type {
  */
 export function useApi() {
   const { getAccessToken } = useAccessToken();
-  const api = useMemo(() => createApiClient(getAccessToken), [getAccessToken]);
+  const getAccessTokenRef = useRef(getAccessToken);
+
+  useEffect(() => {
+    getAccessTokenRef.current = getAccessToken;
+  }, [getAccessToken]);
+
+  const api = useMemo(
+    () =>
+      createApiClient(() => getAccessTokenRef.current()),
+    [],
+  );
   const publicApi = useMemo(() => createPublicApiClient(), []);
 
   // ── Recordings ──────────────────────────────────
@@ -94,6 +109,11 @@ export function useApi() {
     [api],
   );
 
+  const getGithubInstallUrl = useCallback(
+    () => api<GithubInstallUrlResponse>('/integrations/github/app/install-url'),
+    [api],
+  );
+
   const connectGithub = useCallback(
     (request: ConnectGithubRequest) =>
       api<GithubConnectionStatus>('/integrations/github/connect', {
@@ -113,6 +133,20 @@ export function useApi() {
     [api],
   );
 
+  const listSelectedGithubRepos = useCallback(
+    () => api<GithubRepoSelection[]>('/integrations/github/repos/selected'),
+    [api],
+  );
+
+  const updateSelectedGithubRepos = useCallback(
+    (request: UpdateGithubRepoSelectionsRequest) =>
+      api<GithubRepoSelection[]>('/integrations/github/repos/selected', {
+        method: 'PUT',
+        body: request,
+      }),
+    [api],
+  );
+
   const listTestPlans = useCallback(
     () => api<TestPlan[]>('/test-plans'),
     [api],
@@ -129,6 +163,15 @@ export function useApi() {
 
   const getCurrentWorkspace = useCallback(
     () => api<WorkspaceDetails>('/workspaces/current'),
+    [api],
+  );
+
+  const updateCurrentWorkspace = useCallback(
+    (request: UpdateWorkspaceRequest) =>
+      api('/workspaces/current', {
+        method: 'PATCH',
+        body: request,
+      }),
     [api],
   );
 
@@ -154,6 +197,20 @@ export function useApi() {
     (invitationId: string) =>
       api<void>(`/workspaces/current/invitations/${invitationId}`, {
         method: 'DELETE',
+      }),
+    [api],
+  );
+
+  const getDashboardSummary = useCallback(
+    () => api<DashboardSummary>('/dashboard/summary'),
+    [api],
+  );
+
+  const updateOnboarding = useCallback(
+    (body: { completed?: boolean; state?: Record<string, unknown> }) =>
+      api('/auth/onboarding', {
+        method: 'PATCH',
+        body,
       }),
     [api],
   );
@@ -275,12 +332,18 @@ export function useApi() {
     getLatestExtensionRelease,
     getAuthProviders,
     getGithubStatus,
+    getGithubInstallUrl,
     connectGithub,
     disconnectGithub,
     listGithubRepos,
+    listSelectedGithubRepos,
+    updateSelectedGithubRepos,
     listTestPlans,
     createTestPlan,
+    getDashboardSummary,
+    updateOnboarding,
     getCurrentWorkspace,
+    updateCurrentWorkspace,
     inviteWorkspaceMember,
     updateWorkspaceMemberRole,
     revokeWorkspaceInvitation,

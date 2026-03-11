@@ -29,6 +29,16 @@ export class WorkspacesController {
     return this.workspacesService.inviteMember(user.workspaceId, user.userId, body);
   }
 
+  @Patch('current')
+  @Roles('owner', 'admin')
+  @ApiOperation({ summary: 'Update the current workspace basics' })
+  updateWorkspace(
+    @CurrentUser() user: UserContext,
+    @Body() body: { name: string },
+  ) {
+    return this.workspacesService.updateWorkspace(user.workspaceId, body);
+  }
+
   @Patch('current/members/:userId')
   @Roles('owner', 'admin')
   @ApiOperation({ summary: 'Update a workspace member role' })

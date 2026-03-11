@@ -46,6 +46,9 @@ export interface UserContext {
   displayName: string;
   roles: string[];
   workspaceId?: string;
+  authProvider?: 'jwt' | 'logto';
+  externalSubject?: string;
+  provisioned?: boolean;
 }
 
 /** Audit log entry */

@@ -20,6 +20,7 @@
         "@nestjs/platform-express": "^10.4.0",
         "@nestjs/platform-socket.io": "^10.4.0",
         "@supabase/supabase-js": "^2.57.4",
+        "microsoft-cognitiveservices-speech-sdk": "^1.44.1",
         "@nestjs/swagger": "^7.4.0",
         "@nestjs/websockets": "^10.4.0",
         "class-transformer": "^0.5.1",

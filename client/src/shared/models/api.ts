@@ -45,6 +45,9 @@ export interface UserContext {
   email: string;
   displayName: string;
   roles: string[];
+  authProvider?: 'jwt' | 'logto';
+  externalSubject?: string;
+  provisioned?: boolean;
 }
 
 /** Audit log entry */

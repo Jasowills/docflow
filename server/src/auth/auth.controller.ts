@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Public } from './decorators';
 import { AuthService } from './auth.service';
 import { UploadTokenService } from './upload-token.service';
 import type { UserContext } from '@docflow/shared';
 import type { Request } from 'express';
-import { LoginDto, RefreshTokenDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, LogtoProfileSyncDto, RefreshTokenDto, RegisterDto } from './dto/auth.dto';
 import { AppConfig } from '../config/app-config';
 
 @ApiTags('Auth')
@@ -52,10 +52,40 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
+  @Post('logto-bootstrap')
+  @ApiOperation({ summary: 'Bootstrap or sync a local DocFlow user from Logto profile data' })
+  bootstrapLogtoProfile(
+    @CurrentUser() user: UserContext,
+    @Body() body: LogtoProfileSyncDto,
+  ) {
+    return this.authService.bootstrapLogtoUser(user, body);
+  }
+
+  @ApiBearerAuth()
   @Get('me')
   @ApiOperation({ summary: 'Get the authenticated user profile' })
   me(@CurrentUser() user: UserContext) {
     return this.authService.me(user.userId);
+  }
+
+  @ApiBearerAuth()
+  @Post('logto-profile-sync')
+  @ApiOperation({ summary: 'Sync Logto profile data into the authenticated DocFlow user' })
+  syncLogtoProfile(
+    @CurrentUser() user: UserContext,
+    @Body() body: LogtoProfileSyncDto,
+  ) {
+    return this.authService.syncLogtoProfile(user.userId, body);
+  }
+
+  @ApiBearerAuth()
+  @Patch('onboarding')
+  @ApiOperation({ summary: 'Update onboarding progress for the authenticated user' })
+  updateOnboarding(
+    @CurrentUser() user: UserContext,
+    @Body() body: { completed?: boolean; state?: Record<string, unknown> },
+  ) {
+    return this.authService.updateOnboarding(user.userId, body);
   }
 
   @ApiBearerAuth()

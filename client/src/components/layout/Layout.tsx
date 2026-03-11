@@ -1,35 +1,48 @@
-﻿import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import {
+  Bell,
+  ChevronsRight,
+  ClipboardCheck,
+  FileText,
+  LayoutDashboard,
+  List,
+  LogOut,
+  Menu,
+  PlusCircle,
+  Settings,
+  Sparkles,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useAuth } from "../../auth/auth-context";
 import { Button } from "../ui/button";
-import lightLogo from "../../assets/docflow-logo-light.svg";
-import darkLogo from "../../assets/docflow-logo-dark.svg";
-import {
-  FileText,
-  BookOpenCheck,
-  List,
-  Sparkles,
-  Settings,
-  LogOut,
-  LayoutDashboard,
-  Moon,
-  Sun,
-  Bell,
-  X,
-  Menu,
-  Github,
-  ClipboardCheck,
-  Users,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import logo from "../../assets/docflow-logo-dark.svg";
 import { useRealtimeStore, type NotificationItem } from "../../state/realtime-store";
 import { SESSION_EXPIRED_EVENT } from "../../auth/session-events";
 import { useApi } from "../../hooks/use-api";
 import { getApiBaseUrl } from "../../config/runtime-config";
 import {
   EXTENSION_CONNECTED_UNTIL_KEY,
+  isRecorderExtensionAvailable,
   isExtensionTokenStillValid,
   sendExtensionUploadAuth,
 } from "../../lib/extension-bridge";
+
+type NavItem = {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+const navItems: NavItem[] = [
+  { path: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/app/recordings", label: "Recordings", icon: List },
+  { path: "/app/generate", label: "Generate", icon: Sparkles },
+  { path: "/app/documents", label: "Documents", icon: FileText },
+  { path: "/app/test-plans", label: "Test Plans", icon: ClipboardCheck },
+  { path: "/app/settings", label: "Settings", icon: Settings },
+];
 
 let canPlayNotificationAudio = false;
 let audioUnlockBound = false;
@@ -48,30 +61,11 @@ function ensureAudioUnlockListener() {
   window.addEventListener("keydown", unlock, true);
 }
 
-const navItems = [
-  { path: "/app/getting-started", label: "Getting Started", icon: BookOpenCheck },
-  { path: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/app/recordings", label: "Recordings", icon: List },
-  { path: "/app/generate", label: "Generate Docs", icon: Sparkles },
-  { path: "/app/documents", label: "Documents", icon: FileText },
-  { path: "/app/workspace", label: "Workspace", icon: Users },
-  { path: "/app/github", label: "GitHub", icon: Github },
-  { path: "/app/test-plans", label: "Test Plans", icon: ClipboardCheck },
-  { path: "/app/admin/config", label: "Settings", icon: Settings },
-];
-
 export function Layout() {
   const { user, logout } = useAuth();
   const { createExtensionUploadToken } = useApi();
   const location = useLocation();
   const { notifications, unreadCount, markAllNotificationsRead } = useRealtimeStore();
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "light" || stored === "dark") return stored;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  });
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -84,25 +78,17 @@ export function Layout() {
   const pendingExtensionExpiryUtcRef = useRef<string | null>(null);
 
   useEffect(() => {
+    document.documentElement.classList.add("dark");
     ensureAudioUnlockListener();
   }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("theme", theme);
-  }, [theme]);
 
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    // Don't toast historical notifications loaded during initial page hydration.
     if (!notificationsHydratedRef.current) {
-      if (notifications.length === 0) {
-        return;
-      }
+      if (notifications.length === 0) return;
       notificationsHydratedRef.current = true;
       for (const item of notifications) {
         seenNotificationIdsRef.current.add(item.id);
@@ -114,8 +100,8 @@ export function Layout() {
       .filter((n) => !n.read)
       .filter((n) => !seenNotificationIdsRef.current.has(n.id))
       .slice(0, 3);
-    if (nextRealtimeItems.length === 0) return;
 
+    if (nextRealtimeItems.length === 0) return;
     for (const item of nextRealtimeItems) {
       seenNotificationIdsRef.current.add(item.id);
     }
@@ -130,14 +116,14 @@ export function Layout() {
         setToastItems((prev) => prev.filter((t) => t.id !== item.id));
       }, 4000),
     );
-    return () => timers.forEach((t) => window.clearTimeout(t));
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [toastItems]);
 
   const handleLogout = () => {
     if (isSigningOut) return;
     setIsSigningOut(true);
     logout();
-    window.location.assign('/login');
+    window.location.assign("/login");
   };
 
   useEffect(() => {
@@ -150,11 +136,12 @@ export function Layout() {
         handleLogout();
       }, 900);
     };
+
     window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
     return () => {
       window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
     };
-  }, [handleLogout]);
+  }, []);
 
   useEffect(() => {
     const onExtensionAuthResult = (event: MessageEvent) => {
@@ -189,6 +176,7 @@ export function Layout() {
   useEffect(() => {
     const EXTENSION_REFRESH_BUFFER_MS = 2 * 60 * 1000;
     const EXTENSION_REFRESH_CHECK_INTERVAL_MS = 60 * 1000;
+    const EXTENSION_PING_TIMEOUT_MS = 700;
     if (!user) return;
 
     const pushFreshExtensionToken = async () => {
@@ -206,7 +194,7 @@ export function Layout() {
           localStorage.setItem(EXTENSION_CONNECTED_UNTIL_KEY, expiresAtUtc);
         }
       } catch {
-        // Silent by design: auto-connect should not block app usage.
+        // Silent by design.
       } finally {
         extensionRefreshInFlightRef.current = false;
       }
@@ -220,6 +208,12 @@ export function Layout() {
       if (isExtensionTokenStillValid() && millisecondsUntilExpiry > EXTENSION_REFRESH_BUFFER_MS) {
         return;
       }
+
+      const extensionAvailable = await isRecorderExtensionAvailable(EXTENSION_PING_TIMEOUT_MS);
+      if (!extensionAvailable) {
+        return;
+      }
+
       await pushFreshExtensionToken();
     };
 
@@ -231,69 +225,84 @@ export function Layout() {
 
     return () => window.clearInterval(refreshTimer);
   }, [user, createExtensionUploadToken]);
-  const logoSrc = theme === "dark" ? darkLogo : lightLogo;
 
   const sidebarContent = (
     <>
-      <div className="p-5 border-b border-border flex items-center justify-between">
-        <div className="flex flex-col items-start">
-          <img
-            src={logoSrc}
-            alt="DocFlow"
-            className="h-8 w-auto object-contain"
-          />
+      <div className="border-b border-border/70 p-5">
+        <div className="flex items-start justify-between gap-3 md:hidden">
+          <img src={logo} alt="DOCFLOW" className="h-8 w-auto object-contain" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(false)}
+            aria-label="Close sidebar"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-          aria-label="Close sidebar"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="hidden md:block">
+          <img src={logo} alt="DOCFLOW" className="h-8 w-auto object-contain" />
+        </div>
+        <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.26em] text-primary/75">
+          Workspace
+        </p>
+        <h2 className="mt-2 text-xl font-semibold tracking-tight text-foreground">
+          {user?.workspaceName || "DocFlow"}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          {user?.accountType === "team"
+            ? "Shared operations for product, QA, and delivery teams."
+            : "Personal operations for workflow capture and generation."}
+        </p>
       </div>
 
-      <nav className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-2 md:grid-cols-1 md:gap-1">
+      <div className="px-4 pt-4">
+        <Link to="/app/generate">
+          <Button className="w-full justify-between rounded-xl">
+            New generation
+            <PlusCircle className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+
+      <nav className="grid gap-1 p-4">
         {navItems.map((item) => {
           const isActive =
             location.pathname === item.path ||
             location.pathname.startsWith(`${item.path}/`);
           const Icon = item.icon;
+
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${
+              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "bg-primary text-primary-foreground shadow-[0_14px_28px_hsl(var(--primary)/0.24)]"
+                  : "text-muted-foreground hover:bg-accent/80 hover:text-accent-foreground"
               }`}
               onClick={() => setIsSidebarOpen(false)}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {isActive ? <ChevronsRight className="h-4 w-4" /> : null}
             </Link>
           );
         })}
       </nav>
 
-      <div className="px-4 pb-4 mt-auto">
-        <div className="rounded-md border border-border bg-background/70 p-3">
-          <div className="text-sm font-medium truncate">
-            {user?.displayName || "User"}
-          </div>
-          <div className="text-xs text-muted-foreground truncate">
-            {user?.email || ""}
-          </div>
+      <div className="mt-auto px-4 pb-4">
+        <div className="rounded-2xl border border-border/80 bg-background/60 p-4">
+          <div className="text-sm font-medium text-foreground">{user?.displayName || "User"}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{user?.email || ""}</div>
           <Button
             variant="ghost"
             size="sm"
-            className="mt-2 w-full justify-start"
+            className="mt-3 w-full justify-start"
             onClick={handleLogout}
             disabled={isSigningOut}
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            <LogOut className="mr-2 h-4 w-4" />
             {isSigningOut ? "Signing out..." : "Sign out"}
           </Button>
         </div>
@@ -302,101 +311,95 @@ export function Layout() {
   );
 
   return (
-    <div className="min-h-screen md:h-screen flex flex-col md:flex-row md:overflow-hidden">
-      <aside className="hidden md:flex w-72 h-screen shrink-0 border-r border-border bg-card/80 backdrop-blur-xl flex-col overflow-hidden">
-        {sidebarContent}
-      </aside>
-
-      <div
-        className={`fixed inset-0 z-50 md:hidden transition ${
-          isSidebarOpen ? "pointer-events-auto" : "pointer-events-none"
-        }`}
-      >
-        <div
-          className={`absolute inset-0 bg-black/40 transition-opacity ${
-            isSidebarOpen ? "opacity-100" : "opacity-0"
-          }`}
-          onClick={() => setIsSidebarOpen(false)}
-        />
-        <aside
-          className={`absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-card border-r border-border shadow-2xl transition-transform ${
-            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } flex flex-col`}
-        >
+    <div className="min-h-screen md:h-screen md:overflow-hidden">
+      <div className="flex min-h-screen flex-col md:h-screen md:flex-row">
+        <aside className="app-sidebar hidden h-screen w-72 shrink-0 border-r border-border/70 md:flex md:flex-col md:overflow-hidden">
           {sidebarContent}
         </aside>
+
+        <div
+          className={`fixed inset-0 z-50 md:hidden transition ${
+            isSidebarOpen ? "pointer-events-auto" : "pointer-events-none"
+          }`}
+        >
+          <div
+            className={`absolute inset-0 bg-black/60 transition-opacity ${
+              isSidebarOpen ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <aside
+            className={`app-sidebar absolute left-0 top-0 flex h-full w-80 max-w-[88vw] flex-col border-r border-border/70 shadow-2xl transition-transform ${
+              isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+          >
+            {sidebarContent}
+          </aside>
+        </div>
+
+        <main className="app-shell flex-1 min-h-0 overflow-visible md:overflow-y-auto">
+          <header className="sticky top-0 z-20 border-b border-border/70 bg-background/72 backdrop-blur-xl">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 p-4 md:px-8">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="md:hidden"
+                  onClick={() => setIsSidebarOpen(true)}
+                  aria-label="Open sidebar"
+                >
+                  <Menu className="h-4 w-4" />
+                </Button>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary/80">
+                    DocFlow Ops
+                  </p>
+                  <h1 className="text-base font-semibold tracking-tight text-foreground md:text-lg">
+                    {user?.workspaceName || "Workspace"}
+                  </h1>
+                </div>
+              </div>
+
+              <p className="hidden lg:block text-sm text-muted-foreground">
+                Capture flows, generate assets, coordinate releases and testing.
+              </p>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsNotificationOpen(true)}
+                  aria-label="Open notifications"
+                  className="relative"
+                >
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 min-w-4 rounded-sm bg-primary px-1 text-[10px] leading-4 text-primary-foreground">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  ) : null}
+                </Button>
+              </div>
+            </div>
+          </header>
+
+          <div className="mx-auto max-w-7xl p-4 md:p-8">
+            <Outlet />
+          </div>
+        </main>
       </div>
 
-      <main className="flex-1 min-h-0 overflow-visible md:overflow-y-auto">
-        <header className="sticky top-0 z-10 border-b border-border bg-background/85 backdrop-blur-xl">
-          <div className="max-w-6xl mx-auto p-4 md:px-8 flex items-center gap-3 justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setIsSidebarOpen(true)}
-                aria-label="Open sidebar"
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
-              <h1 className="text-lg font-bold tracking-tight">DocFlow</h1>
-              <span className="hidden sm:inline">|</span>
-              <p className="hidden sm:block text-xs text-muted-foreground">
-                Workflow Documentation Platform
-              </p>
-            </div>
-            <p className="hidden lg:block text-sm text-muted-foreground">
-              Capture flows. Generate docs, tests, and release-ready assets.
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsNotificationOpen(true)}
-                aria-label="Open notifications"
-                className="relative"
-              >
-                <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 min-w-4 h-4 px-1 rounded-sm bg-primary text-[10px] text-primary-foreground leading-4">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-4 w-4" />
-                ) : (
-                  <Moon className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-        </header>
-        <div className="max-w-6xl mx-auto p-4 md:p-8">
-          <Outlet />
-        </div>
-      </main>
-
-      {toastItems.length > 0 && (
-        <div className="fixed right-4 top-20 z-40 space-y-2 w-[min(20rem,calc(100vw-2rem))]">
+      {toastItems.length > 0 ? (
+        <div className="fixed right-4 top-20 z-40 w-[min(22rem,calc(100vw-2rem))] space-y-2">
           {toastItems.map((item) => (
             <div
               key={item.id}
-              className="rounded-md border border-border bg-card p-3 shadow-lg"
+              className="rounded-2xl border border-border/80 bg-card/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.36)]"
             >
               <p className="text-sm">
                 {item.actorName ? (
                   <>
-                    <span className="font-semibold text-foreground">
-                      {item.actorName}
-                    </span>
+                    <span className="font-semibold text-foreground">{item.actorName}</span>
                     <span className="text-muted-foreground">
                       {item.title.startsWith(item.actorName)
                         ? item.title.slice(item.actorName.length)
@@ -407,18 +410,17 @@ export function Layout() {
                   <span className="font-semibold">{item.title}</span>
                 )}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {item.message}
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{item.message}</p>
             </div>
           ))}
         </div>
-      )}
-      {sessionToast && (
-        <div className="fixed right-4 top-4 z-[60] rounded-md border border-primary/30 bg-card px-3 py-2 shadow-lg">
+      ) : null}
+
+      {sessionToast ? (
+        <div className="fixed right-4 top-4 z-[60] rounded-2xl border border-primary/30 bg-card px-4 py-3 shadow-lg">
           <p className="text-sm text-foreground">{sessionToast}</p>
         </div>
-      )}
+      ) : null}
 
       <div
         className={`fixed inset-0 z-50 transition ${
@@ -426,78 +428,60 @@ export function Layout() {
         }`}
       >
         <div
-          className={`absolute inset-0 bg-black/30 transition-opacity ${
+          className={`absolute inset-0 bg-black/40 transition-opacity ${
             isNotificationOpen ? "opacity-100" : "opacity-0"
           }`}
           onClick={() => setIsNotificationOpen(false)}
         />
         <aside
-          className={`absolute right-0 top-0 h-full w-full max-w-md bg-background border-l border-border shadow-2xl transition-transform ${
+          className={`absolute right-0 top-0 h-full w-full max-w-md border-l border-border/70 bg-background/92 shadow-2xl backdrop-blur-xl transition-transform ${
             isNotificationOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="h-full flex flex-col">
-            <div className="p-4 border-b border-border flex items-center justify-between">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between border-b border-border/70 p-4">
               <div>
                 <h2 className="text-base font-semibold">Notifications</h2>
-                <p className="text-xs text-muted-foreground">
-                  Audit logs and realtime events
-                </p>
+                <p className="text-xs text-muted-foreground">Activity and realtime events</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={markAllNotificationsRead}
-                >
+                <Button variant="ghost" size="sm" onClick={markAllNotificationsRead}>
                   Mark all read
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsNotificationOpen(false)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => setIsNotificationOpen(false)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto p-3 space-y-2">
+            <div className="flex-1 space-y-2 overflow-auto p-3">
               {notifications.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No notifications yet.
-                </p>
+                <p className="text-sm text-muted-foreground">No notifications yet.</p>
               ) : (
                 notifications.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-md border p-3 ${
+                    className={`rounded-2xl border p-4 ${
                       item.read
-                        ? "bg-background border-border"
-                        : "bg-accent/40 border-primary/30"
+                        ? "border-border/70 bg-background/40"
+                        : "border-primary/20 bg-accent/55"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm">
-                        {item.actorName ? (
-                          <>
-                            <span className="font-semibold text-foreground">
-                              {item.actorName}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {item.title.startsWith(item.actorName)
-                                ? item.title.slice(item.actorName.length)
-                                : ` ${item.title}`}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="font-medium">{item.title}</span>
-                        )}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {item.message}
+                    <p className="text-sm">
+                      {item.actorName ? (
+                        <>
+                          <span className="font-semibold text-foreground">{item.actorName}</span>
+                          <span className="text-muted-foreground">
+                            {item.title.startsWith(item.actorName)
+                              ? item.title.slice(item.actorName.length)
+                              : ` ${item.title}`}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-medium">{item.title}</span>
+                      )}
                     </p>
-                    <p className="text-[10px] text-muted-foreground mt-2">
+                    <p className="mt-1 text-xs text-muted-foreground">{item.message}</p>
+                    <p className="mt-2 text-[10px] text-muted-foreground">
                       {new Date(item.timestamp).toLocaleString()}
                     </p>
                   </div>
@@ -515,6 +499,7 @@ function playNotificationTone() {
   if (!canPlayNotificationAudio) {
     return;
   }
+
   try {
     const AudioCtx =
       window.AudioContext ||
@@ -532,7 +517,7 @@ function playNotificationTone() {
     const note1 = ctx.createOscillator();
     const note1Gain = ctx.createGain();
     note1.type = "triangle";
-    note1.frequency.setValueAtTime(784, now); // G5
+    note1.frequency.setValueAtTime(784, now);
     note1.frequency.exponentialRampToValueAtTime(740, now + 0.14);
     note1Gain.gain.setValueAtTime(0.0001, now);
     note1Gain.gain.exponentialRampToValueAtTime(0.7, now + 0.018);
@@ -545,8 +530,8 @@ function playNotificationTone() {
     const note2 = ctx.createOscillator();
     const note2Gain = ctx.createGain();
     note2.type = "sine";
-    note2.frequency.setValueAtTime(1175, now + 0.1); // D6
-    note2.frequency.exponentialRampToValueAtTime(1047, now + 0.26); // C6
+    note2.frequency.setValueAtTime(1175, now + 0.1);
+    note2.frequency.exponentialRampToValueAtTime(1047, now + 0.26);
     note2Gain.gain.setValueAtTime(0.0001, now + 0.09);
     note2Gain.gain.exponentialRampToValueAtTime(0.52, now + 0.125);
     note2Gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
@@ -560,4 +545,3 @@ function playNotificationTone() {
     // Ignore audio playback errors.
   }
 }
-

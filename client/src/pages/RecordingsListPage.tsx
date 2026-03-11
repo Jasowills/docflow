@@ -85,7 +85,7 @@ export function RecordingsListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Recordings</h1>
           <p className="text-muted-foreground mt-1">
@@ -95,7 +95,14 @@ export function RecordingsListPage() {
         {loading && !cached ? <Spinner className="text-primary mt-1" /> : null}
       </div>
 
-      <div className="inline-flex rounded-md border border-border bg-card p-1">
+      <div className="context-help-card">
+        <p className="text-sm font-medium text-foreground">Capture workflows, then operationalize them.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Use the DocFlow recorder extension for structured browser capture, or upload a prepared recording to seed your workspace. Recordings become the source for generated docs, test cases, and future test plan execution.
+        </p>
+      </div>
+
+      <div className="inline-flex max-w-full overflow-x-auto rounded-md border border-border bg-card p-1">
         <Link
           to="/app/recordings"
           className={`px-4 py-2 text-sm rounded-sm transition-colors ${

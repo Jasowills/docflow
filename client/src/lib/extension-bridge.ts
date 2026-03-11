@@ -91,6 +91,10 @@ export async function pingRecorderExtension(timeoutMs = 800): Promise<boolean> {
   });
 }
 
+export async function isRecorderExtensionAvailable(timeoutMs = 800): Promise<boolean> {
+  return pingRecorderExtension(timeoutMs);
+}
+
 export async function sendExtensionUploadAuth(
   payload: { apiBaseUrl: string; bearerToken: string },
   options?: { attempts?: number; pingTimeoutMs?: number; ackTimeoutMs?: number; retryDelayMs?: number },

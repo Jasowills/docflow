@@ -21,10 +21,10 @@ export class UsersRepository {
 
     if (error) {
       this.logger.error(`Failed to find user by email: ${error.message}`);
-      throw new Error('Failed to load user.');
+      throw mapSupabaseUserError(error.message, 'load user');
     }
 
-    return data ? this.mapRow(data) : null;
+    return data ? this.mapRow(data as Record<string, unknown>) : null;
   }
 
   async findByExternalIdentity(
@@ -40,22 +40,24 @@ export class UsersRepository {
 
     if (error) {
       this.logger.error(`Failed to find user by external identity: ${error.message}`);
-      throw new Error('Failed to load user.');
+      throw mapSupabaseUserError(error.message, 'load user');
     }
 
     return data ? this.mapRow(data) : null;
   }
 
   async findByUserId(userId: string): Promise<AuthUserRecord | null> {
-    const { data, error } = await this.supabase
-      .from('docflow_users')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data, error } = await retrySupabaseRead(() =>
+      this.supabase
+        .from('docflow_users')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle(),
+    );
 
     if (error) {
       this.logger.error(`Failed to find user by userId: ${error.message}`);
-      throw new Error('Failed to load user.');
+      throw mapSupabaseUserError(error.message, 'load user');
     }
 
     return data ? this.mapRow(data) : null;
@@ -74,11 +76,13 @@ export class UsersRepository {
       default_workspace_id: user.defaultWorkspaceId || null,
       created_at_utc: user.createdAtUtc,
       last_login_at_utc: user.lastLoginAtUtc || null,
+      onboarding_completed_at: user.onboardingCompletedAt || null,
+      onboarding_state: user.onboardingState || {},
     });
 
     if (error) {
       this.logger.error(`Failed to insert user ${user.email}: ${error.message}`);
-      throw new Error('Failed to create user.');
+      throw mapSupabaseUserError(error.message, 'create user');
     }
     return user;
   }
@@ -91,7 +95,7 @@ export class UsersRepository {
 
     if (error) {
       this.logger.error(`Failed to update last login for ${userId}: ${error.message}`);
-      throw new Error('Failed to update user login timestamp.');
+      throw mapSupabaseUserError(error.message, 'update user login timestamp');
     }
   }
 
@@ -110,7 +114,63 @@ export class UsersRepository {
 
     if (error) {
       this.logger.error(`Failed to link external identity for ${userId}: ${error.message}`);
-      throw new Error('Failed to link user identity.');
+      throw mapSupabaseUserError(error.message, 'link user identity');
+    }
+  }
+
+  async updateOnboarding(
+    userId: string,
+    updates: {
+      onboardingCompletedAt?: string | null;
+      onboardingState?: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    const payload: Record<string, unknown> = {};
+    if ('onboardingCompletedAt' in updates) {
+      payload.onboarding_completed_at = updates.onboardingCompletedAt ?? null;
+    }
+    if ('onboardingState' in updates) {
+      payload.onboarding_state = updates.onboardingState ?? {};
+    }
+
+    const { error } = await this.supabase
+      .from('docflow_users')
+      .update(payload)
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to update onboarding for ${userId}: ${error.message}`);
+      throw mapSupabaseUserError(error.message, 'update onboarding');
+    }
+  }
+
+  async updateProfile(
+    userId: string,
+    updates: {
+      email?: string;
+      displayName?: string;
+      externalProvider?: AuthUserRecord['externalProvider'];
+      externalSubject?: string;
+    },
+  ): Promise<void> {
+    const payload: Record<string, unknown> = {};
+    if (updates.email) payload.email = updates.email.trim().toLowerCase();
+    if (updates.displayName) payload.display_name = updates.displayName.trim();
+    if ('externalProvider' in updates) {
+      payload.external_provider = updates.externalProvider ?? null;
+    }
+    if ('externalSubject' in updates) {
+      payload.external_subject = updates.externalSubject ?? null;
+    }
+
+    const { error } = await this.supabase
+      .from('docflow_users')
+      .update(payload)
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to update profile for ${userId}: ${error.message}`);
+      throw mapSupabaseUserError(error.message, 'update user profile');
     }
   }
 
@@ -132,6 +192,34 @@ export class UsersRepository {
       createdAtUtc: String(row.created_at_utc || ''),
       lastLoginAtUtc:
         typeof row.last_login_at_utc === 'string' ? row.last_login_at_utc : undefined,
+      onboardingCompletedAt:
+        typeof row.onboarding_completed_at === 'string' ? row.onboarding_completed_at : undefined,
+      onboardingState:
+        row.onboarding_state && typeof row.onboarding_state === 'object'
+          ? (row.onboarding_state as Record<string, unknown>)
+          : {},
     };
   }
+}
+
+function mapSupabaseUserError(message: string, action: string): Error {
+  if (message.includes("Could not find the table 'public.docflow_users'")) {
+    return new Error(
+      "Supabase schema is missing. Run docs/supabase-schema.sql so DocFlow can create and load users.",
+    );
+  }
+
+  return new Error(`Failed to ${action}.`);
+}
+
+async function retrySupabaseRead<T>(
+  operation: () => PromiseLike<{ data: T | null; error: { message: string } | null }>,
+): Promise<{ data: T | null; error: { message: string } | null }> {
+  const first = await Promise.resolve(operation());
+  if (!first.error || !first.error.message.toLowerCase().includes('fetch failed')) {
+    return first;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  return Promise.resolve(operation());
 }

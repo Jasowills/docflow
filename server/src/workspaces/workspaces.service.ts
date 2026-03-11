@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type {
   InviteWorkspaceMemberRequest,
+  UpdateWorkspaceRequest,
   UpdateWorkspaceMemberRoleRequest,
   WorkspaceDetails,
   WorkspaceInvitation,
@@ -50,5 +51,23 @@ export class WorkspacesService {
       throw new BadRequestException('A workspace is required.');
     }
     await this.repository.revokeInvitation(workspaceId, invitationId);
+  }
+
+  async updateWorkspace(
+    workspaceId: string | undefined,
+    request: UpdateWorkspaceRequest,
+  ) {
+    if (!workspaceId) {
+      throw new BadRequestException('A workspace is required.');
+    }
+    if (!request.name?.trim()) {
+      throw new BadRequestException('Workspace name is required.');
+    }
+
+    const workspace = await this.repository.updateWorkspace(workspaceId, request);
+    if (!workspace) {
+      throw new BadRequestException('Workspace not found.');
+    }
+    return workspace;
   }
 }

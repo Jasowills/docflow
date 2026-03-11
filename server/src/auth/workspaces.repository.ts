@@ -4,6 +4,7 @@ import { SUPABASE_CLIENT } from '../database/supabase.providers';
 import type {
   AccountType,
   InviteWorkspaceMemberRequest,
+  UpdateWorkspaceRequest,
   UpdateWorkspaceMemberRoleRequest,
   WorkspaceDetails,
   WorkspaceInvitation,
@@ -71,13 +72,16 @@ export class WorkspacesRepository {
       workspaceId: params.workspaceId,
       name: params.workspaceName,
       accountType: params.accountType,
+      githubInstallationId: undefined,
+      githubConnectedAtUtc: undefined,
+      githubAccountLogin: undefined,
     };
   }
 
   async findSummaryById(workspaceId: string): Promise<WorkspaceSummary | null> {
     const { data, error } = await this.supabase
       .from('workspaces')
-      .select('workspace_id, name, account_type')
+      .select('workspace_id, name, account_type, github_installation_id, github_connected_at_utc, github_account_login')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
@@ -92,7 +96,49 @@ export class WorkspacesRepository {
       workspaceId: data.workspace_id as string,
       name: data.name as string,
       accountType: data.account_type as AccountType,
+      githubInstallationId:
+        typeof data.github_installation_id === 'number' ? data.github_installation_id : undefined,
+      githubConnectedAtUtc:
+        typeof data.github_connected_at_utc === 'string' ? data.github_connected_at_utc : undefined,
+      githubAccountLogin:
+        typeof data.github_account_login === 'string' ? data.github_account_login : undefined,
     };
+  }
+
+  async updateWorkspace(workspaceId: string, request: UpdateWorkspaceRequest): Promise<WorkspaceSummary | null> {
+    const now = new Date().toISOString();
+    const { error } = await this.supabase
+      .from('workspaces')
+      .update({
+        name: request.name.trim(),
+        slug: slugifyWorkspaceName(request.name),
+        updated_at_utc: now,
+      })
+      .eq('workspace_id', workspaceId);
+
+    if (error) {
+      this.logger.error(`Failed to update workspace ${workspaceId}: ${error.message}`);
+      throw new Error('Failed to update workspace.');
+    }
+
+    return this.findSummaryById(workspaceId);
+  }
+
+  async renameWorkspace(workspaceId: string, name: string): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await this.supabase
+      .from('workspaces')
+      .update({
+        name: name.trim(),
+        slug: slugifyWorkspaceName(name),
+        updated_at_utc: now,
+      })
+      .eq('workspace_id', workspaceId);
+
+    if (error) {
+      this.logger.error(`Failed to rename workspace ${workspaceId}: ${error.message}`);
+      throw new Error('Failed to rename workspace.');
+    }
   }
 
   async getWorkspaceDetails(workspaceId: string): Promise<WorkspaceDetails | null> {
@@ -255,6 +301,55 @@ export class WorkspacesRepository {
     if (error) {
       this.logger.error(`Failed to revoke invitation ${invitationId}: ${error.message}`);
       throw new Error('Failed to revoke workspace invitation.');
+    }
+  }
+
+  async setGithubInstallation(
+    workspaceId: string,
+    input: {
+      installationId: number | null;
+      connectedAtUtc?: string | null;
+      accountLogin?: string | null;
+    },
+  ): Promise<void> {
+    const { error } = await this.supabase
+      .from('workspaces')
+      .update({
+        github_installation_id: input.installationId,
+        github_connected_at_utc: input.connectedAtUtc ?? null,
+        github_account_login: input.accountLogin ?? null,
+        updated_at_utc: new Date().toISOString(),
+      })
+      .eq('workspace_id', workspaceId);
+
+    if (error) {
+      this.logger.error(`Failed to set GitHub installation for ${workspaceId}: ${error.message}`);
+      throw new Error('Failed to update GitHub installation.');
+    }
+  }
+
+  async syncMemberProfile(
+    workspaceId: string,
+    userId: string,
+    updates: {
+      email?: string;
+      displayName?: string;
+    },
+  ): Promise<void> {
+    const payload: Record<string, unknown> = {};
+    if (updates.email) payload.email = updates.email.trim().toLowerCase();
+    if (updates.displayName) payload.display_name = updates.displayName.trim();
+    if (Object.keys(payload).length === 0) return;
+
+    const { error } = await this.supabase
+      .from('workspace_members')
+      .update(payload)
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to sync member profile for ${workspaceId}/${userId}: ${error.message}`);
+      throw new Error('Failed to sync workspace member profile.');
     }
   }
 }

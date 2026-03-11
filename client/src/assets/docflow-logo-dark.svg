@@ -1,24 +1,24 @@
 <svg width="820" height="180" viewBox="0 0 820 180" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="docflowTileDark" x1="18" y1="16" x2="156" y2="156" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#71E4FF"/>
-      <stop offset="0.42" stop-color="#2D86FF"/>
-      <stop offset="1" stop-color="#081329"/>
+      <stop stop-color="#74F5B0"/>
+      <stop offset="0.42" stop-color="#16B364"/>
+      <stop offset="1" stop-color="#07110C"/>
     </linearGradient>
     <linearGradient id="docflowFlowDark" x1="48" y1="48" x2="122" y2="112" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#D8EEFF"/>
+      <stop stop-color="#F7FFF9"/>
+      <stop offset="1" stop-color="#C7F7D8"/>
     </linearGradient>
     <filter id="docflowWordmarkShadowDark" x="-20%" y="-60%" width="140%" height="220%">
-      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#030813" flood-opacity="0.52"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#020705" flood-opacity="0.58"/>
     </filter>
   </defs>
   <rect x="12" y="12" width="148" height="148" rx="40" fill="url(#docflowTileDark)"/>
   <rect x="12.75" y="12.75" width="146.5" height="146.5" rx="39.25" stroke="white" stroke-opacity="0.16" stroke-width="1.5"/>
   <path d="M46 48C46 44.6863 48.6863 42 52 42H80C101.539 42 119 59.4609 119 81V91C119 112.539 101.539 130 80 130H52C48.6863 130 46 127.314 46 124V48Z" stroke="url(#docflowFlowDark)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M84 57H118" stroke="#DBF3FF" stroke-width="10" stroke-linecap="round"/>
-  <path d="M84 81H108" stroke="#DBF3FF" stroke-width="10" stroke-linecap="round"/>
-  <path d="M84 105H97" stroke="#DBF3FF" stroke-width="10" stroke-linecap="round"/>
+  <path d="M84 57H118" stroke="#E3FFEA" stroke-width="10" stroke-linecap="round"/>
+  <path d="M84 81H108" stroke="#E3FFEA" stroke-width="10" stroke-linecap="round"/>
+  <path d="M84 105H97" stroke="#E3FFEA" stroke-width="10" stroke-linecap="round"/>
   <g filter="url(#docflowWordmarkShadowDark)">
     <text x="194" y="118" fill="#FFFFFF" font-size="76" font-weight="800" letter-spacing="5.4" font-family="Orbitron, Eurostile, Bank Gothic, Arial, sans-serif">DOCFLOW</text>
   </g>

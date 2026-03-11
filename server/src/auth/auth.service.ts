@@ -56,6 +56,7 @@ export class AuthService {
       roles: dto.accountType === 'team' ? ['owner'] : ['member'],
       createdAtUtc: now,
       lastLoginAtUtc: now,
+      onboardingState: {},
     };
 
     await this.usersRepository.insert(user);
@@ -114,7 +115,134 @@ export class AuthService {
       teamName: user.teamName,
       workspaceId: workspace?.workspaceId,
       workspaceName: workspace?.name,
+      onboardingCompletedAt: user.onboardingCompletedAt,
+      onboardingState: user.onboardingState || {},
     };
+  }
+
+  async updateOnboarding(
+    userId: string,
+    updates: {
+      completed?: boolean;
+      state?: Record<string, unknown>;
+    },
+  ) {
+    const user = await this.usersRepository.findByUserId(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    const nextState = {
+      ...(user.onboardingState || {}),
+      ...(updates.state || {}),
+    };
+
+    await this.usersRepository.updateOnboarding(userId, {
+      onboardingCompletedAt: updates.completed
+        ? new Date().toISOString()
+        : user.onboardingCompletedAt || null,
+      onboardingState: nextState,
+    });
+
+    return this.me(userId);
+  }
+
+  async syncLogtoProfile(
+    userId: string,
+    profile: {
+      email?: string;
+      displayName?: string;
+    },
+  ) {
+    const user = await this.usersRepository.findByUserId(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    const nextEmail = profile.email?.trim().toLowerCase();
+    const nextDisplayName = profile.displayName?.trim();
+    const shouldUpdateEmail =
+      !!nextEmail &&
+      nextEmail !== user.email &&
+      user.email.endsWith('@logto.local');
+    const shouldUpdateDisplayName =
+      !!nextDisplayName &&
+      nextDisplayName !== user.displayName &&
+      (user.email.endsWith('@logto.local') ||
+        user.displayName === user.email.split('@')[0] ||
+        user.displayName.trim().length === 0);
+
+    if (shouldUpdateEmail || shouldUpdateDisplayName) {
+      const resolvedEmail = shouldUpdateEmail ? nextEmail : user.email;
+      const resolvedDisplayName = shouldUpdateDisplayName ? nextDisplayName : user.displayName;
+      const previousDisplayName = user.displayName;
+
+      await this.usersRepository.updateProfile(user.userId, {
+        email: resolvedEmail,
+        displayName: resolvedDisplayName,
+        externalProvider: 'logto',
+        externalSubject: user.externalSubject,
+      });
+
+      if (user.defaultWorkspaceId) {
+        await this.workspacesRepository.syncMemberProfile(user.defaultWorkspaceId, user.userId, {
+          email: resolvedEmail,
+          displayName: resolvedDisplayName,
+        });
+        await this.syncDefaultWorkspaceNameIfNeeded(
+          user.defaultWorkspaceId,
+          user.accountType,
+          previousDisplayName,
+          resolvedDisplayName,
+        );
+      }
+    }
+
+    return this.me(userId);
+  }
+
+  async bootstrapLogtoUser(
+    context: UserContext,
+    profile: {
+      email?: string;
+      displayName?: string;
+    },
+  ) {
+    if (context.userId) {
+      if (profile.email || profile.displayName) {
+        await this.syncLogtoProfile(context.userId, profile);
+      }
+      return this.me(context.userId);
+    }
+
+    const subject = context.externalSubject;
+    if (!subject) {
+      throw new UnauthorizedException('Missing Logto subject.');
+    }
+
+    const email = profile.email?.trim().toLowerCase();
+    const displayName =
+      profile.displayName?.trim() || email || subject;
+
+    if (!email) {
+      throw new BadRequestException(
+        'Logto profile is missing an email address. Ensure the application requests the email scope and the user has an email in Logto.',
+      );
+    }
+
+    const user = await this.resolveLogtoUser({
+      subject,
+      email,
+      displayName,
+    });
+
+    return this.me(user.userId);
+  }
+
+  async findLogtoUserContext(subject: string): Promise<UserContext | null> {
+    const user = await this.usersRepository.findByExternalIdentity('logto', subject);
+    if (!user) return null;
+    return this.buildUserContext(user);
   }
 
   async resolveLogtoUser(params: {
@@ -153,6 +281,7 @@ export class AuthService {
         roles: ['member'],
         createdAtUtc: now,
         lastLoginAtUtc: now,
+        onboardingState: {},
       };
 
       await this.usersRepository.insert(createdUser);
@@ -165,6 +294,51 @@ export class AuthService {
         workspaceName: `${displayName}'s Workspace`,
       });
       return createdUser;
+    }
+
+    const shouldUpdateFallbackEmail =
+      normalizedEmail &&
+      normalizedEmail !== user.email &&
+      user.email.endsWith('@logto.local');
+    const shouldUpdateDisplayName =
+      params.displayName.trim() &&
+      params.displayName.trim() !== user.displayName &&
+      (user.displayName === user.email.split('@')[0] ||
+        user.displayName === params.subject ||
+        user.email.endsWith('@logto.local'));
+
+    if (shouldUpdateFallbackEmail || shouldUpdateDisplayName) {
+      const nextEmail = shouldUpdateFallbackEmail ? normalizedEmail : user.email;
+      const nextDisplayName = shouldUpdateDisplayName ? params.displayName.trim() : user.displayName;
+      const previousDisplayName = user.displayName;
+
+      await this.usersRepository.updateProfile(user.userId, {
+        email: nextEmail,
+        displayName: nextDisplayName,
+        externalProvider: 'logto',
+        externalSubject: params.subject,
+      });
+
+      if (user.defaultWorkspaceId) {
+        await this.workspacesRepository.syncMemberProfile(user.defaultWorkspaceId, user.userId, {
+          email: nextEmail,
+          displayName: nextDisplayName,
+        });
+        await this.syncDefaultWorkspaceNameIfNeeded(
+          user.defaultWorkspaceId,
+          user.accountType,
+          previousDisplayName,
+          nextDisplayName,
+        );
+      }
+
+      user = {
+        ...user,
+        email: nextEmail,
+        displayName: nextDisplayName,
+        externalProvider: 'logto',
+        externalSubject: params.subject,
+      };
     }
 
     const now = new Date().toISOString();
@@ -182,6 +356,9 @@ export class AuthService {
       displayName: user.displayName,
       roles: await this.resolveWorkspaceRoles(user),
       workspaceId: user.defaultWorkspaceId,
+      authProvider: user.externalProvider === 'logto' ? 'logto' : 'jwt',
+      externalSubject: user.externalSubject,
+      provisioned: true,
     };
   }
 
@@ -242,6 +419,8 @@ export class AuthService {
         teamName: user.teamName,
         workspaceId: workspace?.workspaceId,
         workspaceName: workspace?.name,
+        onboardingCompletedAt: user.onboardingCompletedAt,
+        onboardingState: user.onboardingState || {},
       },
     };
   }
@@ -260,6 +439,30 @@ export class AuthService {
       user.userId,
     );
     return role ? [role] : user.roles;
+  }
+
+  private async syncDefaultWorkspaceNameIfNeeded(
+    workspaceId: string,
+    accountType: AuthUserRecord['accountType'],
+    previousDisplayName: string,
+    nextDisplayName: string,
+  ): Promise<void> {
+    if (accountType !== 'individual') {
+      return;
+    }
+
+    const workspace = await this.workspacesRepository.findSummaryById(workspaceId);
+    if (!workspace) {
+      return;
+    }
+
+    const expectedPreviousName = `${previousDisplayName}'s Workspace`;
+    const expectedNextName = `${nextDisplayName}'s Workspace`;
+    if (workspace.name !== expectedPreviousName || workspace.name === expectedNextName) {
+      return;
+    }
+
+    await this.workspacesRepository.renameWorkspace(workspaceId, expectedNextName);
   }
 
   private verifyRefreshToken(refreshToken: string): RefreshTokenClaims {

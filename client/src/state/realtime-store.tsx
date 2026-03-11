@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   type ReactNode,
 } from 'react';
 import { io, type Socket } from 'socket.io-client';
@@ -119,53 +120,76 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
   const { getAccessToken } = useAccessToken();
   const [state, dispatch] = useReducer(reducer, initialState);
   const userId = user?.userId ?? null;
+  const auditFetchInFlightRef = useRef<Promise<void> | null>(null);
+  const lastAuditFetchAtRef = useRef(0);
 
   const fetchAuditNotifications = useCallback(
     async (markAsRead = false) => {
-      const token = await getAccessToken();
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/api/audit?limit=100`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        if (res.status === 401) {
-          emitSessionExpired('Session expired. Signing out...');
+      const now = Date.now();
+      if (!markAsRead && auditFetchInFlightRef.current) {
+        return auditFetchInFlightRef.current;
+      }
+      if (!markAsRead && now - lastAuditFetchAtRef.current < 1500) {
+        return;
+      }
+
+      const run = async () => {
+        lastAuditFetchAtRef.current = Date.now();
+        const token = await getAccessToken();
+        const baseUrl = getApiBaseUrl();
+        const res = await fetch(`${baseUrl}/api/audit?limit=100`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          if (res.status === 401) {
+            emitSessionExpired('Session expired. Signing out...');
+            return;
+          }
+          dispatch({
+            type: 'SET_AUDIT_NOTIFICATIONS',
+            payload: [
+              {
+                id: `audit-fetch-error:${Date.now()}`,
+                title: 'Audit notifications unavailable',
+                message: `Failed to load audit logs (${res.status})`,
+                timestamp: new Date().toISOString(),
+                read: false,
+                source: 'audit',
+              },
+            ],
+          });
           return;
+        }
+        const entries = (await res.json()) as AuditLogEntry[];
+        const readIds = loadReadNotificationIds(userId);
+        const mapped = entries.map((entry) => {
+          const next = toAuditNotification(entry);
+          return {
+            ...next,
+            read: markAsRead || readIds.has(next.id),
+          };
+        });
+        if (markAsRead) {
+          persistReadNotificationIds(
+            userId,
+            mapped.map((item) => item.id),
+          );
         }
         dispatch({
           type: 'SET_AUDIT_NOTIFICATIONS',
-          payload: [
-            {
-              id: `audit-fetch-error:${Date.now()}`,
-              title: 'Audit notifications unavailable',
-              message: `Failed to load audit logs (${res.status})`,
-              timestamp: new Date().toISOString(),
-              read: false,
-              source: 'audit',
-            },
-          ],
+          payload: mapped,
         });
-        return;
-      }
-      const entries = (await res.json()) as AuditLogEntry[];
-      const readIds = loadReadNotificationIds(userId);
-      const mapped = entries.map((entry) => {
-        const next = toAuditNotification(entry);
-        return {
-          ...next,
-          read: markAsRead || readIds.has(next.id),
-        };
+      };
+
+      const promise = run().finally(() => {
+        if (auditFetchInFlightRef.current === promise) {
+          auditFetchInFlightRef.current = null;
+        }
       });
-      if (markAsRead) {
-        persistReadNotificationIds(
-          userId,
-          mapped.map((item) => item.id),
-        );
+      if (!markAsRead) {
+        auditFetchInFlightRef.current = promise;
       }
-      dispatch({
-        type: 'SET_AUDIT_NOTIFICATIONS',
-        payload: mapped,
-      });
+      return promise;
     },
     [getAccessToken, userId],
   );
