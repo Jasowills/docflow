@@ -15,12 +15,20 @@ import { TestPlansPage } from "./pages/TestPlansPage";
 import { LandingPage } from "./pages/LandingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
+import { Spinner } from "./components/ui/spinner";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
   if (isLoading) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <div className="flex items-center gap-3 rounded-2xl border border-border/80 bg-card/80 px-4 py-3">
+          <Spinner className="h-4 w-4 text-primary" />
+          <span className="text-sm text-muted-foreground">Loading workspace...</span>
+        </div>
+      </div>
+    );
   }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

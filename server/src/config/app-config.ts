@@ -161,7 +161,7 @@ export class AppConfig {
   }
 
   get aiMaxTokens(): number {
-    return parseInt(this.configService.get<string>('AI_MAX_TOKENS', '8192'), 10);
+    return parseInt(this.configService.get<string>('AI_MAX_TOKENS', '4096'), 10);
   }
 
   get azureOpenAiEndpoint(): string {

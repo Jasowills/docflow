@@ -20,10 +20,11 @@ import {
   Workflow,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { useAuth } from '../auth/auth-context';
 import docflowLogo from '../assets/docflow-logo-light.svg';
-import recordingsVisual from '../assets/docflow-product-recordings.svg';
-import documentsVisual from '../assets/docflow-product-documents.svg';
-import testPlansVisual from '../assets/docflow-product-testplans.svg';
+import recordingsVisual from '../assets/docflow-showcase-dashboard.png';
+import documentsVisual from '../assets/docflow-showcase-documents.png';
+import testPlansVisual from '../assets/docflow-showcase-testplans.png';
 
 const HeroScene = lazy(async () => import('../components/landing/HeroScene').then((module) => ({
   default: module.HeroScene,
@@ -94,6 +95,7 @@ const heroTitleWords = [
 ];
 
 export function LandingPage() {
+  const { isAuthenticated } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -214,23 +216,40 @@ export function LandingPage() {
           <a href="#roadmap">Roadmap</a>
         </nav>
         <div className="landing-nav-actions">
-          <Link to="/login" className="landing-nav-signin">
-            Sign in
-          </Link>
-          <Button asChild>
-            <Link to="/login">
-              Start free
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+          {isAuthenticated ? (
+            <Button asChild>
+              <Link to="/app/dashboard">
+                Dashboard
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          ) : (
+            <>
+              <Link to="/login" className="landing-nav-signin">
+                Sign in
+              </Link>
+              <Button asChild>
+                <Link to="/login">
+                  Start free
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
         <div className={`landing-mobile-nav ${mobileNavOpen ? 'landing-mobile-nav-open' : ''}`}>
           <a href="#features" onClick={() => setMobileNavOpen(false)}>Features</a>
           <a href="#workflow" onClick={() => setMobileNavOpen(false)}>How it works</a>
           <a href="#product" onClick={() => setMobileNavOpen(false)}>Product</a>
           <a href="#roadmap" onClick={() => setMobileNavOpen(false)}>Roadmap</a>
-          <Link to="/login" onClick={() => setMobileNavOpen(false)}>Sign in</Link>
-          <Link to="/login" onClick={() => setMobileNavOpen(false)}>Start free</Link>
+          {isAuthenticated ? (
+            <Link to="/app/dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</Link>
+          ) : (
+            <>
+              <Link to="/login" onClick={() => setMobileNavOpen(false)}>Sign in</Link>
+              <Link to="/login" onClick={() => setMobileNavOpen(false)}>Start free</Link>
+            </>
+          )}
         </div>
       </header>
 
@@ -254,8 +273,8 @@ export function LandingPage() {
             </p>
             <div className="landing-hero-actions">
               <Button asChild size="lg">
-                <Link to="/login">
-                  Start with DocFlow
+                <Link to={isAuthenticated ? '/app/dashboard' : '/login'}>
+                  {isAuthenticated ? 'Open Dashboard' : 'Start with DocFlow'}
                   <ChevronRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -472,8 +491,8 @@ export function LandingPage() {
             </div>
             <div className="landing-final-cta-actions">
               <Button asChild size="lg">
-                <Link to="/login">
-                  Start free
+                <Link to={isAuthenticated ? '/app/dashboard' : '/login'}>
+                  {isAuthenticated ? 'Dashboard' : 'Start free'}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -505,9 +524,18 @@ export function LandingPage() {
             </div>
             <div className="landing-footer-column">
               <span>Access</span>
-              <Link to="/login">Sign in</Link>
-              <Link to="/login">Start free</Link>
-              <Link to="/login">Onboarding</Link>
+              {isAuthenticated ? (
+                <>
+                  <Link to="/app/dashboard">Dashboard</Link>
+                  <Link to="/app/onboarding">Onboarding</Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/login">Sign in</Link>
+                  <Link to="/login">Start free</Link>
+                  <Link to="/login">Onboarding</Link>
+                </>
+              )}
             </div>
             <div className="landing-footer-column">
               <span>Platform</span>

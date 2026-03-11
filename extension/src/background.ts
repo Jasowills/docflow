@@ -1,5 +1,5 @@
 /**
- * RouteCTRL Recorder - Background Service Worker (Manifest V3)
+ * DocFlow Recorder - Background Service Worker (Manifest V3)
  * Manages recording state and message routing between popup/content scripts.
  */
 
@@ -100,7 +100,7 @@ interface ResolvedScreenshotSettings {
   thumbnailQuality: number;
 }
 
-const CONTENT_SCRIPT_ELIGIBLE_URL = /^(https:\/\/[^/]+\.(routectrl\.com|azurewebsites\.net|marklite\.com)\/|https:\/\/[^/]+\.dynamics\.com\/|http:\/\/localhost\/)/i;
+const CONTENT_SCRIPT_ELIGIBLE_URL = /^https?:\/\//i;
 
 chrome.runtime.onMessage.addListener((message: BaseMsg, _sender, sendResponse) => {
   handleMessage(message, sendResponse).catch((error) => {
@@ -117,7 +117,7 @@ async function handleMessage(msg: BaseMsg, sendResponse: (resp: unknown) => void
   switch (msg.type) {
     case 'START_RECORDING': {
       const meta = msg.payload as RecordingMetadata;
-      debugLogBg('[RouteCTRL][BG] START_RECORDING', {
+      debugLogBg('[DocFlow][BG] START_RECORDING', {
         tabId: meta?.tabId,
         title: meta?.title,
       });
@@ -127,7 +127,7 @@ async function handleMessage(msg: BaseMsg, sendResponse: (resp: unknown) => void
       }
 
       const captureReady = await ensureCaptureReady(meta.tabId);
-      debugLogBg('[RouteCTRL][BG] captureReady', { tabId: meta.tabId, captureReady });
+      debugLogBg('[DocFlow][BG] captureReady', { tabId: meta.tabId, captureReady });
       if (!captureReady) {
         sendResponse({
           ok: false,
@@ -173,7 +173,7 @@ async function handleMessage(msg: BaseMsg, sendResponse: (resp: unknown) => void
     }
 
     case 'STOP_RECORDING': {
-      debugLogBg('[RouteCTRL][BG] STOP_RECORDING', {
+      debugLogBg('[DocFlow][BG] STOP_RECORDING', {
         tabId: state.tabId,
         events: state.events.length,
         transcriptSegments: state.transcript.length,
@@ -190,7 +190,7 @@ async function handleMessage(msg: BaseMsg, sendResponse: (resp: unknown) => void
 
       const recording = buildRecording();
       await persistLastRecordingSnapshot(recording);
-      debugLogBg('[RouteCTRL][BG] recording finalized', {
+      debugLogBg('[DocFlow][BG] recording finalized', {
         events: recording.events.length,
         transcriptSegments: state.transcript.length,
         hasAudioWav: !!state.audioWavBase64,
@@ -230,7 +230,7 @@ async function handleMessage(msg: BaseMsg, sendResponse: (resp: unknown) => void
         state.audioWavBase64 = payload.wavBase64;
         audioDataWaiters.forEach((resolve) => resolve());
         audioDataWaiters = [];
-        debugLogBg('[RouteCTRL][BG] AUDIO_DATA received', {
+        debugLogBg('[DocFlow][BG] AUDIO_DATA received', {
           bytesApprox: Math.floor((payload.wavBase64.length * 3) / 4),
           status: state.status,
         });
@@ -257,7 +257,7 @@ async function handleMessage(msg: BaseMsg, sendResponse: (resp: unknown) => void
       ]);
       const fallbackRecording = state.status === 'stopped' ? buildRecording() : null;
       const fallbackAudioWav = state.status === 'stopped' ? state.audioWavBase64 : null;
-      debugLogBg('[RouteCTRL][BG] DOWNLOAD_RECORDING', {
+      debugLogBg('[DocFlow][BG] DOWNLOAD_RECORDING', {
         hasRecording: !!(stored.lastRecording ?? fallbackRecording),
         hasAudioWav: !!(stored.lastRecordingAudioWav ?? fallbackAudioWav),
       });

@@ -69,7 +69,7 @@ async function main() {
   const publishKey = process.env.EXTENSION_PUBLISH_KEY;
   const notes = process.env.EXTENSION_RELEASE_NOTES;
   const containerSasUrl = process.env.AZURE_BLOB_SAS_URL;
-  const outputDirName = process.env.EXTENSION_OUTPUT_DIR || 'Routectrl-recorder';
+  const outputDirName = process.env.EXTENSION_OUTPUT_DIR || 'DocFlow-recorder';
 
   if (!apiBaseUrl) {
     throw new Error('DOC_STUDIO_API_BASE_URL is required');
@@ -82,12 +82,12 @@ async function main() {
   }
 
   const artifactDir = path.resolve(process.cwd(), outputDirName);
-  const zipFileName = `Routectrl-recorder-v${version}.zip`;
+  const zipFileName = `DocFlow-recorder-v${version}.zip`;
   const zipPath = path.resolve(process.cwd(), zipFileName);
   await createZipFromDir(artifactDir, zipPath);
 
   const containerClient = new ContainerClient(containerSasUrl);
-  const blobName = `routectrl-recorder/${version}/${zipFileName}`;
+  const blobName = `docflow-recorder/${version}/${zipFileName}`;
   const blobClient = containerClient.getBlockBlobClient(blobName);
 
   await blobClient.uploadFile(zipPath, {
@@ -121,7 +121,7 @@ async function main() {
     const code = cause && typeof cause === 'object' ? cause.code : undefined;
     if (code === 'ECONNREFUSED') {
       throw new Error(
-        `Publish endpoint unreachable (${endpoint}). Start Doc Studio API or set DOC_STUDIO_API_BASE_URL to a reachable host.`,
+        `Publish endpoint unreachable (${endpoint}). Start the DocFlow API or set DOC_STUDIO_API_BASE_URL to a reachable host.`,
       );
     }
     throw error;

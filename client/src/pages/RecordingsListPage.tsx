@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApi } from '../hooks/use-api';
 import { useClientDataStore } from '../state/client-data-store';
-import { useRealtimeStore } from '../state/realtime-store';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Spinner } from '../components/ui/spinner';
+import { pushDebugTrace } from '../lib/debug-trace';
 import { Search } from 'lucide-react';
 import type { RecordingSummary, RecordingListQuery } from '@docflow/shared';
 
@@ -15,7 +15,6 @@ const ENV_FILTERS = ['', 'DEV', 'UAT', 'STAGING', 'TEST', 'PROD', 'DEMO'];
 export function RecordingsListPage() {
   const { listRecordings } = useApi();
   const { recordingsLists, ensureRecordingsList } = useClientDataStore();
-  const { lastRecordingPersisted } = useRealtimeStore();
   const location = useLocation();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -42,8 +41,30 @@ export function RecordingsListPage() {
   const cached = recordingsLists[cacheKey];
 
   useEffect(() => {
+    pushDebugTrace('render', 'RecordingsListPage', 'Rendered', {
+      cacheKey,
+      hasCached: !!cached,
+      page,
+      pageSize,
+      search,
+      environment,
+    });
+  });
+
+  useEffect(() => {
     let mounted = true;
-    if (cached) return;
+    if (cached) {
+      pushDebugTrace('effect', 'RecordingsListPage.useEffect', 'Skipped fetch because cache exists', {
+        cacheKey,
+      });
+      return;
+    }
+    pushDebugTrace('effect', 'RecordingsListPage.useEffect', 'Triggering recordings list fetch', {
+      cacheKey,
+      page,
+      pageSize,
+      search,
+    });
     setLoading(true);
     ensureRecordingsList(cacheKey, () => listRecordings(query))
       .catch(console.error)
@@ -52,28 +73,9 @@ export function RecordingsListPage() {
       });
     return () => {
       mounted = false;
+      pushDebugTrace('effect', 'RecordingsListPage.useEffect', 'Cleanup', { cacheKey });
     };
   }, [cacheKey, cached, ensureRecordingsList, listRecordings, query]);
-
-  useEffect(() => {
-    if (!lastRecordingPersisted) return;
-    let mounted = true;
-    setLoading(true);
-    ensureRecordingsList(cacheKey, () => listRecordings(query), true)
-      .catch(console.error)
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [
-    lastRecordingPersisted?.recordingId,
-    cacheKey,
-    ensureRecordingsList,
-    listRecordings,
-    query,
-  ]);
 
   const sourceItems = cached?.items || [];
   const items = environment

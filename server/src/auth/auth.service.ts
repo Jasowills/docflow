@@ -44,7 +44,7 @@ export class AuthService {
     const workspaceName =
       dto.accountType === 'team'
         ? dto.teamName!.trim()
-        : `${dto.displayName.trim()}'s Workspace`;
+        : buildPersonalWorkspaceName(dto.displayName, email);
     const user: AuthUserRecord = {
       userId,
       email,
@@ -291,7 +291,7 @@ export class AuthService {
         ownerEmail: normalizedEmail,
         ownerDisplayName: displayName,
         accountType: 'individual',
-        workspaceName: `${displayName}'s Workspace`,
+        workspaceName: buildPersonalWorkspaceName(displayName, normalizedEmail),
       });
       return createdUser;
     }
@@ -456,8 +456,8 @@ export class AuthService {
       return;
     }
 
-    const expectedPreviousName = `${previousDisplayName}'s Workspace`;
-    const expectedNextName = `${nextDisplayName}'s Workspace`;
+    const expectedPreviousName = buildPersonalWorkspaceName(previousDisplayName);
+    const expectedNextName = buildPersonalWorkspaceName(nextDisplayName);
     if (workspace.name !== expectedPreviousName || workspace.name === expectedNextName) {
       return;
     }
@@ -482,4 +482,48 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token.');
     }
   }
+}
+
+function buildPersonalWorkspaceName(displayName?: string, email?: string): string {
+  const preferredName =
+    getHumanFriendlyName(displayName) ||
+    getHumanFriendlyName(email?.split('@')[0]) ||
+    'My';
+
+  return `${preferredName}'s Workspace`;
+}
+
+function getHumanFriendlyName(value?: string): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+
+  if (looksOpaqueIdentifier(normalized)) {
+    return undefined;
+  }
+
+  const cleaned = normalized
+    .replace(/@.*$/, '')
+    .replace(/[_\-.]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleaned) {
+    return undefined;
+  }
+
+  return cleaned
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function looksOpaqueIdentifier(value: string): boolean {
+  return (
+    value.length >= 8 &&
+    !/\s/.test(value) &&
+    /[a-z]/i.test(value) &&
+    /\d/.test(value)
+  );
 }

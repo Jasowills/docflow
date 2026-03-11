@@ -70,6 +70,15 @@ export function useApi() {
       const qs = params.toString();
       return api<PaginatedResponse<RecordingSummary>>(
         `/recordings${qs ? `?${qs}` : ''}`,
+        {
+          debugSource: 'useApi.listRecordings',
+          debugMeta: {
+            page: query?.page,
+            pageSize: query?.pageSize,
+            search: query?.search || '',
+            productArea: query?.productArea || '',
+          },
+        },
       );
     },
     [api],
@@ -239,6 +248,16 @@ export function useApi() {
       const qs = params.toString();
       return api<PaginatedResponse<DocumentSummary>>(
         `/documents${qs ? `?${qs}` : ''}`,
+        {
+          debugSource: 'useApi.listDocuments',
+          debugMeta: {
+            page: query?.page,
+            pageSize: query?.pageSize,
+            search: query?.search || '',
+            documentType: query?.documentType || '',
+            folder: query?.folder || '',
+          },
+        },
       );
     },
     [api],

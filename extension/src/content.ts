@@ -1,7 +1,7 @@
 /**
- * RouteCTRL Recorder – Content Script
+ * DocFlow Recorder - Content Script
  *
- * Injected into RouteCTRL pages. Captures DOM events (clicks, navigation,
+ * Injected into supported web pages. Captures DOM events (clicks, navigation,
  * form inputs, key interactions) and forwards them to the background service
  * worker as RecordingEvent objects.
  */
@@ -58,16 +58,11 @@ interface SpeechRecognitionLike extends EventTarget {
 }
 
 interface AppContext {
-  erpSystem: 'bc' | 'scm' | 'unknown';
   productName?: string;
+  pageOrigin: string;
   host: string;
   path: string;
-  tenantId?: string;
-  environment?: string;
-  company?: string;
-  pageId?: string;
-  nodeId?: string;
-  bookmark?: string;
+  queryKeys?: string[];
   title?: string;
 }
 
@@ -102,7 +97,7 @@ let contextCache: AppContext | null = null;
 let originalFetch: typeof window.fetch | null = null;
 let originalXhrOpen: typeof XMLHttpRequest.prototype.open | null = null;
 let originalXhrSend: typeof XMLHttpRequest.prototype.send | null = null;
-const PCM_WORKLET_PROCESSOR = 'routectrl-pcm-capture-processor';
+const PCM_WORKLET_PROCESSOR = 'docflow-pcm-capture-processor';
 const ENABLE_AUDIO_WORKLET_CAPTURE = true;
 
 // ──────────────────────────────────────────────────────────────
@@ -204,7 +199,7 @@ window.addEventListener('message', (event: MessageEvent) => {
 // ──────────────────────────────────────────────────────────────
 function startCapture(captureMicrophone = true, captureScreenshots = true) {
   if (capturing) return;
-  debugLogContent('[RouteCTRL][CONTENT] startCapture');
+  debugLogContent('[DocFlow][CONTENT] startCapture');
   capturing = true;
   sequenceNumber = 0;
   sessionStartTime = Date.now();
@@ -233,7 +228,7 @@ function startCapture(captureMicrophone = true, captureScreenshots = true) {
 }
 
 async function stopCapture() {
-  debugLogContent('[RouteCTRL][CONTENT] stopCapture begin');
+  debugLogContent('[DocFlow][CONTENT] stopCapture begin');
   capturing = false;
   document.removeEventListener('click', onClickCapture, true);
   document.removeEventListener('pointerdown', onPointerCapture, true);
@@ -247,7 +242,7 @@ async function stopCapture() {
   restoreApiCallPatches();
 
   await stopSpeechCapture();
-  debugLogContent('[RouteCTRL][CONTENT] stopCapture done');
+  debugLogContent('[DocFlow][CONTENT] stopCapture done');
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -458,16 +453,10 @@ function buildNavigationData() {
   return {
     url: location.href,
     title: document.title,
+    origin: url.origin,
     host: url.host,
     path: url.pathname,
-    query: {
-      company: url.searchParams.get('company') || undefined,
-      page: url.searchParams.get('page') || undefined,
-      node: url.searchParams.get('node') || undefined,
-      bookmark: url.searchParams.get('bookmark') || undefined,
-      aadTenantId: url.searchParams.get('aadTenantId') || undefined,
-      environment: getEnvironmentFromUrl(url) || undefined,
-    },
+    queryKeys: getQueryKeys(url),
     referrer: document.referrer || undefined,
   };
 }
@@ -519,24 +508,12 @@ function getAppContext(): AppContext {
     return contextCache;
   }
   const url = new URL(location.href);
-  const erpSystem = detectErpSystem(url, document.title);
   const context: AppContext = {
-    erpSystem,
-    productName: detectProductName(erpSystem),
+    productName: detectProductName(),
+    pageOrigin: url.origin,
     host: url.host,
     path: url.pathname,
-    tenantId:
-      readTenantIdFromUrl(url) ||
-      readTenantIdFromDom() ||
-      undefined,
-    environment:
-      getEnvironmentFromUrl(url) ||
-      readEnvironmentFromDom() ||
-      undefined,
-    company: url.searchParams.get('company') || undefined,
-    pageId: url.searchParams.get('page') || undefined,
-    nodeId: url.searchParams.get('node') || undefined,
-    bookmark: url.searchParams.get('bookmark') || undefined,
+    queryKeys: getQueryKeys(url),
     title: document.title || undefined,
   };
   contextCacheUrl = location.href;
@@ -544,75 +521,23 @@ function getAppContext(): AppContext {
   return context;
 }
 
-function detectErpSystem(url: URL, title: string): AppContext['erpSystem'] {
-  const host = url.host.toLowerCase();
-  const lowerTitle = title.toLowerCase();
-  if (
-    host.includes('businesscentral.dynamics.com') ||
-    lowerTitle.includes('business central')
-  ) {
-    return 'bc';
-  }
-  if (
-    lowerTitle.includes('supply chain management') ||
-    url.pathname.toLowerCase().includes('/namespaces/axsf')
-  ) {
-    return 'scm';
-  }
-  return 'unknown';
+function detectProductName(): string | undefined {
+  const metaProductName =
+    document.querySelector('meta[property="og:site_name"]')?.getAttribute('content') ||
+    document.querySelector('meta[name="application-name"]')?.getAttribute('content') ||
+    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.getAttribute('content');
+
+  return metaProductName?.trim() || document.title || undefined;
 }
 
-function detectProductName(erpSystem: AppContext['erpSystem']): string | undefined {
-  if (erpSystem === 'bc') return 'Dynamics 365 Business Central';
-  if (erpSystem === 'scm') return 'Dynamics 365 Supply Chain Management';
-  return (
-    document.querySelector('#O365_SuiteBranding_container .hpyHhmSe9hmk5gopLr9a5Q\\=\\=')?.textContent?.trim() ||
-    document.title ||
-    undefined
-  );
-}
-
-function readTenantIdFromUrl(url: URL): string | null {
-  const explicit = url.searchParams.get('aadTenantId');
-  if (explicit) return explicit;
-  const match = url.pathname.match(
-    /\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\//i,
-  );
-  return match?.[1] ?? null;
-}
-
-function readTenantIdFromDom(): string | null {
-  const boot = document.getElementById('boot') as HTMLScriptElement | null;
-  if (boot?.src) {
-    try {
-      const parsed = new URL(boot.src);
-      return parsed.searchParams.get('aadTenantId');
-    } catch {
-      return null;
+function getQueryKeys(url: URL): string[] {
+  const keys: string[] = [];
+  url.searchParams.forEach((_value, key) => {
+    if (!keys.includes(key) && keys.length < 12) {
+      keys.push(key);
     }
-  }
-  return null;
-}
-
-function getEnvironmentFromUrl(url: URL): string | null {
-  const pathParts = url.pathname.split('/').filter(Boolean);
-  if (pathParts.length >= 2) {
-    const candidate = pathParts[1];
-    if (candidate && !candidate.includes('.')) return candidate;
-  }
-  return null;
-}
-
-function readEnvironmentFromDom(): string | null {
-  const envLabel = document.querySelector('.environment-name--x3l2NSEEd8TopcoaFR9h');
-  if (envLabel?.textContent?.trim()) {
-    return envLabel.textContent.trim();
-  }
-  const launcher = document.getElementById('BC_EnvironmentLauncher');
-  if (!launcher) return null;
-  const title = launcher.querySelector('button')?.getAttribute('title') || '';
-  const match = title.match(/Environment:\s*([^,]+)/i);
-  return match?.[1]?.trim() || null;
+  });
+  return keys;
 }
 
 function getEventElement(target: EventTarget | null): Element | null {
@@ -743,29 +668,29 @@ function patchApiCalls() {
     originalXhrSend = XMLHttpRequest.prototype.send;
 
     XMLHttpRequest.prototype.open = function (
-      this: XMLHttpRequest & { __routeCtrlMethod?: string; __routeCtrlUrl?: string; __routeCtrlStart?: number },
+      this: XMLHttpRequest & { __docflowMethod?: string; __docflowUrl?: string; __docflowStart?: number },
       method: string,
       url: string | URL,
       async?: boolean,
       username?: string | null,
       password?: string | null,
     ) {
-      this.__routeCtrlMethod = method;
-      this.__routeCtrlUrl = typeof url === 'string' ? url : url.toString();
+      this.__docflowMethod = method;
+      this.__docflowUrl = typeof url === 'string' ? url : url.toString();
       return originalXhrOpen!.call(this, method, url, async ?? true, username ?? undefined, password ?? undefined);
     };
 
     XMLHttpRequest.prototype.send = function (
-      this: XMLHttpRequest & { __routeCtrlMethod?: string; __routeCtrlUrl?: string; __routeCtrlStart?: number },
+      this: XMLHttpRequest & { __docflowMethod?: string; __docflowUrl?: string; __docflowStart?: number },
       body?: Document | XMLHttpRequestBodyInit | null,
     ) {
-      this.__routeCtrlStart = performance.now();
+      this.__docflowStart = performance.now();
       const onDone = () => {
-        const durationMs = Math.round(performance.now() - (this.__routeCtrlStart ?? performance.now()));
+        const durationMs = Math.round(performance.now() - (this.__docflowStart ?? performance.now()));
         emitEvent('api_call', {
           source: 'xhr',
-          method: (this.__routeCtrlMethod || 'GET').toUpperCase(),
-          url: sanitizeValue(this.__routeCtrlUrl, 600),
+          method: (this.__docflowMethod || 'GET').toUpperCase(),
+          url: sanitizeValue(this.__docflowUrl, 600),
           status: this.status || undefined,
           ok: this.status >= 200 && this.status < 400,
           durationMs,
@@ -815,7 +740,7 @@ function sendRuntimeMessage(message: unknown, callback?: (resp: unknown) => void
 }
 
 function startSpeechCapture() {
-  debugLogContent('[RouteCTRL][CONTENT] startSpeechCapture');
+  debugLogContent('[DocFlow][CONTENT] startSpeechCapture');
   startBrowserSpeechRecognition();
   void startMicrophoneCapture();
 }
@@ -824,7 +749,7 @@ async function stopSpeechCapture() {
   // Keep this stopped to ensure transcript generation happens via backend Azure Speech.
   stopBrowserSpeechRecognition();
   await stopMicrophoneCapture();
-  debugLogContent('[RouteCTRL][CONTENT] stopSpeechCapture done');
+  debugLogContent('[DocFlow][CONTENT] stopSpeechCapture done');
 }
 
 function startBrowserSpeechRecognition() {
@@ -836,7 +761,7 @@ function startBrowserSpeechRecognition() {
     (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionLike })
       .webkitSpeechRecognition;
   if (!SpeechCtor) return;
-  debugLogContent('[RouteCTRL][CONTENT] browser speech fallback available');
+  debugLogContent('[DocFlow][CONTENT] browser speech fallback available');
 
   shouldKeepSpeechRecognitionAlive = true;
   if (!speechRecognition) {
@@ -899,7 +824,7 @@ async function startMicrophoneCapture() {
   if (window.top !== window) return;
   if (!navigator.mediaDevices?.getUserMedia) return;
   if (micStream) return;
-  debugLogContent('[RouteCTRL][CONTENT] mic capture start requested');
+  debugLogContent('[DocFlow][CONTENT] mic capture start requested');
 
   try {
     micStream = await navigator.mediaDevices.getUserMedia({
@@ -910,10 +835,10 @@ async function startMicrophoneCapture() {
       },
       video: false,
     });
-    debugLogContent('[RouteCTRL][CONTENT] mic stream granted');
+    debugLogContent('[DocFlow][CONTENT] mic stream granted');
     startMediaRecorderCapture(micStream);
   } catch (error) {
-    console.error('[RouteCTRL][CONTENT] mic getUserMedia failed', error);
+    console.error('[DocFlow][CONTENT] mic getUserMedia failed', error);
     emitEvent('error', {
       source: 'microphone',
       stage: 'getUserMedia',
@@ -927,7 +852,7 @@ async function startMicrophoneCapture() {
 
   const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioCtx) {
-    console.error('[RouteCTRL][CONTENT] AudioContext unavailable');
+    console.error('[DocFlow][CONTENT] AudioContext unavailable');
     emitEvent('error', {
       source: 'microphone',
       stage: 'audio-context',
@@ -945,12 +870,12 @@ async function startMicrophoneCapture() {
   if (micAudioContext.state !== 'running') {
     try {
       await micAudioContext.resume();
-      debugLogContent('[RouteCTRL][CONTENT] mic audio context resumed');
+      debugLogContent('[DocFlow][CONTENT] mic audio context resumed');
     } catch (error) {
-      console.warn('[RouteCTRL][CONTENT] failed to resume audio context', error);
+      console.warn('[DocFlow][CONTENT] failed to resume audio context', error);
     }
   }
-  debugLogContent('[RouteCTRL][CONTENT] mic audio context created', {
+  debugLogContent('[DocFlow][CONTENT] mic audio context created', {
     sampleRate: micAudioContext.sampleRate,
     state: micAudioContext.state,
   });
@@ -983,14 +908,14 @@ async function startMicrophoneCapture() {
       micNoDataTimer = window.setTimeout(() => {
         if (!capturing || !micAudioContext) return;
         if (micCaptureMode === 'worklet' && micPcmChunks.length === 0) {
-          console.warn('[RouteCTRL][CONTENT] worklet produced no frames; switching to ScriptProcessor');
+          console.warn('[DocFlow][CONTENT] worklet produced no frames; switching to ScriptProcessor');
           void switchToScriptProcessorCapture();
         }
       }, 3000);
-      debugLogContent('[RouteCTRL][CONTENT] using AudioWorklet capture path');
+      debugLogContent('[DocFlow][CONTENT] using AudioWorklet capture path');
       return;
     } catch {
-      console.warn('[RouteCTRL][CONTENT] AudioWorklet capture failed; falling back to ScriptProcessor');
+      console.warn('[DocFlow][CONTENT] AudioWorklet capture failed; falling back to ScriptProcessor');
       // Fall back to ScriptProcessor below for older/incompatible environments.
       micWorkletNode = null;
       if (micSilenceNode) {
@@ -1008,7 +933,7 @@ async function startMicrophoneCapture() {
 }
 
 async function stopMicrophoneCapture() {
-  debugLogContent('[RouteCTRL][CONTENT] stopMicrophoneCapture begin');
+  debugLogContent('[DocFlow][CONTENT] stopMicrophoneCapture begin');
   clearMicNoDataTimer();
   const mediaBlob = await stopMediaRecorderCapture();
   if (micWorkletNode) {
@@ -1070,11 +995,11 @@ async function stopMicrophoneCapture() {
   if (micPcmChunks.length > 0) {
     wavBuffer = encodePcmToWav(micPcmChunks, sampleRate);
   } else if (mediaBlob) {
-    console.warn('[RouteCTRL][CONTENT] no PCM chunks captured; using MediaRecorder fallback');
+    console.warn('[DocFlow][CONTENT] no PCM chunks captured; using MediaRecorder fallback');
     try {
       wavBuffer = await decodeRecordedBlobToWav(mediaBlob);
     } catch (error) {
-      console.error('[RouteCTRL][CONTENT] MediaRecorder fallback decode failed', error);
+      console.error('[DocFlow][CONTENT] MediaRecorder fallback decode failed', error);
       emitEvent('error', {
         source: 'microphone',
         stage: 'decode-fallback',
@@ -1086,7 +1011,7 @@ async function stopMicrophoneCapture() {
   micPcmChunks = [];
 
   if (!wavBuffer) {
-    console.warn('[RouteCTRL][CONTENT] no WAV audio produced from mic capture');
+    console.warn('[DocFlow][CONTENT] no WAV audio produced from mic capture');
     emitEvent('error', {
       source: 'microphone',
       stage: 'stop',
@@ -1096,7 +1021,7 @@ async function stopMicrophoneCapture() {
   }
 
   const wavBase64 = arrayBufferToBase64(wavBuffer);
-  debugLogContent('[RouteCTRL][CONTENT] WAV prepared', {
+  debugLogContent('[DocFlow][CONTENT] WAV prepared', {
     sampleRate: 16000,
     bytes: wavBuffer.byteLength,
   });
@@ -1106,7 +1031,7 @@ async function stopMicrophoneCapture() {
       wavBase64,
     },
   });
-  debugLogContent('[RouteCTRL][CONTENT] AUDIO_DATA sent to background');
+  debugLogContent('[DocFlow][CONTENT] AUDIO_DATA sent to background');
   micCaptureMode = null;
 }
 
@@ -1137,7 +1062,7 @@ function startMediaRecorderCapture(stream: MediaStream) {
       ? new MediaRecorder(stream, { mimeType: selectedMimeType })
       : new MediaRecorder(stream);
   } catch (error) {
-    console.warn('[RouteCTRL][CONTENT] MediaRecorder init failed', error);
+    console.warn('[DocFlow][CONTENT] MediaRecorder init failed', error);
     micMediaRecorder = null;
     return;
   }
@@ -1148,16 +1073,16 @@ function startMediaRecorderCapture(stream: MediaStream) {
     }
   };
   micMediaRecorder.onerror = (event: Event) => {
-    console.warn('[RouteCTRL][CONTENT] MediaRecorder error', event);
+    console.warn('[DocFlow][CONTENT] MediaRecorder error', event);
   };
 
   try {
     micMediaRecorder.start(1000);
-    debugLogContent('[RouteCTRL][CONTENT] MediaRecorder started', {
+    debugLogContent('[DocFlow][CONTENT] MediaRecorder started', {
       mimeType: micMediaRecorder.mimeType,
     });
   } catch (error) {
-    console.warn('[RouteCTRL][CONTENT] MediaRecorder start failed', error);
+    console.warn('[DocFlow][CONTENT] MediaRecorder start failed', error);
     micMediaRecorder = null;
     micMediaChunks = [];
   }
@@ -1190,7 +1115,7 @@ async function stopMediaRecorderCapture(): Promise<Blob | null> {
     micMediaChunks.length > 0
       ? new Blob(micMediaChunks, { type: recorder.mimeType || 'audio/webm' })
       : null;
-  debugLogContent('[RouteCTRL][CONTENT] MediaRecorder stopped', {
+  debugLogContent('[DocFlow][CONTENT] MediaRecorder stopped', {
     chunks: micMediaChunks.length,
     bytes: blob?.size ?? 0,
   });
@@ -1270,13 +1195,13 @@ async function switchToScriptProcessorCapture() {
   micProcessorNode.connect(micSilenceNode);
   micSilenceNode.connect(micAudioContext.destination);
   micCaptureMode = 'scriptprocessor';
-  debugLogContent('[RouteCTRL][CONTENT] using ScriptProcessor capture path');
+  debugLogContent('[DocFlow][CONTENT] using ScriptProcessor capture path');
 }
 
 async function ensurePcmCaptureWorklet(context: AudioContext) {
   if (micWorkletModuleUrl) return;
   const workletCode = `
-class RouteCtrlPcmCaptureProcessor extends AudioWorkletProcessor {
+class DocFlowPcmCaptureProcessor extends AudioWorkletProcessor {
   process(inputs) {
     const input = inputs[0];
     if (input && input[0]) {
@@ -1285,7 +1210,7 @@ class RouteCtrlPcmCaptureProcessor extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor('${PCM_WORKLET_PROCESSOR}', RouteCtrlPcmCaptureProcessor);
+registerProcessor('${PCM_WORKLET_PROCESSOR}', DocFlowPcmCaptureProcessor);
 `;
   const blob = new Blob([workletCode], { type: 'application/javascript' });
   micWorkletModuleUrl = URL.createObjectURL(blob);

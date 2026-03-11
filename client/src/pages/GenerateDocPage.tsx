@@ -32,6 +32,7 @@ export function GenerateDocPage() {
   const [selectedFolder, setSelectedFolder] = useState('Unfiled');
   const [folderOptions, setFolderOptions] = useState<string[]>(['Unfiled']);
   const [generating, setGenerating] = useState(false);
+  const [generationStageIndex, setGenerationStageIndex] = useState(0);
   const [loadingRecordings, setLoadingRecordings] = useState(true);
   const [autofilling, setAutofilling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,8 +46,17 @@ export function GenerateDocPage() {
     outOfScope: '',
   });
   const selectedRecordingSummary = useMemo(
-    () => recordings.find((recording) => recording.recordingId === selectedRecording) || null,
+    () => recordings.find((recording) => getRecordingSelectionId(recording) === selectedRecording) || null,
     [recordings, selectedRecording],
+  );
+  const generationStages = useMemo(
+    () => [
+      'Preparing generation request',
+      'Sending recording context to the AI provider',
+      `Drafting ${selectedTypes.length || 1} document${selectedTypes.length === 1 ? '' : 's'}`,
+      'Finishing output and saving documents',
+    ],
+    [selectedTypes.length],
   );
 
   useEffect(() => {
@@ -79,6 +89,20 @@ export function GenerateDocPage() {
       })
       .catch(console.error);
   }, [listRecordings, listDocuments, getConfig]);
+
+  useEffect(() => {
+    if (!generating) {
+      setGenerationStageIndex(0);
+      return;
+    }
+
+    setGenerationStageIndex(0);
+    const timer = window.setInterval(() => {
+      setGenerationStageIndex((prev) => Math.min(prev + 1, generationStages.length - 1));
+    }, 2200);
+
+    return () => window.clearInterval(timer);
+  }, [generating, generationStages.length]);
 
   const toggleDocType = (key: string) => {
     setSelectedTypes((prev) =>
@@ -188,10 +212,11 @@ export function GenerateDocPage() {
               <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-thin-subtle pr-1">
                 {recordings.map((rec) => (
                   <button
-                    key={rec.metadata.recordingId}
-                    onClick={() => setSelectedRecording(rec.metadata.recordingId)}
+                    key={getRecordingSelectionId(rec)}
+                    type="button"
+                    onClick={() => setSelectedRecording(getRecordingSelectionId(rec))}
                     className={`w-full text-left p-3 rounded-md border text-sm transition-colors ${
-                      selectedRecording === rec.metadata.recordingId
+                      selectedRecording === getRecordingSelectionId(rec)
                         ? 'border-primary bg-primary/5'
                         : 'hover:bg-accent'
                     }`}
@@ -410,6 +435,23 @@ export function GenerateDocPage() {
           <div className="text-sm text-destructive">{error}</div>
         )}
 
+        {generating ? (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="flex items-start gap-3 p-4">
+              <Spinner className="mt-0.5 h-4 w-4 text-primary" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Generating documentation</p>
+                <p className="text-sm text-muted-foreground">
+                  {generationStages[generationStageIndex]}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This can take a little longer for larger recordings or multiple document types.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Button
           onClick={handleGenerate}
           disabled={generating}
@@ -431,6 +473,10 @@ export function GenerateDocPage() {
       </div>
     </div>
   );
+}
+
+function getRecordingSelectionId(recording: RecordingSummary): string {
+  return recording.recordingId || recording.metadata.recordingId || '';
 }
 
 function sanitizeTestCaseContext(

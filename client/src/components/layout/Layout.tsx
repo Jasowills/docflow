@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
@@ -18,7 +18,7 @@ import {
 import { useAuth } from "../../auth/auth-context";
 import { Button } from "../ui/button";
 import logo from "../../assets/docflow-logo-dark.svg";
-import { useRealtimeStore, type NotificationItem } from "../../state/realtime-store";
+import { useRealtimeNotificationsStore } from "../../state/realtime-store";
 import { SESSION_EXPIRED_EVENT } from "../../auth/session-events";
 import { useApi } from "../../hooks/use-api";
 import { getApiBaseUrl } from "../../config/runtime-config";
@@ -28,6 +28,15 @@ import {
   isExtensionTokenStillValid,
   sendExtensionUploadAuth,
 } from "../../lib/extension-bridge";
+import { APP_TOAST_EVENT, type AppToastDetail } from "../../lib/app-toast";
+import { DebugPanel } from "../debug/DebugPanel";
+
+type AppToastItem = {
+  id: string;
+  title: string;
+  message: string;
+  variant: "info" | "success" | "error";
+};
 
 type NavItem = {
   path: string;
@@ -65,12 +74,14 @@ export function Layout() {
   const { user, logout } = useAuth();
   const { createExtensionUploadToken } = useApi();
   const location = useLocation();
-  const { notifications, unreadCount, markAllNotificationsRead } = useRealtimeStore();
+  const navigate = useNavigate();
+  const { notifications, unreadCount, markAllNotificationsRead } = useRealtimeNotificationsStore();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [toastItems, setToastItems] = useState<NotificationItem[]>([]);
+  const [toastItems, setToastItems] = useState<AppToastItem[]>([]);
   const [sessionToast, setSessionToast] = useState<string | null>(null);
+  const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
   const notificationsHydratedRef = useRef(false);
   const sessionExpiryHandledRef = useRef(false);
@@ -84,6 +95,7 @@ export function Layout() {
 
   useEffect(() => {
     setIsSidebarOpen(false);
+    setPendingNavigationPath(null);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -105,9 +117,37 @@ export function Layout() {
     for (const item of nextRealtimeItems) {
       seenNotificationIdsRef.current.add(item.id);
     }
-    setToastItems((prev) => [...nextRealtimeItems.reverse(), ...prev].slice(0, 4));
+    setToastItems((prev) => [
+      ...nextRealtimeItems.reverse().map((item) => ({
+        id: item.id,
+        title: item.actorName ? `${item.actorName} ${item.title}`.trim() : item.title,
+        message: item.message,
+        variant: "info" as const,
+      })),
+      ...prev,
+    ].slice(0, 4));
     playNotificationTone();
   }, [notifications]);
+
+  useEffect(() => {
+    const onAppToast = (event: Event) => {
+      const detail = (event as CustomEvent<AppToastDetail>).detail;
+      if (!detail?.title) return;
+
+      setToastItems((prev) => [
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          title: detail.title,
+          message: detail.message || "",
+          variant: detail.variant || "info",
+        },
+        ...prev,
+      ].slice(0, 4));
+    };
+
+    window.addEventListener(APP_TOAST_EVENT, onAppToast);
+    return () => window.removeEventListener(APP_TOAST_EVENT, onAppToast);
+  }, []);
 
   useEffect(() => {
     if (toastItems.length === 0) return;
@@ -124,6 +164,20 @@ export function Layout() {
     setIsSigningOut(true);
     logout();
     window.location.assign("/login");
+  };
+
+  const handleNavClick = (item: NavItem) => {
+    setIsSidebarOpen(false);
+
+    const isCurrentRoute =
+      location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+
+    if (isCurrentRoute) {
+      return;
+    }
+
+    setPendingNavigationPath(item.path);
+    navigate(item.path);
   };
 
   useEffect(() => {
@@ -271,22 +325,25 @@ export function Layout() {
             location.pathname === item.path ||
             location.pathname.startsWith(`${item.path}/`);
           const Icon = item.icon;
+          const isPending = pendingNavigationPath === item.path;
 
           return (
-            <Link
+            <button
               key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all ${
+              type="button"
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition-all ${
                 isActive
                   ? "bg-primary text-primary-foreground shadow-[0_14px_28px_hsl(var(--primary)/0.24)]"
-                  : "text-muted-foreground hover:bg-accent/80 hover:text-accent-foreground"
+                  : isPending
+                    ? "bg-accent/80 text-foreground"
+                    : "text-muted-foreground hover:bg-accent/80 hover:text-accent-foreground"
               }`}
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={() => handleNavClick(item)}
             >
               <Icon className="h-4 w-4" />
               <span className="flex-1">{item.label}</span>
-              {isActive ? <ChevronsRight className="h-4 w-4" /> : null}
-            </Link>
+              {isActive || isPending ? <ChevronsRight className="h-4 w-4" /> : null}
+            </button>
           );
         })}
       </nav>
@@ -394,23 +451,18 @@ export function Layout() {
           {toastItems.map((item) => (
             <div
               key={item.id}
-              className="rounded-2xl border border-border/80 bg-card/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.36)]"
+              className={`rounded-2xl border bg-card/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.36)] ${
+                item.variant === "error"
+                  ? "border-destructive/40"
+                  : item.variant === "success"
+                    ? "border-primary/30"
+                    : "border-border/80"
+              }`}
             >
-              <p className="text-sm">
-                {item.actorName ? (
-                  <>
-                    <span className="font-semibold text-foreground">{item.actorName}</span>
-                    <span className="text-muted-foreground">
-                      {item.title.startsWith(item.actorName)
-                        ? item.title.slice(item.actorName.length)
-                        : ` ${item.title}`}
-                    </span>
-                  </>
-                ) : (
-                  <span className="font-semibold">{item.title}</span>
-                )}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">{item.message}</p>
+              <p className="text-sm font-semibold text-foreground">{item.title}</p>
+              {item.message ? (
+                <p className="mt-1 text-xs text-muted-foreground">{item.message}</p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -491,6 +543,8 @@ export function Layout() {
           </div>
         </aside>
       </div>
+
+      <DebugPanel />
     </div>
   );
 }

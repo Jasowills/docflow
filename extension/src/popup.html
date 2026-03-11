@@ -22,35 +22,34 @@
       }
 
       :root {
-        --bg: #020806;
-        --bg-accent: rgba(20, 184, 110, 0.14);
-        --surface: rgba(7, 15, 12, 0.9);
-        --surface-strong: rgba(9, 18, 14, 0.98);
-        --surface-soft: rgba(10, 24, 18, 0.9);
-        --surface-elevated: rgba(14, 29, 22, 0.9);
+        --bg: #000000;
+        --surface: #050505;
+        --surface-strong: #090909;
+        --surface-soft: #0d0d0d;
+        --surface-elevated: #111111;
         --text: #f3f8f5;
-        --muted: #97aea1;
-        --border: rgba(103, 232, 168, 0.12);
-        --border-strong: rgba(103, 232, 168, 0.2);
-        --divider: rgba(255, 255, 255, 0.06);
+        --muted: #8f8f8f;
+        --border: rgba(255, 255, 255, 0.08);
+        --border-strong: rgba(255, 255, 255, 0.14);
+        --divider: rgba(255, 255, 255, 0.07);
 
         --primary: #22c55e;
-        --primary-hover: #16a34a;
-        --primary-strong: #4ade80;
+        --primary-hover: #1faa52;
+        --primary-strong: #34d16f;
         --danger: #f87171;
         --danger-hover: #ef4444;
 
-        --success-bg: rgba(34, 197, 94, 0.14);
+        --success-bg: rgba(34, 197, 94, 0.08);
         --success-fg: #86efac;
-        --success-border: rgba(74, 222, 128, 0.25);
+        --success-border: rgba(74, 222, 128, 0.18);
 
-        --warn-bg: rgba(250, 204, 21, 0.12);
+        --warn-bg: rgba(250, 204, 21, 0.08);
         --warn-fg: #fde68a;
-        --warn-border: rgba(250, 204, 21, 0.22);
+        --warn-border: rgba(250, 204, 21, 0.16);
 
-        --shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
-        --radius: 22px;
-        --radius-sm: 16px;
+        --shadow: none;
+        --radius: 10px;
+        --radius-sm: 8px;
       }
 
       * {
@@ -65,10 +64,7 @@
 
       body {
         width: 400px;
-        background:
-          radial-gradient(circle at top left, rgba(34, 197, 94, 0.14), transparent 34%),
-          radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.08), transparent 28%),
-          var(--bg);
+        background: var(--bg);
         color: var(--text);
         font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
         font-size: 13px;
@@ -78,7 +74,7 @@
       .shell {
         position: relative;
         margin: 10px;
-        background: linear-gradient(180deg, rgba(12, 27, 20, 0.96), rgba(5, 12, 9, 0.98));
+        background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
         overflow: hidden;
@@ -86,13 +82,7 @@
       }
 
       .shell::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background:
-          radial-gradient(circle at 12% 10%, rgba(34, 197, 94, 0.14), transparent 24%),
-          radial-gradient(circle at 92% 0%, rgba(16, 185, 129, 0.12), transparent 30%);
-        pointer-events: none;
+        content: none;
       }
 
       .header {
@@ -100,17 +90,18 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
-        padding: 14px 16px 12px;
-        background: linear-gradient(180deg, rgba(28, 46, 35, 0.36), rgba(8, 18, 14, 0));
+        gap: 12px;
+        padding: 16px;
+        background: var(--surface-strong);
         border-bottom: 1px solid var(--divider);
       }
 
       .brand {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         min-width: 0;
+        flex: 1 1 auto;
       }
 
       .header-logo {
@@ -118,14 +109,35 @@
         height: 30px;
         object-fit: contain;
         display: block;
-        filter: drop-shadow(0 8px 16px rgba(34, 197, 94, 0.22));
+        filter: none;
       }
 
       .title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 800;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
+      }
+
+      .eyebrow {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .header-copy {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .header-meta {
+        flex: 0 0 auto;
       }
 
       .studio-tag {
@@ -138,8 +150,7 @@
         font-size: 11px;
         font-weight: 600;
         white-space: nowrap;
-        background: rgba(255, 255, 255, 0.02);
-        backdrop-filter: blur(18px);
+        background: #0d0d0d;
       }
 
       .dot {
@@ -176,7 +187,7 @@
         gap: 8px;
         padding: 10px 16px;
         border-bottom: 1px solid var(--divider);
-        background: rgba(255, 255, 255, 0.02);
+        background: var(--surface-soft);
       }
 
       .status-dot {
@@ -195,7 +206,7 @@
       }
 
       .status-strip.recording {
-        background: rgba(248, 113, 113, 0.08);
+        background: rgba(248, 113, 113, 0.05);
       }
 
       .status-strip.recording .status-dot {
@@ -204,7 +215,7 @@
       }
 
       .status-strip.stopped {
-        background: var(--success-bg);
+        background: rgba(34, 197, 94, 0.05);
       }
 
       .status-strip.stopped .status-dot {
@@ -225,7 +236,79 @@
 
       .section {
         position: relative;
-        padding: 16px;
+        padding: 14px;
+      }
+
+      .hero-panel,
+      .subpanel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-strong);
+      }
+
+      .hero-panel {
+        padding: 14px;
+      }
+
+      .hero-top {
+        display: block;
+        margin-bottom: 12px;
+      }
+
+      .hero-title {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+      }
+
+      .hero-body {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+        max-width: 32ch;
+      }
+
+      .hero-actions {
+        width: 100%;
+        margin-top: 12px;
+      }
+
+      .control-grid,
+      .snapshot-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .control-grid {
+        grid-template-columns: 1fr;
+        margin-top: 12px;
+      }
+
+      .snapshot-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mini-panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: #0b0b0b;
+        padding: 11px 12px;
+      }
+
+      .mini-panel-title {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .stack {
+        display: grid;
+        gap: 12px;
       }
 
       .section + .section {
@@ -237,7 +320,9 @@
       details + button,
       .btn-group,
       .btn-group + .field,
-      .meta-panel .field + .field {
+      .meta-panel .field + .field,
+      .stack > .field,
+      .stack > details {
         margin-top: 10px;
       }
 
@@ -247,7 +332,7 @@
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.06em;
-        color: #8db39f;
+        color: #9aa09c;
         text-transform: uppercase;
       }
 
@@ -263,12 +348,12 @@
       textarea {
         width: 100%;
         border: 1px solid var(--border);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        background: #0d0d0d;
         color: var(--text);
         font-size: 13px;
         outline: none;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+        box-shadow: none;
       }
 
       input,
@@ -286,14 +371,14 @@
       input:focus,
       select:focus,
       textarea:focus {
-        border-color: rgba(74, 222, 128, 0.34);
-        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+        border-color: rgba(74, 222, 128, 0.28);
+        box-shadow: none;
       }
 
       details {
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
-        background: rgba(255, 255, 255, 0.02);
+        background: #0a0a0a;
         overflow: hidden;
       }
 
@@ -302,7 +387,7 @@
         list-style: none;
         padding: 12px 14px;
         font-size: 12px;
-        color: #9be5bc;
+        color: #c7d0ca;
         font-weight: 800;
         letter-spacing: 0.04em;
         text-transform: uppercase;
@@ -318,7 +403,7 @@
 
       .meta-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: 10px;
         align-items: start;
       }
@@ -333,8 +418,8 @@
         justify-content: space-between;
         gap: 10px;
         border: 1px solid var(--border);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        background: #0d0d0d;
         padding: 10px 12px;
         margin: 0;
         text-transform: none;
@@ -356,7 +441,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: var(--primary-strong);
+        color: var(--primary);
       }
 
       .mic-icon svg {
@@ -383,17 +468,16 @@
 
       button {
         width: 100%;
-        height: 42px;
-        border-radius: 14px;
-        border: 1px solid transparent;
+        height: 40px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
         font-size: 13px;
-        font-weight: 800;
+        font-weight: 700;
         cursor: pointer;
         transition:
-          transform 140ms ease,
           border-color 140ms ease,
           background-color 140ms ease,
-          box-shadow 140ms ease;
+          color 140ms ease;
       }
 
       button:disabled {
@@ -401,37 +485,59 @@
         cursor: not-allowed;
       }
 
-      button:not(:disabled):hover {
-        transform: translateY(-1px);
-      }
-
       .btn-primary {
-        background: linear-gradient(180deg, var(--primary), var(--primary-hover));
-        color: #02130a;
-        box-shadow: 0 14px 36px rgba(34, 197, 94, 0.22);
+        background: var(--primary);
+        color: #031008;
+        border-color: rgba(34, 197, 94, 0.35);
       }
 
       .btn-primary:hover {
-        background: linear-gradient(180deg, var(--primary-strong), var(--primary));
+        background: var(--primary-hover);
+      }
+
+      .btn-primary.is-busy,
+      .btn-outline.is-busy,
+      .btn-danger.is-busy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .btn-spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.22);
+        border-top-color: currentColor;
+        border-radius: 999px;
+        animation: spin 0.8s linear infinite;
+        flex: 0 0 auto;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
 
       .btn-danger {
-        background: linear-gradient(180deg, var(--danger), var(--danger-hover));
+        background: #2a1111;
         color: #fff7f7;
+        border-color: rgba(248, 113, 113, 0.22);
       }
 
       .btn-danger:hover {
-        background: var(--danger-hover);
+        background: #341414;
       }
 
       .btn-outline {
-        background: rgba(255, 255, 255, 0.03);
+        background: #0d0d0d;
         color: var(--text);
         border-color: var(--border);
       }
 
       .btn-outline:hover {
-        background: rgba(255, 255, 255, 0.06);
+        background: #141414;
         border-color: var(--border-strong);
       }
 
@@ -453,18 +559,121 @@
         margin-top: 10px;
       }
 
+      .section-title {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .stat-card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-strong);
+        overflow: hidden;
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .stat-cell {
+        padding: 12px 14px;
+      }
+
+      .stat-cell + .stat-cell {
+        border-left: 1px solid var(--divider);
+      }
+
+      .stat-label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .result-panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-strong);
+        padding: 12px;
+      }
+
+      .result-copy {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .result-heading {
+        margin: 0 0 6px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .stopped-summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .metric-panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: #0b0b0b;
+        padding: 10px 12px;
+      }
+
+      .metric-value {
+        margin-top: 8px;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .utility-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .utility-copy {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+
+      .utility-action {
+        width: auto;
+        min-width: 148px;
+      }
+
       .upload-progress-track {
         width: 100%;
         height: 8px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
+        background: #111111;
         overflow: hidden;
       }
 
       .upload-progress-fill {
         width: 0%;
         height: 100%;
-        background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+        background: var(--primary);
         transition: width 0.15s ease;
       }
 
@@ -478,21 +687,6 @@
         gap: 8px;
       }
 
-      .stats {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 10px 16px;
-        border-bottom: 1px solid var(--divider);
-        background: rgba(255, 255, 255, 0.025);
-        color: var(--muted);
-        font-size: 12px;
-      }
-
-      .stats strong {
-        color: var(--text);
-      }
-
       .source-chip {
         display: inline-flex;
         align-items: center;
@@ -501,7 +695,7 @@
         padding: 4px 8px;
         border-radius: 999px;
         border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.03);
+        background: #0d0d0d;
         font-size: 12px;
         color: var(--muted);
       }
@@ -526,6 +720,15 @@
         font-weight: 600;
       }
 
+      .spacious-input {
+        margin-top: 12px;
+      }
+
+      .stopped-actions {
+        display: grid;
+        gap: 10px;
+      }
+
       .version {
         color: var(--muted);
         font-size: 11px;
@@ -542,12 +745,17 @@
       <header class="header">
         <div class="brand">
           <img src="icons/brand-icon.svg" alt="DocFlow" class="header-logo" />
-          <div class="title">DocFlow Recorder</div>
+          <div class="header-copy">
+            <span class="eyebrow">Capture Console</span>
+            <div class="title">DocFlow Recorder</div>
+          </div>
         </div>
-        <span id="studioTag" class="studio-tag disconnected">
-          <span class="dot" aria-hidden="true"></span>
-          Not Connected
-        </span>
+        <div class="header-meta">
+          <span id="studioTag" class="studio-tag disconnected">
+            <span class="dot" aria-hidden="true"></span>
+            Not Connected
+          </span>
+        </div>
       </header>
 
       <div id="statusBar" class="status-strip idle">
@@ -557,154 +765,210 @@
 
       <div id="idleSection">
         <section class="section">
-          <div class="field">
-            <label for="title">Session Title</label>
-            <input id="title" type="text" placeholder="e.g. How to create a subplan" />
-          </div>
-
-          <details>
-            <summary>Advanced metadata</summary>
-            <div class="meta-panel">
-              <div class="field">
-                <label for="description">Description</label>
-                <textarea id="description" rows="2" placeholder="Short context for this recording"></textarea>
-              </div>
-
-              <div class="meta-grid">
-                <div class="field">
-                  <label for="productArea">Product Area</label>
-                  <select id="productArea">
-                    <option value="dashboard">Dashboard</option>
-                    <option value="device_management">Device Management</option>
-                    <option value="alerts">Alerts</option>
-                    <option value="reporting">Reporting</option>
-                    <option value="settings">Settings</option>
-                    <option value="user_management">User Management</option>
-                    <option value="other">Other</option>
-                  </select>
+          <div class="stack">
+            <div class="hero-panel">
+              <div class="hero-top">
+                <div>
+                  <span class="eyebrow">New Session</span>
+                  <h1 class="hero-title">Capture a live workflow</h1>
+                  <p class="hero-body">
+                    Record the current tab into structured events, screenshots, and optional transcript-ready audio.
+                  </p>
                 </div>
-
-                <div class="field">
-                  <label for="environment">Environment</label>
-                  <select id="environment">
-                    <option value="production">Production</option>
-                    <option value="staging">Staging</option>
-                    <option value="development">Development</option>
-                    <option value="test">Test</option>
-                    <option value="demo">Demo</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="productVersion">Product Version</label>
-                  <input id="productVersion" type="text" placeholder="4.2.1" />
-                </div>
-
-                <div class="field">
-                  <label for="locale">Locale</label>
-                  <input id="locale" type="text" value="en-US" />
+                <div class="hero-actions">
+                  <button id="btnStart" class="btn-primary">Start Recording</button>
                 </div>
               </div>
 
               <div class="field">
-                <label for="tags">Tags</label>
-                <input id="tags" type="text" placeholder="routes, subplans" />
+                <label for="title">Session Title</label>
+                <input id="title" type="text" placeholder="e.g. Checkout settings review" />
               </div>
 
-              <div class="field">
-                <label for="captureMic">Audio Transcript</label>
-                <label class="toggle-row" for="captureMic">
-                  <span class="toggle-main">
-                    <span class="mic-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="2.5" width="6" height="12" rx="3"></rect>
-                        <path d="M5 11a7 7 0 0 0 14 0"></path>
-                        <line x1="12" y1="18" x2="12" y2="22"></line>
-                        <line x1="8.5" y1="22" x2="15.5" y2="22"></line>
-                      </svg>
-                    </span>
-                    Capture microphone audio
-                  </span>
-                  <input id="captureMic" type="checkbox" checked />
-                </label>
-                <div class="field-help">Optional. Turn off to record only on-screen events.</div>
-              </div>
-
-              <div class="field">
-                <label for="captureScreenshots">Key Screenshots</label>
-                <label class="toggle-row" for="captureScreenshots">
-                  <span class="toggle-main">
-                    Capture focused key screenshots
-                  </span>
-                  <input id="captureScreenshots" type="checkbox" checked />
-                </label>
-                <div class="field-help">Recommended. Captures important UI moments for documentation steps.</div>
-              </div>
-
-              <div class="field">
-                <label>Screenshot Image Settings</label>
-                <div class="meta-grid">
+              <div class="control-grid">
+                <div class="mini-panel">
+                  <div class="mini-panel-title">Scope</div>
                   <div class="field">
-                    <label for="screenshotWidth">Width</label>
-                    <input id="screenshotWidth" type="number" min="960" max="3840" step="16" value="2560" />
+                    <label for="productArea">Product Area</label>
+                    <select id="productArea">
+                      <option value="dashboard">Dashboard</option>
+                      <option value="device_management">Device Management</option>
+                      <option value="alerts">Alerts</option>
+                      <option value="reporting">Reporting</option>
+                      <option value="settings">Settings</option>
+                      <option value="user_management">User Management</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
                   <div class="field">
-                    <label for="screenshotHeight">Height</label>
-                    <input id="screenshotHeight" type="number" min="540" max="2160" step="16" value="1440" />
+                    <label for="environment">Environment</label>
+                    <select id="environment">
+                      <option value="production">Production</option>
+                      <option value="staging">Staging</option>
+                      <option value="development">Development</option>
+                      <option value="test">Test</option>
+                      <option value="demo">Demo</option>
+                    </select>
                   </div>
                 </div>
-                <div class="field">
-                  <label for="screenshotQuality">JPEG Quality</label>
-                  <input id="screenshotQuality" type="number" min="60" max="100" step="1" value="100" />
+
+                <div class="mini-panel">
+                  <div class="mini-panel-title">Capture Modes</div>
+                  <div class="field">
+                    <label for="captureMic">Audio Transcript</label>
+                    <label class="toggle-row" for="captureMic">
+                      <span class="toggle-main">
+                        <span class="mic-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="2.5" width="6" height="12" rx="3"></rect>
+                            <path d="M5 11a7 7 0 0 0 14 0"></path>
+                            <line x1="12" y1="18" x2="12" y2="22"></line>
+                            <line x1="8.5" y1="22" x2="15.5" y2="22"></line>
+                          </svg>
+                        </span>
+                        Capture microphone audio
+                      </span>
+                      <input id="captureMic" type="checkbox" checked />
+                    </label>
+                    <div class="field-help">Optional. Turn off to record only on-screen events.</div>
+                  </div>
+
+                  <div class="field">
+                    <label for="captureScreenshots">Key Screenshots</label>
+                    <label class="toggle-row" for="captureScreenshots">
+                      <span class="toggle-main">
+                        Capture focused key screenshots
+                      </span>
+                      <input id="captureScreenshots" type="checkbox" checked />
+                    </label>
+                    <div class="field-help">Recommended. Captures important UI moments for documentation steps.</div>
+                  </div>
                 </div>
-                <div class="field-help">Higher values increase clarity and upload size.</div>
               </div>
             </div>
-          </details>
 
-          <button id="btnStart" class="btn-primary">Start Recording</button>
+            <details class="subpanel">
+              <summary>Metadata and image settings</summary>
+              <div class="meta-panel">
+                <div class="field">
+                  <label for="description">Description</label>
+                  <textarea id="description" rows="2" placeholder="Short context for this recording"></textarea>
+                </div>
+
+                <div class="meta-grid">
+                  <div class="field">
+                    <label for="productVersion">Product Version</label>
+                    <input id="productVersion" type="text" placeholder="4.2.1" />
+                  </div>
+
+                  <div class="field">
+                    <label for="locale">Locale</label>
+                    <input id="locale" type="text" value="en-US" />
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="tags">Tags</label>
+                  <input id="tags" type="text" placeholder="checkout, settings, qa" />
+                </div>
+
+                <div class="field">
+                  <label>Screenshot Image Settings</label>
+                  <div class="meta-grid">
+                    <div class="field">
+                      <label for="screenshotWidth">Width</label>
+                      <input id="screenshotWidth" type="number" min="960" max="3840" step="16" value="2560" />
+                    </div>
+                    <div class="field">
+                      <label for="screenshotHeight">Height</label>
+                      <input id="screenshotHeight" type="number" min="540" max="2160" step="16" value="1440" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="screenshotQuality">JPEG Quality</label>
+                    <input id="screenshotQuality" type="number" min="60" max="100" step="1" value="100" />
+                  </div>
+                  <div class="field-help">Higher values increase clarity and upload size.</div>
+                </div>
+              </div>
+            </details>
         </section>
       </div>
 
       <div id="recordingSection" class="hidden">
-        <div class="stats">
-          <div>Events: <strong id="eventCount">0</strong></div>
-          <div>Duration: <strong id="duration">00:00</strong></div>
-        </div>
         <section class="section">
-          <button id="btnStop" class="btn-danger">Stop Recording</button>
+          <div class="stack">
+            <div class="stat-card">
+              <div class="stat-grid">
+                <div class="stat-cell">
+                  <span class="stat-label">Events</span>
+                  <div class="stat-value" id="eventCount">0</div>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-label">Duration</span>
+                  <div class="stat-value" id="duration">00:00</div>
+                </div>
+              </div>
+            </div>
+            <div class="result-panel">
+              <p class="result-copy">The current tab is being captured into a structured DocFlow session.</p>
+              <button id="btnStop" class="btn-danger">Stop Recording</button>
+            </div>
+          </div>
         </section>
       </div>
 
       <div id="stoppedSection" class="hidden">
-        <div class="stats">
-          <div>Events captured: <strong id="finalEventCount">0</strong></div>
-        </div>
         <section class="section">
-          <div class="action-stack">
-            <div class="btn-group">
-              <button id="btnDownload" class="btn-primary">Download JSON</button>
-              <button id="btnUpload" class="btn-outline">Upload to Studio</button>
+          <div class="stack">
+            <div class="result-panel">
+              <span class="eyebrow">Recording Ready</span>
+              <p class="result-copy">Review the capture, keep a local export, or send it straight into DocFlow.</p>
+              <div class="stopped-summary-grid">
+                <div class="metric-panel">
+                  <div class="mini-panel-title">Events Captured</div>
+                  <div class="metric-value" id="finalEventCount">0</div>
+                </div>
+                <div class="metric-panel">
+                  <div class="mini-panel-title">Next Step</div>
+                  <div class="footer-copy">Upload or start a clean capture.</div>
+                </div>
+              </div>
             </div>
-            <button id="btnReset" class="btn-outline">New Recording</button>
-          </div>
-          <div id="uploadProgress" class="upload-progress hidden">
-            <div class="upload-progress-track" aria-hidden="true">
-              <div id="uploadProgressFill" class="upload-progress-fill"></div>
-            </div>
-            <div class="upload-progress-copy">
-              <span id="uploadProgressText">Preparing upload...</span>
-              <span id="uploadProgressPct">0%</span>
+
+            <div class="stopped-actions">
+              <div class="btn-group">
+                <button id="btnDownload" class="btn-primary">Download JSON</button>
+                <button id="btnUpload" class="btn-outline">Upload to Studio</button>
+              </div>
+              <button id="btnReset" class="btn-outline">New Recording</button>
+              <div id="uploadProgress" class="upload-progress hidden">
+                <div class="upload-progress-track" aria-hidden="true">
+                  <div id="uploadProgressFill" class="upload-progress-fill"></div>
+                </div>
+                <div class="upload-progress-copy">
+                  <span id="uploadProgressText">Preparing upload...</span>
+                  <span id="uploadProgressPct">0%</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
       </div>
 
       <section class="section">
-        <button id="btnClearToken" class="btn-outline">Clear Connection</button>
-        <div class="footer">
-          <span id="authStatus" class="footer-copy">Not connected</span>
-          <span class="version">v0.1.0</span>
+        <div class="result-panel">
+          <div class="utility-row">
+            <div class="utility-copy">
+              <span class="eyebrow">Workspace Link</span>
+              <div id="authStatus" class="footer-copy">Not connected</div>
+            </div>
+            <button id="btnClearToken" class="btn-outline utility-action">Clear Connection</button>
+          </div>
+          <div class="footer">
+            <span class="footer-copy">Recorder extension surface</span>
+            <span class="version">v1.0.0.14</span>
+          </div>
         </div>
       </section>
     </div>

@@ -13,11 +13,8 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://*.routectrl.com/*",
-    "https://*.azurewebsites.net/*",
-    "https://*.marklite.com/*",
-    "http://localhost/*",
-    "https://*.dynamics.com/*"
+    "https://*/*",
+    "http://*/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -26,11 +23,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.routectrl.com/*",
-        "https://*.azurewebsites.net/*",
-        "https://*.marklite.com/*",
-        "http://localhost/*",
-        "https://*.dynamics.com/*"
+        "https://*/*",
+        "http://*/*"
       ],
       "js": [
         "content.js"
@@ -42,14 +36,14 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icons/brand-icon.png",
-      "48": "icons/brand-icon.png",
-      "128": "icons/brand-icon.png"
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
     }
   },
   "icons": {
-    "16": "icons/brand-icon.png",
-    "48": "icons/brand-icon.png",
-    "128": "icons/brand-icon.png"
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   }
 }

@@ -152,6 +152,7 @@ const authStatusEl = document.getElementById('authStatus');
 let durationInterval: ReturnType<typeof setInterval> | null = null;
 let settings: UploadSettings = { ...DEFAULT_SETTINGS };
 let lastAudioWavBase64: string | null = null;
+let uploadInFlight = false;
 
 async function init() {
   await loadSettings();
@@ -287,10 +288,20 @@ btnDownload.addEventListener('click', () => {
 });
 
 btnUpload.addEventListener('click', async () => {
+  if (uploadInFlight) return;
+  uploadInFlight = true;
+  setUploadActionState(true, 'Preparing...');
+
   chrome.runtime.sendMessage({ type: 'DOWNLOAD_RECORDING' }, async (resp) => {
-    if (!resp?.recording) return;
+    if (!resp?.recording) {
+      uploadInFlight = false;
+      setUploadActionState(false);
+      return;
+    }
 
     if (!settings.bearerToken) {
+      uploadInFlight = false;
+      setUploadActionState(false);
       setStatus('recording', 'Extension not connected. Use "Connect Extension" in DocFlow.');
       return;
     }
@@ -367,10 +378,14 @@ btnUpload.addEventListener('click', async () => {
       }
 
       setUploadProgress(100, 'Upload complete');
+      uploadInFlight = false;
+      setUploadActionState(false);
       setButtonBusy(btnUpload, false, 'Uploaded');
       btnUpload.disabled = true;
       setStatus('stopped', transcriptWarning ? `Upload successful. ${transcriptWarning}` : 'Upload successful');
     } catch (err) {
+      uploadInFlight = false;
+      setUploadActionState(false);
       hideUploadProgress();
       setButtonBusy(btnUpload, false, 'Upload failed');
       console.error('Upload error:', err);
@@ -492,12 +507,14 @@ function showRecordingUI(eventCount: number, startedAt: string) {
 }
 
 function showStoppedUI(eventCount: number) {
+  uploadInFlight = false;
   setStatus('stopped', 'Recording complete');
   idleSection.classList.add('hidden');
   recordingSection.classList.add('hidden');
   stoppedSection.classList.remove('hidden');
   hideUploadProgress();
   finalEventCountEl.textContent = String(eventCount);
+  setUploadActionState(false);
   btnUpload.disabled = false;
   btnUpload.textContent = 'Upload to Studio';
   if (durationInterval) clearInterval(durationInterval);
@@ -519,7 +536,20 @@ function setButtonBusy(
     btn.dataset.defaultText = btn.textContent || '';
   }
   btn.disabled = busy;
+  btn.classList.toggle('is-busy', busy);
   btn.textContent = busy ? textWhenBusy : btn.dataset.defaultText;
+  if (busy) {
+    const spinner = document.createElement('span');
+    spinner.className = 'btn-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    btn.prepend(spinner);
+  }
+}
+
+function setUploadActionState(busy: boolean, textWhenBusy = 'Uploading...') {
+  setButtonBusy(btnUpload, busy, textWhenBusy);
+  btnDownload.disabled = busy;
+  btnReset.disabled = busy;
 }
 
 function setUploadProgress(percent: number, message: string) {

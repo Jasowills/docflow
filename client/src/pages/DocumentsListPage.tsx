@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApi } from '../hooks/use-api';
 import { useClientDataStore } from '../state/client-data-store';
-import { useRealtimeStore } from '../state/realtime-store';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Spinner } from '../components/ui/spinner';
@@ -13,7 +12,6 @@ export function DocumentsListPage() {
   const location = useLocation();
   const { listDocuments, getConfig } = useApi();
   const { documentsLists, ensureDocumentsList } = useClientDataStore();
-  const { lastDocumentPersisted } = useRealtimeStore();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [folderFilter, setFolderFilter] = useState('');
@@ -126,34 +124,6 @@ export function DocumentsListPage() {
       mounted = false;
     };
   }, [folderFilter, folderCacheKey, folderCached, ensureDocumentsList, listDocuments, folderQuery]);
-
-  useEffect(() => {
-    if (!lastDocumentPersisted) return;
-    let mounted = true;
-    setLoading(true);
-    ensureDocumentsList(baseCacheKey, () => listDocuments(baseQuery), true)
-      .then(async () => {
-        if (folderFilter.trim()) {
-          await ensureDocumentsList(folderCacheKey, () => listDocuments(folderQuery), true);
-        }
-      })
-      .catch(console.error)
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [
-    lastDocumentPersisted?.documentId,
-    baseCacheKey,
-    baseQuery,
-    folderCacheKey,
-    folderFilter,
-    folderQuery,
-    ensureDocumentsList,
-    listDocuments,
-  ]);
 
   const docTypeLabels: Record<string, string> = {
     user_reference: 'Reference',

@@ -14,6 +14,7 @@ import { useAccessToken } from '../auth/use-access-token';
 import { getApiBaseUrl, getRealtimeBaseUrl } from '../config/runtime-config';
 import type { AuditLogEntry } from '@docflow/shared';
 import { emitSessionExpired } from '../auth/session-events';
+import { pushDebugTrace } from '../lib/debug-trace';
 
 export interface RecordingPersistedEvent {
   recordingId: string;
@@ -113,15 +114,58 @@ interface RealtimeStoreValue extends RealtimeState {
   unreadCount: number;
 }
 
+interface RealtimeEventsValue {
+  status: RealtimeStatus;
+  error: string | null;
+  lastRecordingPersisted: RecordingPersistedEvent | null;
+  lastDocumentPersisted: DocumentPersistedEvent | null;
+  clearRealtimeError: () => void;
+}
+
+interface RealtimeNotificationsValue {
+  notifications: NotificationItem[];
+  unreadCount: number;
+  markAllNotificationsRead: () => void;
+}
+
 const RealtimeStoreContext = createContext<RealtimeStoreValue | null>(null);
+const RealtimeEventsContext = createContext<RealtimeEventsValue | null>(null);
+const RealtimeNotificationsContext = createContext<RealtimeNotificationsValue | null>(null);
 
 export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
   const { getAccessToken } = useAccessToken();
   const [state, dispatch] = useReducer(reducer, initialState);
   const userId = user?.userId ?? null;
+  const getAccessTokenRef = useRef(getAccessToken);
+  const notificationsRef = useRef(state.notifications);
   const auditFetchInFlightRef = useRef<Promise<void> | null>(null);
   const lastAuditFetchAtRef = useRef(0);
+
+  useEffect(() => {
+    getAccessTokenRef.current = getAccessToken;
+  }, [getAccessToken]);
+
+  useEffect(() => {
+    notificationsRef.current = state.notifications;
+  }, [state.notifications]);
+
+  useEffect(() => {
+    pushDebugTrace('state', 'RealtimeStore', 'Realtime state changed', {
+      status: state.status,
+      error: state.error,
+      notifications: state.notifications.length,
+      unreadCount: state.notifications.filter((n) => !n.read).length,
+      lastRecordingPersisted: state.lastRecordingPersisted?.recordingId || null,
+      lastDocumentPersisted: state.lastDocumentPersisted?.documentId || null,
+    });
+  }, [
+    state.status,
+    state.error,
+    state.notifications,
+    state.lastRecordingPersisted?.recordingId,
+    state.lastDocumentPersisted?.documentId,
+  ]);
 
   const fetchAuditNotifications = useCallback(
     async (markAsRead = false) => {
@@ -135,7 +179,7 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
 
       const run = async () => {
         lastAuditFetchAtRef.current = Date.now();
-        const token = await getAccessToken();
+        const token = await getAccessTokenRef.current();
         const baseUrl = getApiBaseUrl();
         const res = await fetch(`${baseUrl}/api/audit?limit=100`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -191,11 +235,14 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
       }
       return promise;
     },
-    [getAccessToken, userId],
+    [userId],
   );
 
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
+    pushDebugTrace('effect', 'RealtimeStore.fetchAuditNotifications', 'Initial audit notification fetch', {
+      userId,
+    });
     void (async () => {
       try {
         await fetchAuditNotifications(false);
@@ -224,15 +271,18 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isAuthenticated) {
+      pushDebugTrace('effect', 'RealtimeStore.socket', 'Resetting realtime because user is not authenticated');
       dispatch({ type: 'RESET' });
       return;
     }
 
     if (!userId) {
+      pushDebugTrace('effect', 'RealtimeStore.socket', 'Missing userId for realtime session');
       dispatch({ type: 'DISCONNECTED', error: 'Missing user claim for realtime session' });
       return;
     }
 
+    pushDebugTrace('effect', 'RealtimeStore.socket', 'Opening realtime socket', { userId });
     dispatch({ type: 'CONNECTING' });
     const baseUrl = getRealtimeBaseUrl();
     const socket: Socket = io(baseUrl, {
@@ -240,25 +290,44 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
       auth: { userId },
     });
 
-    socket.on('connect', () => dispatch({ type: 'CONNECTED' }));
-    socket.on('disconnect', () => dispatch({ type: 'DISCONNECTED' }));
+    socket.on('connect', () => {
+      pushDebugTrace('state', 'RealtimeStore.socket', 'Socket connected', { userId });
+      dispatch({ type: 'CONNECTED' });
+    });
+    socket.on('disconnect', () => {
+      pushDebugTrace('state', 'RealtimeStore.socket', 'Socket disconnected', { userId });
+      dispatch({ type: 'DISCONNECTED' });
+    });
     socket.on('connect_error', (err: Error) =>
-      dispatch({ type: 'DISCONNECTED', error: err.message || 'Realtime connection failed' }),
+      {
+        pushDebugTrace('state', 'RealtimeStore.socket', 'Socket connection error', {
+          userId,
+          message: err.message || 'Realtime connection failed',
+        });
+        dispatch({ type: 'DISCONNECTED', error: err.message || 'Realtime connection failed' });
+      },
     );
     socket.on('recording.persisted', (payload: RecordingPersistedEvent) =>
       void (async () => {
+        pushDebugTrace('state', 'RealtimeStore.socket', 'recording.persisted received', {
+          recordingId: payload.recordingId,
+        });
         dispatch({ type: 'RECORDING_PERSISTED', payload });
         await fetchAuditNotifications(false);
       })(),
     );
     socket.on('document.persisted', (payload: DocumentPersistedEvent) =>
       void (async () => {
+        pushDebugTrace('state', 'RealtimeStore.socket', 'document.persisted received', {
+          documentId: payload.documentId,
+        });
         dispatch({ type: 'DOCUMENT_PERSISTED', payload });
         await fetchAuditNotifications(false);
       })(),
     );
 
     return () => {
+      pushDebugTrace('effect', 'RealtimeStore.socket', 'Closing realtime socket', { userId });
       socket.disconnect();
     };
   }, [isAuthenticated, fetchAuditNotifications, userId]);
@@ -271,9 +340,35 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'MARK_ALL_NOTIFICATIONS_READ' });
     persistReadNotificationIds(
       userId,
-      state.notifications.map((item) => item.id),
+      notificationsRef.current.map((item) => item.id),
     );
-  }, [state.notifications, userId]);
+  }, [userId]);
+
+  const eventsValue = useMemo<RealtimeEventsValue>(
+    () => ({
+      status: state.status,
+      error: state.error,
+      lastRecordingPersisted: state.lastRecordingPersisted,
+      lastDocumentPersisted: state.lastDocumentPersisted,
+      clearRealtimeError,
+    }),
+    [
+      state.status,
+      state.error,
+      state.lastRecordingPersisted,
+      state.lastDocumentPersisted,
+      clearRealtimeError,
+    ],
+  );
+
+  const notificationsValue = useMemo<RealtimeNotificationsValue>(
+    () => ({
+      notifications: state.notifications,
+      unreadCount: state.notifications.filter((n) => !n.read).length,
+      markAllNotificationsRead,
+    }),
+    [state.notifications, markAllNotificationsRead],
+  );
 
   const value = useMemo(
     () => ({
@@ -286,9 +381,13 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <RealtimeStoreContext.Provider value={value}>
-      {children}
-    </RealtimeStoreContext.Provider>
+    <RealtimeEventsContext.Provider value={eventsValue}>
+      <RealtimeNotificationsContext.Provider value={notificationsValue}>
+        <RealtimeStoreContext.Provider value={value}>
+          {children}
+        </RealtimeStoreContext.Provider>
+      </RealtimeNotificationsContext.Provider>
+    </RealtimeEventsContext.Provider>
   );
 }
 
@@ -327,6 +426,22 @@ export function useRealtimeStore() {
   const ctx = useContext(RealtimeStoreContext);
   if (!ctx) {
     throw new Error('useRealtimeStore must be used within RealtimeStoreProvider');
+  }
+  return ctx;
+}
+
+export function useRealtimeEventsStore() {
+  const ctx = useContext(RealtimeEventsContext);
+  if (!ctx) {
+    throw new Error('useRealtimeEventsStore must be used within RealtimeStoreProvider');
+  }
+  return ctx;
+}
+
+export function useRealtimeNotificationsStore() {
+  const ctx = useContext(RealtimeNotificationsContext);
+  if (!ctx) {
+    throw new Error('useRealtimeNotificationsStore must be used within RealtimeStoreProvider');
   }
   return ctx;
 }

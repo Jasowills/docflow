@@ -115,6 +115,14 @@ export function DashboardPage() {
     ],
     [summary],
   );
+  const hasRecordingTrendData = useMemo(
+    () => (summary?.recordingsTrend || []).some((point) => point.value > 0),
+    [summary?.recordingsTrend],
+  );
+  const hasDocumentTrendData = useMemo(
+    () => (summary?.documentsTrend || []).some((point) => point.value > 0),
+    [summary?.documentsTrend],
+  );
 
   return (
     <div className="space-y-6">
@@ -169,6 +177,9 @@ export function DashboardPage() {
                   <span className="text-sm font-medium text-foreground">Recordings</span>
                   <span className="text-xs text-muted-foreground">Capture volume</span>
                 </div>
+                {!loading && !hasRecordingTrendData ? (
+                  <p className="mb-3 text-xs text-muted-foreground">No recording activity in the last 7 days.</p>
+                ) : null}
                 <div className="app-inline-chart">
                   {(summary?.recordingsTrend || []).map((point) => (
                     <div key={point.label} className="flex flex-1 flex-col items-center gap-2">
@@ -186,6 +197,9 @@ export function DashboardPage() {
                   <span className="text-sm font-medium text-foreground">Documents</span>
                   <span className="text-xs text-muted-foreground">Generation volume</span>
                 </div>
+                {!loading && !hasDocumentTrendData ? (
+                  <p className="mb-3 text-xs text-muted-foreground">No document activity in the last 7 days.</p>
+                ) : null}
                 <div className="app-inline-chart">
                   {(summary?.documentsTrend || []).map((point) => (
                     <div key={point.label} className="flex flex-1 flex-col items-center gap-2">
@@ -265,10 +279,16 @@ export function DashboardPage() {
               <CardDescription>Move the workspace forward from the main bottlenecks.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <QuickAction to="/app/recordings/upload" icon={Upload} label="Upload recording" />
-              <QuickAction to="/app/generate" icon={Sparkles} label="Generate documents" />
-              <QuickAction to="/app/test-plans" icon={ClipboardCheck} label="Create test plan" />
-              <QuickAction to="/app/settings?section=github" icon={FolderGit2} label="Connect GitHub App" />
+              {loading ? (
+                <InlineLoadingState message="Loading quick actions..." />
+              ) : (
+                <>
+                  <QuickAction to="/app/recordings/upload" icon={Upload} label="Upload recording" />
+                  <QuickAction to="/app/generate" icon={Sparkles} label="Generate documents" />
+                  <QuickAction to="/app/test-plans" icon={ClipboardCheck} label="Create test plan" />
+                  <QuickAction to="/app/settings?section=github" icon={FolderGit2} label="Connect GitHub App" />
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -278,30 +298,36 @@ export function DashboardPage() {
               <CardDescription>What still needs attention in this workspace.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Badge variant={summary?.setup.githubConnected ? "secondary" : "outline"}>
-                  {summary?.setup.githubConnected ? "GitHub connected" : "GitHub pending"}
-                </Badge>
-                <Badge
-                  variant={summary?.setup.onboardingCompleted ? "secondary" : "outline"}
-                >
-                  {summary?.setup.onboardingCompleted ? "Onboarding done" : "Onboarding active"}
-                </Badge>
-              </div>
-
-              {(summary?.setup.missingSteps || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">Workspace setup is in a strong state.</p>
+              {loading ? (
+                <InlineLoadingState message="Loading setup status..." />
               ) : (
-                <div className="space-y-2">
-                  {summary?.setup.missingSteps.map((item) => (
-                    <div
-                      key={item}
-                      className="rounded-2xl border border-border/80 bg-background/50 px-4 py-3 text-sm text-muted-foreground"
+                <>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={summary?.setup.githubConnected ? "secondary" : "outline"}>
+                      {summary?.setup.githubConnected ? "GitHub connected" : "GitHub pending"}
+                    </Badge>
+                    <Badge
+                      variant={summary?.setup.onboardingCompleted ? "secondary" : "outline"}
                     >
-                      {item}
+                      {summary?.setup.onboardingCompleted ? "Onboarding done" : "Onboarding active"}
+                    </Badge>
+                  </div>
+
+                  {(summary?.setup.missingSteps || []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Workspace setup is in a strong state.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {summary?.setup.missingSteps.map((item) => (
+                        <div
+                          key={item}
+                          className="rounded-2xl border border-border/80 bg-background/50 px-4 py-3 text-sm text-muted-foreground"
+                        >
+                          {item}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -312,24 +338,37 @@ export function DashboardPage() {
               <CardDescription>Current test plan distribution across the workspace.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {(summary?.testPlanStatus || []).map((status) => (
-                <div key={status.label} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="capitalize text-foreground">{status.label}</span>
-                    <span className="text-muted-foreground">{status.value}</span>
+              {loading ? (
+                <InlineLoadingState message="Loading plan readiness..." />
+              ) : (
+                (summary?.testPlanStatus || []).map((status) => (
+                  <div key={status.label} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="capitalize text-foreground">{status.label}</span>
+                      <span className="text-muted-foreground">{status.value}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-background/80">
+                      <div
+                        className="h-2 rounded-full bg-primary"
+                        style={{ width: `${Math.min(100, status.value * 28)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 rounded-full bg-background/80">
-                    <div
-                      className="h-2 rounded-full bg-primary"
-                      style={{ width: `${Math.min(100, status.value * 28)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function InlineLoadingState({ message }: { message: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm text-muted-foreground">
+      <Spinner className="h-4 w-4 text-primary" />
+      <span>{message}</span>
     </div>
   );
 }

@@ -32,19 +32,21 @@ export class DashboardService {
     }
 
     const memberIds = workspace.members.map((member) => member.userId);
-    const [recordings, documents, testPlans, repoSelections, fallbackGithubStatus] = await Promise.all([
+    const [recordings, documents, recordingTrendTimestamps, documentTrendTimestamps, testPlans, repoSelections, fallbackGithubStatus] = await Promise.all([
       this.loadRecentRecordings(memberIds),
       this.loadRecentDocuments(memberIds),
+      this.loadRecordingTrendTimestamps(memberIds),
+      this.loadDocumentTrendTimestamps(memberIds),
       this.loadRecentTestPlans(workspaceId),
       this.loadSelectedRepoCount(workspaceId),
       this.githubRepository.findConnectionByUserId(userId),
     ]);
 
     const recordingsTrend = buildDailyTrend(
-      recordings.items.map((item) => item.uploadedAtUtc),
+      recordingTrendTimestamps,
     );
     const documentsTrend = buildDailyTrend(
-      documents.items.map((item) => item.createdAtUtc),
+      documentTrendTimestamps,
     );
     const testPlanStatus = buildStatusSeries(testPlans);
 
@@ -182,6 +184,48 @@ export class DashboardService {
     }));
   }
 
+  private async loadRecordingTrendTimestamps(userIds: string[]): Promise<string[]> {
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    const dateFrom = getTrendWindowStartIso();
+    const { data, error } = await this.supabase
+      .from('recordings')
+      .select('uploaded_at_utc')
+      .in('user_id', userIds)
+      .gte('uploaded_at_utc', dateFrom);
+
+    if (error) {
+      throw new Error('Failed to load dashboard recording trend.');
+    }
+
+    return ((data as Array<Record<string, unknown>> | null) || [])
+      .map((row) => String(row.uploaded_at_utc || ''))
+      .filter(Boolean);
+  }
+
+  private async loadDocumentTrendTimestamps(userIds: string[]): Promise<string[]> {
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    const dateFrom = getTrendWindowStartIso();
+    const { data, error } = await this.supabase
+      .from('documents')
+      .select('created_at_utc')
+      .in('created_by', userIds)
+      .gte('created_at_utc', dateFrom);
+
+    if (error) {
+      throw new Error('Failed to load dashboard document trend.');
+    }
+
+    return ((data as Array<Record<string, unknown>> | null) || [])
+      .map((row) => String(row.created_at_utc || ''))
+      .filter(Boolean);
+  }
+
   private async loadSelectedRepoCount(workspaceId: string): Promise<number> {
     const { count, error } = await this.supabase
       .from('workspace_repo_selections')
@@ -218,6 +262,13 @@ function buildDailyTrend(timestamps: string[]): DashboardSeriesPoint[] {
     label: key.slice(5),
     value,
   }));
+}
+
+function getTrendWindowStartIso(): string {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - 6);
+  return date.toISOString();
 }
 
 function buildStatusSeries(testPlans: TestPlan[]): DashboardSeriesPoint[] {

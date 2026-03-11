@@ -24,7 +24,7 @@ export function OnboardingPage() {
     updateCurrentWorkspace,
   } = useApi();
   const navigate = useNavigate();
-  const [workspaceName, setWorkspaceName] = useState(user?.workspaceName || "");
+  const [workspaceName, setWorkspaceName] = useState(getSuggestedWorkspaceName(user));
   const [localOnboardingState, setLocalOnboardingState] = useState<Record<string, unknown>>(
     () => ({ ...(user?.onboardingState || {}) }),
   );
@@ -33,7 +33,7 @@ export function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setWorkspaceName(user?.workspaceName || "");
+    setWorkspaceName(getSuggestedWorkspaceName(user));
     setLocalOnboardingState({ ...(user?.onboardingState || {}) });
   }, [user?.workspaceName, user?.onboardingState]);
 
@@ -281,6 +281,80 @@ export function OnboardingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function getSuggestedWorkspaceName(
+  user: ReturnType<typeof useAuth>["user"],
+): string {
+  const currentWorkspaceName = user?.workspaceName?.trim();
+  if (currentWorkspaceName && !looksGeneratedWorkspaceName(currentWorkspaceName, user)) {
+    return currentWorkspaceName;
+  }
+
+  const preferredName = getPreferredWorkspaceOwnerName(user);
+  if (preferredName) {
+    return `${preferredName}'s Workspace`;
+  }
+
+  return currentWorkspaceName || "";
+}
+
+function getPreferredWorkspaceOwnerName(
+  user: ReturnType<typeof useAuth>["user"],
+): string | undefined {
+  const displayName = user?.displayName?.trim();
+  if (displayName && !looksOpaqueIdentifier(displayName)) {
+    return displayName;
+  }
+
+  const emailLocalPart = user?.email?.split("@")[0];
+  return humanizeIdentityToken(emailLocalPart) || humanizeIdentityToken(displayName);
+}
+
+function looksGeneratedWorkspaceName(
+  workspaceName: string,
+  user: ReturnType<typeof useAuth>["user"],
+): boolean {
+  const normalized = workspaceName.trim();
+  const displayName = user?.displayName?.trim();
+  const generatedFromDisplayName = displayName ? `${displayName}'s Workspace` : null;
+
+  return (
+    !!generatedFromDisplayName &&
+    normalized === generatedFromDisplayName &&
+    looksOpaqueIdentifier(displayName)
+  );
+}
+
+function humanizeIdentityToken(value?: string): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+
+  const cleaned = normalized
+    .replace(/[_\-.]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) return undefined;
+
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function looksOpaqueIdentifier(value?: string): boolean {
+  const normalized = value?.trim();
+  if (!normalized) return false;
+
+  return (
+    normalized.length >= 8 &&
+    !/\s/.test(normalized) &&
+    /[a-z]/i.test(normalized) &&
+    /\d/.test(normalized)
   );
 }
 

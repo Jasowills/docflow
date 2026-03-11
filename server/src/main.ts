@@ -40,7 +40,7 @@ async function bootstrap() {
   );
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || isAllowedCorsOrigin(origin, allowedOrigins)) {
         callback(null, true);
         return;
       }
@@ -109,4 +109,17 @@ function getAllowedCorsOrigins(configuredOrigins?: string): string[] {
     .map((value) => value.trim())
     .filter(Boolean);
   return Array.from(new Set([...defaults, ...configured]));
+}
+
+function isAllowedCorsOrigin(origin: string, allowedOrigins: string[]): boolean {
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  // Allow Chrome extension requests for recorder upload/auth flows.
+  if (origin.startsWith('chrome-extension://')) {
+    return true;
+  }
+
+  return false;
 }

@@ -1,5 +1,6 @@
 import { emitSessionExpired } from '../auth/session-events';
 import { getApiBaseUrl } from '../config/runtime-config';
+import { pushDebugTrace } from '../lib/debug-trace';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -7,6 +8,8 @@ interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
   headers?: Record<string, string>;
+  debugSource?: string;
+  debugMeta?: Record<string, unknown>;
 }
 
 /**
@@ -18,7 +21,7 @@ export function createApiClient(getAccessToken: () => Promise<string>) {
     path: string,
     options: RequestOptions = {},
   ): Promise<T> {
-    const { method = 'GET', body, headers = {} } = options;
+    const { method = 'GET', body, headers = {}, debugSource = 'apiRequest', debugMeta } = options;
 
     const token = await getAccessToken();
 
@@ -32,6 +35,8 @@ export function createApiClient(getAccessToken: () => Promise<string>) {
     }
 
     const apiBaseUrl = getApiBaseUrl();
+    const startedAt = performance.now();
+    pushDebugTrace('api', debugSource, `${method} ${path} started`, debugMeta);
     const response = await fetch(`${apiBaseUrl}/api${path}`, {
       method,
       headers: fetchHeaders,
@@ -39,6 +44,11 @@ export function createApiClient(getAccessToken: () => Promise<string>) {
     });
 
     if (!response.ok) {
+      pushDebugTrace('api', debugSource, `${method} ${path} failed`, {
+        ...debugMeta,
+        status: response.status,
+        durationMs: Math.round(performance.now() - startedAt),
+      });
       if (response.status === 401) {
         emitSessionExpired('Session expired. Signing out...');
       }
@@ -50,9 +60,19 @@ export function createApiClient(getAccessToken: () => Promise<string>) {
     }
 
     if (response.status === 204) {
+      pushDebugTrace('api', debugSource, `${method} ${path} completed`, {
+        ...debugMeta,
+        status: response.status,
+        durationMs: Math.round(performance.now() - startedAt),
+      });
       return undefined as T;
     }
 
+    pushDebugTrace('api', debugSource, `${method} ${path} completed`, {
+      ...debugMeta,
+      status: response.status,
+      durationMs: Math.round(performance.now() - startedAt),
+    });
     return response.json() as Promise<T>;
   };
 }
@@ -62,7 +82,7 @@ export function createPublicApiClient() {
     path: string,
     options: RequestOptions = {},
   ): Promise<T> {
-    const { method = 'GET', body, headers = {} } = options;
+    const { method = 'GET', body, headers = {}, debugSource = 'publicApiRequest', debugMeta } = options;
 
     const fetchHeaders: Record<string, string> = {
       ...headers,
@@ -73,6 +93,8 @@ export function createPublicApiClient() {
     }
 
     const apiBaseUrl = getApiBaseUrl();
+    const startedAt = performance.now();
+    pushDebugTrace('api', debugSource, `${method} ${path} started`, debugMeta);
     const response = await fetch(`${apiBaseUrl}/api${path}`, {
       method,
       headers: fetchHeaders,
@@ -80,6 +102,11 @@ export function createPublicApiClient() {
     });
 
     if (!response.ok) {
+      pushDebugTrace('api', debugSource, `${method} ${path} failed`, {
+        ...debugMeta,
+        status: response.status,
+        durationMs: Math.round(performance.now() - startedAt),
+      });
       const errorBody = await response.json().catch(() => ({}));
       throw new ApiError(
         response.status,
@@ -88,9 +115,19 @@ export function createPublicApiClient() {
     }
 
     if (response.status === 204) {
+      pushDebugTrace('api', debugSource, `${method} ${path} completed`, {
+        ...debugMeta,
+        status: response.status,
+        durationMs: Math.round(performance.now() - startedAt),
+      });
       return undefined as T;
     }
 
+    pushDebugTrace('api', debugSource, `${method} ${path} completed`, {
+      ...debugMeta,
+      status: response.status,
+      durationMs: Math.round(performance.now() - startedAt),
+    });
     return response.json() as Promise<T>;
   };
 }

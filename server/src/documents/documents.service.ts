@@ -5,6 +5,8 @@ import {
   BadRequestException,
   Logger,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { DocumentsRepository } from './documents.repository';
@@ -88,8 +90,18 @@ export class DocumentsService {
         `Generating ${docTypeConfig.name} for recording "${recording.metadata.name}" using ${this.aiProvider.providerName}`,
       );
 
-      // Call AI provider
-      const result = await this.aiProvider.generate(messages);
+      let result;
+      try {
+        result = await this.aiProvider.generate(messages);
+      } catch (error) {
+        if (this.aiProvider.providerName === 'openrouter' && isOpenRouterBudgetError(error)) {
+          throw new HttpException(
+            'OpenRouter could not generate this document within the current credit budget. Top up credits or lower AI_MAX_TOKENS in your environment.',
+            HttpStatus.PAYMENT_REQUIRED,
+          );
+        }
+        throw error;
+      }
 
       this.logger.log(
         `Generated ${docTypeConfig.name}: ${result.usage?.totalTokens ?? '?'} tokens used`,
@@ -298,5 +310,21 @@ export class DocumentsService {
     if (trimmed.toLowerCase() === 'unfiled') return 'Unfiled';
     return trimmed;
   }
+
+}
+
+function isOpenRouterBudgetError(error: unknown): boolean {
+  if (error instanceof HttpException && error.getStatus() === HttpStatus.PAYMENT_REQUIRED) {
+    return true;
+  }
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('requires more credits') ||
+    message.includes('fewer max_tokens') ||
+    message.includes('can only afford')
+  );
 }
 

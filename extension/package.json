@@ -5,9 +5,9 @@
   "description": "DocFlow Recorder browser extension for capturing website and web app workflows",
   "scripts": {
     "build": "tsc && node build.mjs",
-    "build:publish": "node bump-version.mjs && set EXTENSION_OUTPUT_DIR=Routectrl-recorder&& tsc && node build.mjs && node publish.mjs",
+    "build:publish": "node bump-version.mjs && set EXTENSION_OUTPUT_DIR=DocFlow-recorder&& tsc && node build.mjs && node publish.mjs",
     "watch": "tsc --watch",
-    "clean": "rimraf dist Routectrl-recorder"
+    "clean": "rimraf dist DocFlow-recorder"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",

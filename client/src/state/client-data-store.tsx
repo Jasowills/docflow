@@ -9,10 +9,11 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  useRealtimeStore,
+  useRealtimeEventsStore,
   type RecordingPersistedEvent,
   type DocumentPersistedEvent,
 } from './realtime-store';
+import { pushDebugTrace } from '../lib/debug-trace';
 import type {
   DocumentSummary,
   ExtensionReleaseInfo,
@@ -305,9 +306,14 @@ interface ClientDataStoreValue extends ClientDataState {
 const ClientDataStoreContext = createContext<ClientDataStoreValue | null>(null);
 
 export function ClientDataStoreProvider({ children }: { children: ReactNode }) {
-  const { lastRecordingPersisted, lastDocumentPersisted } = useRealtimeStore();
+  const { lastRecordingPersisted, lastDocumentPersisted } = useRealtimeEventsStore();
   const [state, dispatch] = useReducer(reducer, initialState);
   const inflightRef = useRef<Map<string, Promise<unknown>>>(new Map());
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   const withInflightDedup = useCallback(async <T,>(key: string, fn: () => Promise<T>): Promise<T> => {
     const existing = inflightRef.current.get(key) as Promise<T> | undefined;
@@ -328,7 +334,7 @@ export function ClientDataStoreProvider({ children }: { children: ReactNode }) {
       fetcher: () => Promise<Omit<DashboardSnapshot, 'loadedAtUtc'>>,
       force = false,
     ): Promise<DashboardSnapshot> => {
-      if (!force && state.dashboard) return state.dashboard;
+      if (!force && stateRef.current.dashboard) return stateRef.current.dashboard;
       return withInflightDedup('dashboard', async () => {
         const data = await fetcher();
         const snapshot: DashboardSnapshot = {
@@ -339,7 +345,7 @@ export function ClientDataStoreProvider({ children }: { children: ReactNode }) {
         return snapshot;
       });
     },
-    [state.dashboard, withInflightDedup],
+    [withInflightDedup],
   );
 
   const ensureDocumentsList = useCallback(
@@ -348,15 +354,19 @@ export function ClientDataStoreProvider({ children }: { children: ReactNode }) {
       fetcher: () => Promise<PaginatedResponse<DocumentSummary>>,
       force = false,
     ): Promise<PaginatedResponse<DocumentSummary>> => {
-      const cached = state.documentsLists[key];
+      const cached = stateRef.current.documentsLists[key];
       if (!force && cached) return cached;
       return withInflightDedup(`documents:${key}`, async () => {
+        pushDebugTrace('state', 'ClientDataStore.ensureDocumentsList', 'Fetching documents list', {
+          cacheKey: key,
+          force,
+        });
         const result = await fetcher();
         dispatch({ type: 'SET_DOCUMENTS_LIST', key, payload: result });
         return result;
       });
     },
-    [state.documentsLists, withInflightDedup],
+    [withInflightDedup],
   );
 
   const ensureRecordingsList = useCallback(
@@ -365,15 +375,19 @@ export function ClientDataStoreProvider({ children }: { children: ReactNode }) {
       fetcher: () => Promise<PaginatedResponse<RecordingSummary>>,
       force = false,
     ): Promise<PaginatedResponse<RecordingSummary>> => {
-      const cached = state.recordingsLists[key];
+      const cached = stateRef.current.recordingsLists[key];
       if (!force && cached) return cached;
       return withInflightDedup(`recordings:${key}`, async () => {
+        pushDebugTrace('state', 'ClientDataStore.ensureRecordingsList', 'Fetching recordings list', {
+          cacheKey: key,
+          force,
+        });
         const result = await fetcher();
         dispatch({ type: 'SET_RECORDINGS_LIST', key, payload: result });
         return result;
       });
     },
-    [state.recordingsLists, withInflightDedup],
+    [withInflightDedup],
   );
 
   const ensureExtensionRelease = useCallback(
@@ -381,14 +395,14 @@ export function ClientDataStoreProvider({ children }: { children: ReactNode }) {
       fetcher: () => Promise<ExtensionReleaseInfo>,
       force = false,
     ): Promise<ExtensionReleaseInfo> => {
-      if (!force && state.extensionRelease) return state.extensionRelease;
+      if (!force && stateRef.current.extensionRelease) return stateRef.current.extensionRelease;
       return withInflightDedup('extension-release', async () => {
         const result = await fetcher();
         dispatch({ type: 'SET_EXTENSION_RELEASE', payload: result });
         return result;
       });
     },
-    [state.extensionRelease, withInflightDedup],
+    [withInflightDedup],
   );
 
   const evictRecording = useCallback((recordingId: string) => {
@@ -405,12 +419,18 @@ export function ClientDataStoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!lastRecordingPersisted) return;
+    pushDebugTrace('state', 'ClientDataStore', 'Realtime recording persisted event received', {
+      recordingId: lastRecordingPersisted.recordingId,
+    });
     dispatch({ type: 'INCREMENT_RECORDING_COUNT' });
     dispatch({ type: 'UPSERT_RECORDING_FROM_REALTIME', payload: lastRecordingPersisted });
   }, [lastRecordingPersisted?.recordingId]);
 
   useEffect(() => {
     if (!lastDocumentPersisted) return;
+    pushDebugTrace('state', 'ClientDataStore', 'Realtime document persisted event received', {
+      documentId: lastDocumentPersisted.documentId,
+    });
     dispatch({ type: 'INCREMENT_DOC_COUNT' });
     dispatch({ type: 'UPSERT_DOCUMENT_FROM_REALTIME', payload: lastDocumentPersisted });
   }, [lastDocumentPersisted?.documentId]);
