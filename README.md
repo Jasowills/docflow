@@ -167,24 +167,9 @@ Use:
 - `AUTH_PROVIDER=jwt`
 - `VITE_AUTH_MODE=jwt`
 
-### Logto mode
-
-Use:
-
-- `AUTH_PROVIDER=logto`
-- `VITE_AUTH_MODE=logto`
-
-In Logto mode, authenticated users are provisioned or linked into DocFlow on first API access, and workspace membership is the effective role source.
 
 ## Notes
 
-- This repo started from an inherited codebase and is still being cleaned up.
-- Do not assume the Supabase migration is complete across every repository layer.
+
 - The main user-facing product flow is centered on recording, generating, and documenting.
 
-## References
-
-- [AGENTS.md](/C:/Users/JasonAmadi/OneDrive%20-%20Marklite/Desktop/DocFlow/AGENTS.md)
-- [docs/ROADMAP.md](/C:/Users/JasonAmadi/OneDrive%20-%20Marklite/Desktop/DocFlow/docs/ROADMAP.md)
-- [docs/MIGRATION_AUDIT.md](/C:/Users/JasonAmadi/OneDrive%20-%20Marklite/Desktop/DocFlow/docs/MIGRATION_AUDIT.md)
-- [docs/supabase-schema.sql](/C:/Users/JasonAmadi/OneDrive%20-%20Marklite/Desktop/DocFlow/docs/supabase-schema.sql)
