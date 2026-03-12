@@ -28,7 +28,6 @@ export class AnthropicProvider implements ITextGenerationProvider {
       `Anthropic: generating with ${messages.length} messages, model=${this.model}`,
     );
 
-    // Separate system message from conversation messages
     const systemMessage = messages.find((m) => m.role === 'system');
     const conversationMessages = messages
       .filter((m) => m.role !== 'system')
@@ -45,7 +44,9 @@ export class AnthropicProvider implements ITextGenerationProvider {
       messages: conversationMessages,
     });
 
-    const textBlock = response.content.find((b) => b.type === 'text');
+    const textBlock = response.content.find(
+      (block): block is { type: 'text'; text: string } => block.type === 'text',
+    );
     return {
       content: textBlock?.type === 'text' ? textBlock.text : '',
       model: response.model,
