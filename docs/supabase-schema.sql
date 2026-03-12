@@ -102,6 +102,32 @@ create table if not exists public.test_plans (
   test_case_ids jsonb not null default '[]'::jsonb
 );
 
+create index if not exists idx_test_plans_workspace_id
+  on public.test_plans(workspace_id);
+
+create table if not exists public.test_plan_runs (
+  run_id text primary key,
+  plan_id text not null references public.test_plans(plan_id) on delete cascade,
+  workspace_id text not null references public.workspaces(workspace_id) on delete cascade,
+  status text not null check (status in ('queued', 'running', 'passed', 'failed', 'cancelled')),
+  trigger text not null check (trigger in ('manual')),
+  source text not null check (source in ('docflow')),
+  branch text,
+  target_environment text,
+  notes text,
+  created_at_utc timestamptz not null default timezone('utc', now()),
+  created_by text not null references public.docflow_users(user_id) on delete cascade,
+  started_at_utc timestamptz,
+  completed_at_utc timestamptz,
+  total_tests integer,
+  passed_tests integer,
+  failed_tests integer,
+  skipped_tests integer
+);
+
+create index if not exists idx_test_plan_runs_plan_id
+  on public.test_plan_runs(plan_id, created_at_utc desc);
+
 create table if not exists public.recordings (
   recording_id text primary key,
   recording_name text not null,

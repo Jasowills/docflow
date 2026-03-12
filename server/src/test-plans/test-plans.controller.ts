@@ -1,6 +1,11 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { CreateTestPlanRequest, UserContext } from '@docflow/shared';
+import type {
+  AttachTestPlanSuitesRequest,
+  CreateTestPlanRequest,
+  CreateTestPlanRunRequest,
+  UserContext,
+} from '@docflow/shared';
 import { CurrentUser } from '../auth/decorators';
 import { TestPlansService } from './test-plans.service';
 
@@ -23,5 +28,34 @@ export class TestPlansController {
     @Body() body: CreateTestPlanRequest,
   ) {
     return this.testPlansService.create(user.workspaceId, user.userId, body);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a test plan detail view for the current workspace' })
+  getById(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+  ) {
+    return this.testPlansService.getDetail(user.workspaceId, id, user.userId);
+  }
+
+  @Put(':id/test-suites')
+  @ApiOperation({ summary: 'Replace attached generated test suites for a test plan' })
+  attachSuites(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() body: AttachTestPlanSuitesRequest,
+  ) {
+    return this.testPlansService.attachSuites(user.workspaceId, id, body, user.userId);
+  }
+
+  @Post(':id/runs')
+  @ApiOperation({ summary: 'Create a manual execution run for a test plan' })
+  createRun(
+    @CurrentUser() user: UserContext,
+    @Param('id') id: string,
+    @Body() body: CreateTestPlanRunRequest,
+  ) {
+    return this.testPlansService.createRun(user.workspaceId, id, user.userId, body);
   }
 }

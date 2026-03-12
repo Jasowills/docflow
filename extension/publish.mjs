@@ -36,7 +36,6 @@ async function loadEnvFallback() {
         }
       }
     } catch {
-      // optional fallback
     }
   }
 }
@@ -65,20 +64,31 @@ async function main() {
   const packageJson = JSON.parse(packageJsonRaw);
   const version = packageJson.version;
 
-  const apiBaseUrl = process.env.DOC_STUDIO_API_BASE_URL;
-  const publishKey = process.env.EXTENSION_PUBLISH_KEY;
+  const apiBaseUrl =
+    process.env.DOCFLOW_API_BASE_URL ||
+    process.env.DOC_STUDIO_API_BASE_URL;
+  const publishKey =
+    process.env.EXTENSION_PUBLISH_SECRET ||
+    process.env.EXTENSION_PUBLISH_KEY;
   const notes = process.env.EXTENSION_RELEASE_NOTES;
   const containerSasUrl = process.env.AZURE_BLOB_SAS_URL;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseBucket =
+    process.env.EXTENSION_RELEASES_STORAGE_BUCKET ||
+    process.env.SUPABASE_STORAGE_BUCKET;
   const outputDirName = process.env.EXTENSION_OUTPUT_DIR || 'DocFlow-recorder';
 
   if (!apiBaseUrl) {
-    throw new Error('DOC_STUDIO_API_BASE_URL is required');
+    throw new Error('DOCFLOW_API_BASE_URL is required');
   }
   if (!publishKey) {
-    throw new Error('EXTENSION_PUBLISH_KEY is required');
+    throw new Error('EXTENSION_PUBLISH_SECRET is required');
   }
-  if (!containerSasUrl) {
-    throw new Error('AZURE_BLOB_SAS_URL is required');
+  if (!containerSasUrl && (!supabaseUrl || !supabaseServiceRoleKey || !supabaseBucket)) {
+    throw new Error(
+      'Configure either AZURE_BLOB_SAS_URL or SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY + SUPABASE_STORAGE_BUCKET.',
+    );
   }
 
   const artifactDir = path.resolve(process.cwd(), outputDirName);
@@ -86,18 +96,20 @@ async function main() {
   const zipPath = path.resolve(process.cwd(), zipFileName);
   await createZipFromDir(artifactDir, zipPath);
 
-  const containerClient = new ContainerClient(containerSasUrl);
   const blobName = `docflow-recorder/${version}/${zipFileName}`;
-  const blobClient = containerClient.getBlockBlobClient(blobName);
-
-  await blobClient.uploadFile(zipPath, {
-    blobHTTPHeaders: {
-      blobContentType: 'application/zip',
-      blobContentDisposition: `attachment; filename="${zipFileName}"`,
-    },
-  });
-
-  const downloadUrl = blobClient.url;
+  const downloadUrl = supabaseUrl && supabaseServiceRoleKey && supabaseBucket
+    ? await uploadToSupabaseStorage({
+        zipPath,
+        blobName,
+        bucket: supabaseBucket,
+        supabaseUrl,
+        serviceRoleKey: supabaseServiceRoleKey,
+      })
+    : await uploadToAzureBlob({
+        zipPath,
+        blobName,
+        containerSasUrl: containerSasUrl,
+      });
 
   const endpoint = `${apiBaseUrl.replace(/\/$/, '')}/api/extensions/releases/publish`;
   const body = {
@@ -108,20 +120,22 @@ async function main() {
 
   let response;
   try {
-    response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-extension-publish-key': publishKey,
-      },
-      body: JSON.stringify(body),
-    });
+    response = await retryAsync(() =>
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-extension-publish-key': publishKey,
+        },
+        body: JSON.stringify(body),
+      }),
+    );
   } catch (error) {
     const cause = error && typeof error === 'object' ? error.cause : null;
     const code = cause && typeof cause === 'object' ? cause.code : undefined;
     if (code === 'ECONNREFUSED') {
       throw new Error(
-        `Publish endpoint unreachable (${endpoint}). Start the DocFlow API or set DOC_STUDIO_API_BASE_URL to a reachable host.`,
+        `Publish endpoint unreachable (${endpoint}). Start the DocFlow API or set DOCFLOW_API_BASE_URL to a reachable host.`,
       );
     }
     throw error;
@@ -135,6 +149,90 @@ async function main() {
   const result = await response.json();
   console.log(`Uploaded extension artifact: ${blobName}`);
   console.log(`Published extension release v${result.version} -> ${result.downloadUrl}`);
+}
+
+async function uploadToAzureBlob({
+  zipPath,
+  blobName,
+  containerSasUrl,
+}) {
+  const containerClient = new ContainerClient(containerSasUrl);
+  const blobClient = containerClient.getBlockBlobClient(blobName);
+
+  await retryAsync(() =>
+    blobClient.uploadFile(zipPath, {
+      blobHTTPHeaders: {
+        blobContentType: 'application/zip',
+        blobContentDisposition: `attachment; filename="${path.basename(zipPath)}"`,
+      },
+    }),
+  );
+
+  return blobClient.url;
+}
+
+async function uploadToSupabaseStorage({
+  zipPath,
+  blobName,
+  bucket,
+  supabaseUrl,
+  serviceRoleKey,
+}) {
+  const fileBuffer = await fs.readFile(zipPath);
+  const uploadUrl = `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/${bucket}/${blobName}`;
+  const response = await retryAsync(() =>
+    fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        apikey: serviceRoleKey,
+        authorization: `Bearer ${serviceRoleKey}`,
+        'content-type': 'application/zip',
+        'x-upsert': 'true',
+      },
+      body: fileBuffer,
+    }),
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase storage upload failed (${response.status}): ${text || response.statusText}`);
+  }
+
+  return `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/${bucket}/${blobName}`;
+}
+
+async function retryAsync(operation, options = {}) {
+  const retries = options.retries ?? 3;
+  const delayMs = options.delayMs ?? 1200;
+
+  let lastError;
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableNetworkError(error) || attempt === retries - 1) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)));
+    }
+  }
+
+  throw lastError;
+}
+
+function isRetryableNetworkError(error) {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  const cause = error && typeof error === 'object' ? error.cause : null;
+  const code = cause && typeof cause === 'object' ? cause.code : undefined;
+
+  return (
+    code === 'EAI_AGAIN' ||
+    code === 'ENOTFOUND' ||
+    code === 'ECONNRESET' ||
+    code === 'ETIMEDOUT' ||
+    message.includes('fetch failed')
+  );
 }
 
 main().catch((err) => {

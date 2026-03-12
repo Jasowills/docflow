@@ -4,6 +4,7 @@ export interface AuthProviderConfig {
   githubSignInEnabled: boolean;
   logtoSignInUrl?: string;
   logtoGithubSignInUrl?: string;
+  logtoGithubIdpName?: string;
 }
 
 export interface GithubConnectionStatus {

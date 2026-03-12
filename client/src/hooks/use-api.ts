@@ -23,8 +23,11 @@ import type {
   GithubRepositorySummary,
   ConnectGithubRequest,
   UpdateGithubRepoSelectionsRequest,
+  AttachTestPlanSuitesRequest,
   CreateTestPlanRequest,
+  CreateTestPlanRunRequest,
   TestPlan,
+  TestPlanDetail,
   WorkspaceDetails,
   InviteWorkspaceMemberRequest,
   UpdateWorkspaceMemberRoleRequest,
@@ -164,6 +167,29 @@ export function useApi() {
   const createTestPlan = useCallback(
     (request: CreateTestPlanRequest) =>
       api<TestPlan>('/test-plans', {
+        method: 'POST',
+        body: request,
+      }),
+    [api],
+  );
+
+  const getTestPlanDetail = useCallback(
+    (planId: string) => api<TestPlanDetail>(`/test-plans/${planId}`),
+    [api],
+  );
+
+  const attachTestPlanSuites = useCallback(
+    (planId: string, request: AttachTestPlanSuitesRequest) =>
+      api<TestPlanDetail>(`/test-plans/${planId}/test-suites`, {
+        method: 'PUT',
+        body: request,
+      }),
+    [api],
+  );
+
+  const createTestPlanRun = useCallback(
+    (planId: string, request: CreateTestPlanRunRequest) =>
+      api(`/test-plans/${planId}/runs`, {
         method: 'POST',
         body: request,
       }),
@@ -359,6 +385,9 @@ export function useApi() {
     updateSelectedGithubRepos,
     listTestPlans,
     createTestPlan,
+    getTestPlanDetail,
+    attachTestPlanSuites,
+    createTestPlanRun,
     getDashboardSummary,
     updateOnboarding,
     getCurrentWorkspace,

@@ -11,7 +11,6 @@ import { DocumentsListPage } from "./pages/DocumentsListPage";
 import { DocumentDetailPage } from "./pages/DocumentDetailPage";
 import { AdminConfigPage } from "./pages/AdminConfigPage";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
-import { TestPlansPage } from "./pages/TestPlansPage";
 import { LandingPage } from "./pages/LandingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
@@ -35,9 +34,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
   const isOnboardingRoute = location.pathname.startsWith("/app/onboarding");
   const hasCompletedOnboarding = !!user?.onboardingCompletedAt;
-  if (!hasCompletedOnboarding && !isOnboardingRoute) {
-    return <Navigate to="/app/onboarding" replace />;
-  }
   if (hasCompletedOnboarding && isOnboardingRoute) {
     return <Navigate to="/app/dashboard" replace />;
   }
@@ -70,8 +66,9 @@ export default function App() {
           <Route path="documents" element={<DocumentsListPage />} />
           <Route path="documents/:id" element={<DocumentDetailPage />} />
           <Route path="workspace" element={<Navigate to="/app/settings?section=workspace" replace />} />
-          <Route path="github" element={<Navigate to="/app/settings?section=github" replace />} />
-          <Route path="test-plans" element={<TestPlansPage />} />
+          <Route path="github" element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="test-plans" element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="test-plans/:id" element={<Navigate to="/app/dashboard" replace />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="admin/config" element={<AdminConfigPage />} />
         </Route>

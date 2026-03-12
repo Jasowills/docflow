@@ -31,12 +31,14 @@ export class UsersRepository {
     provider: AuthUserRecord['externalProvider'],
     externalSubject: string,
   ): Promise<AuthUserRecord | null> {
-    const { data, error } = await this.supabase
-      .from('docflow_users')
-      .select('*')
-      .eq('external_provider', provider)
-      .eq('external_subject', externalSubject)
-      .maybeSingle();
+    const { data, error } = await retrySupabaseRead(() =>
+      this.supabase
+        .from('docflow_users')
+        .select('*')
+        .eq('external_provider', provider)
+        .eq('external_subject', externalSubject)
+        .maybeSingle(),
+    );
 
     if (error) {
       this.logger.error(`Failed to find user by external identity: ${error.message}`);

@@ -1,7 +1,7 @@
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { ClipboardCheck, FileText, LayoutDashboard, List, Settings, Sparkles } from "lucide-react";
+import { FileText, LayoutDashboard, List, Settings, Sparkles } from "lucide-react";
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 
@@ -10,17 +10,15 @@ const navItems = [
   { label: "Recordings", icon: List, activeFor: "dashboard" },
   { label: "Generate", icon: Sparkles, activeFor: "documents" },
   { label: "Documents", icon: FileText, activeFor: "documents" },
-  { label: "Test Plans", icon: ClipboardCheck, activeFor: "test-plans" },
-  { label: "Settings", icon: Settings, activeFor: "test-plans" },
+  { label: "Settings", icon: Settings, activeFor: "dashboard" },
 ];
 
 export function ShowcaseScreenPage() {
   const params = useParams<{ shot?: string }>();
-  const shot = params.shot === "documents" || params.shot === "test-plans" ? params.shot : "dashboard";
+  const shot = params.shot === "documents" ? params.shot : "dashboard";
 
   const content = useMemo(() => {
     if (shot === "documents") return <DocumentsShot />;
-    if (shot === "test-plans") return <TestPlansShot />;
     return <DashboardShot />;
   }, [shot]);
 
@@ -34,7 +32,7 @@ export function ShowcaseScreenPage() {
             </p>
             <h1 className="mt-3 text-[30px] font-semibold tracking-tight">Jason's Workspace</h1>
             <p className="mt-3 max-w-[22rem] text-sm leading-6 text-zinc-400">
-              Personal operations for workflow capture, generation, and release coordination.
+              Personal operations for workflow capture, generation, and documentation.
             </p>
           </div>
           <div className="p-5">
@@ -74,7 +72,7 @@ export function ShowcaseScreenPage() {
           <header className="border-b border-white/8 bg-black/10 px-8 py-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-300/70">DocFlow Ops</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-              {shot === "dashboard" ? "Operations dashboard" : shot === "documents" ? "Generated documents" : "Test plans"}
+              {shot === "dashboard" ? "Operations dashboard" : "Generated documents"}
             </h2>
           </header>
           <div className="p-8">{content}</div>
@@ -91,8 +89,7 @@ function DashboardShot() {
         {[
           ["Recordings", "42"],
           ["Documents", "18"],
-          ["Test Plans", "6"],
-          ["Connected Repos", "4"],
+          ["Members", "4"],
         ].map(([label, value]) => (
           <div key={label} className="rounded-[28px] border border-white/8 bg-[#0a100d] p-5">
             <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
@@ -123,7 +120,7 @@ function DashboardShot() {
             <CardDescription className="text-zinc-400">Move the workspace forward from the main bottlenecks.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {["Upload recording", "Generate documents", "Create test plan", "Connect GitHub App"].map((label) => (
+            {["Upload recording", "Generate documents", "Review documents"].map((label) => (
               <div key={label} className="rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
                 {label}
               </div>
@@ -158,57 +155,6 @@ function DocumentsShot() {
             <p className="mt-3 text-sm text-zinc-400">Generated from {source}. Ready for review and folder assignment.</p>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function TestPlansShot() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-[1fr_360px] gap-6">
-        <Card className="border-white/8 bg-[#09100d] text-white">
-          <CardHeader>
-            <CardTitle>Release 1.4 regression</CardTitle>
-            <CardDescription className="text-zinc-400">Repo-linked plan targeting checkout and account settings flows.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              ["Repository", "docflow-webapp"],
-              ["Branch", "release/1.4"],
-              ["Environment", "staging"],
-              ["Suites attached", "3"],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/20 px-4 py-3">
-                <span className="text-sm text-zinc-400">{label}</span>
-                <span className="text-sm font-medium">{value}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-        <Card className="border-white/8 bg-[#09100d] text-white">
-          <CardHeader>
-            <CardTitle>Run readiness</CardTitle>
-            <CardDescription className="text-zinc-400">Current distribution of plans by status.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              ["Draft", 3],
-              ["Ready", 6],
-              ["Blocked", 1],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span>{label}</span>
-                  <span className="text-zinc-400">{value}</span>
-                </div>
-                <div className="h-2 rounded-full bg-black/30">
-                  <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Number(value) * 12}%` }} />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

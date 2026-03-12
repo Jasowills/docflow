@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ClipboardCheck, Plus, GitBranch, FolderGit2 } from 'lucide-react';
 import { useApi } from '../hooks/use-api';
 import type { CreateTestPlanRequest, GithubRepositorySummary, TestPlan } from '@docflow/shared';
@@ -275,6 +276,12 @@ export function TestPlansPage() {
                     <p className="text-xs text-muted-foreground">
                       Created {new Date(plan.createdAtUtc).toLocaleString()}
                     </p>
+
+                    <div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/app/test-plans/${plan.planId}`}>Open plan</Link>
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

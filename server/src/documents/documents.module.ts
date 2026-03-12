@@ -8,6 +8,7 @@ import { AdminModule } from '../admin/admin.module';
 import { AiModule } from '../ai/ai.module';
 import { CommonModule } from '../common/common.module';
 import { RealtimeModule } from '../realtime/realtime.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -16,9 +17,10 @@ import { RealtimeModule } from '../realtime/realtime.module';
     AiModule,
     CommonModule,
     RealtimeModule,
+    AuthModule,
   ],
   controllers: [DocumentsController],
   providers: [DocumentsService, DocumentsRepository, PromptBuilderService],
-  exports: [DocumentsService],
+  exports: [DocumentsService, DocumentsRepository],
 })
 export class DocumentsModule {}

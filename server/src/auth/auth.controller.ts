@@ -21,12 +21,17 @@ export class AuthController {
   @Get('providers')
   @ApiOperation({ summary: 'Get enabled sign-in providers' })
   getProviders() {
+    const githubSignInEnabled =
+      this.config.authProvider === 'logto' &&
+      !!(this.config.logtoGithubIdpName || this.config.logtoGithubSignInUrl);
+
     return {
       primaryProvider: this.config.authProvider === 'logto' ? 'logto' : 'jwt',
       logtoEnabled: this.config.authProvider === 'logto' || !!this.config.logtoEndpoint,
-      githubSignInEnabled: !!this.config.logtoGithubSignInUrl,
+      githubSignInEnabled,
       logtoSignInUrl: this.config.logtoSignInUrl || undefined,
       logtoGithubSignInUrl: this.config.logtoGithubSignInUrl || undefined,
+      logtoGithubIdpName: this.config.logtoGithubIdpName || undefined,
     };
   }
 

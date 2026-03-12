@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   ChevronsRight,
-  ClipboardCheck,
   FileText,
   LayoutDashboard,
   List,
@@ -30,6 +29,7 @@ import {
 } from "../../lib/extension-bridge";
 import { APP_TOAST_EVENT, type AppToastDetail } from "../../lib/app-toast";
 import { DebugPanel } from "../debug/DebugPanel";
+import { pushDebugTrace } from "../../lib/debug-trace";
 
 type AppToastItem = {
   id: string;
@@ -49,7 +49,6 @@ const navItems: NavItem[] = [
   { path: "/app/recordings", label: "Recordings", icon: List },
   { path: "/app/generate", label: "Generate", icon: Sparkles },
   { path: "/app/documents", label: "Documents", icon: FileText },
-  { path: "/app/test-plans", label: "Test Plans", icon: ClipboardCheck },
   { path: "/app/settings", label: "Settings", icon: Settings },
 ];
 
@@ -178,6 +177,27 @@ export function Layout() {
 
     setPendingNavigationPath(item.path);
     navigate(item.path);
+  };
+
+  const handleOpenNotifications = () => {
+    setIsNotificationOpen(true);
+
+    if (unreadCount > 0) {
+      pushDebugTrace(
+        "effect",
+        "Layout.notifications",
+        "Opened notification drawer and marked unread items as read",
+        { unreadCount },
+      );
+      markAllNotificationsRead();
+      return;
+    }
+
+    pushDebugTrace(
+      "effect",
+      "Layout.notifications",
+      "Opened notification drawer with no unread items",
+    );
   };
 
   useEffect(() => {
@@ -418,14 +438,14 @@ export function Layout() {
               </div>
 
               <p className="hidden lg:block text-sm text-muted-foreground">
-                Capture flows, generate assets, coordinate releases and testing.
+                Capture flows and generate structured documentation from one workspace.
               </p>
 
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setIsNotificationOpen(true)}
+                  onClick={handleOpenNotifications}
                   aria-label="Open notifications"
                   className="relative"
                 >

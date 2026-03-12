@@ -47,12 +47,17 @@ export class DocumentsRepository {
     }
   }
 
-  async findById(documentId: string): Promise<GeneratedDocument | null> {
-    const { data, error } = await this.supabase
+  async findById(documentId: string, userIds?: string[]): Promise<GeneratedDocument | null> {
+    let request = this.supabase
       .from('documents')
       .select('*')
-      .eq('document_id', documentId)
-      .maybeSingle();
+      .eq('document_id', documentId);
+
+    if (userIds?.length) {
+      request = request.in('created_by', userIds);
+    }
+
+    const { data, error } = await request.maybeSingle();
     if (error) {
       this.logger.error(`Failed to load document ${documentId}: ${error.message}`);
       throw new Error('Failed to load document.');
@@ -78,7 +83,10 @@ export class DocumentsRepository {
     };
   }
 
-  async findAll(query: DocumentListQuery): Promise<PaginatedResponse<DocumentSummary>> {
+  async findAll(
+    query: DocumentListQuery,
+    userIds?: string[],
+  ): Promise<PaginatedResponse<DocumentSummary>> {
     const page = query.page || 1;
     const pageSize = Math.min(query.pageSize || 20, 100);
     const skip = (page - 1) * pageSize;
@@ -91,6 +99,7 @@ export class DocumentsRepository {
       )
       .order('created_at_utc', { ascending: false });
 
+    if (userIds?.length) request = request.in('created_by', userIds);
     if (query.documentType) request = request.eq('document_type', query.documentType);
     if (query.productArea) request = request.eq('product_area', query.productArea);
     if (query.folder) request = request.eq('folder', query.folder.trim());
@@ -125,6 +134,48 @@ export class DocumentsRepository {
     };
   }
 
+  async findSummariesByIds(
+    documentIds: string[],
+    userIds?: string[],
+  ): Promise<DocumentSummary[]> {
+    const ids = Array.from(new Set(documentIds.map((value) => value.trim()).filter(Boolean)));
+    if (ids.length === 0) {
+      return [];
+    }
+
+    let request = this.supabase
+      .from('documents')
+      .select(
+        'document_id, document_title, document_type, recording_id, recording_name, product_area, folder, created_at_utc, created_by',
+      )
+      .in('document_id', ids);
+
+    if (userIds?.length) {
+      request = request.in('created_by', userIds);
+    }
+
+    const { data, error } = await request;
+    if (error) {
+      this.logger.error(`Failed to load document summaries by id: ${error.message}`);
+      throw new Error('Failed to load documents.');
+    }
+
+    const summaries = ((data as Array<Record<string, unknown>> | null) || []).map((row) => ({
+      documentId: String(row.document_id || ''),
+      documentTitle: String(row.document_title || ''),
+      documentType: String(row.document_type || ''),
+      recordingId: String(row.recording_id || ''),
+      recordingName: String(row.recording_name || ''),
+      productArea: String(row.product_area || ''),
+      folder: typeof row.folder === 'string' ? row.folder : undefined,
+      createdAtUtc: String(row.created_at_utc || ''),
+      createdBy: String(row.created_by || ''),
+    }));
+
+    const index = new Map(summaries.map((summary) => [summary.documentId, summary]));
+    return ids.map((id) => index.get(id)).filter(Boolean) as DocumentSummary[];
+  }
+
   async deleteById(documentId: string, userId: string): Promise<boolean> {
     const { error, count } = await this.supabase
       .from('documents')
@@ -138,8 +189,13 @@ export class DocumentsRepository {
     return (count || 0) > 0;
   }
 
-  async updateFolder(documentId: string, folder: string, modifiedBy: string): Promise<GeneratedDocument | null> {
-    const { error } = await this.supabase
+  async updateFolder(
+    documentId: string,
+    folder: string,
+    modifiedBy: string,
+    userIds?: string[],
+  ): Promise<GeneratedDocument | null> {
+    let request = this.supabase
       .from('documents')
       .update({
         folder,
@@ -147,10 +203,16 @@ export class DocumentsRepository {
         last_modified_by: modifiedBy,
       })
       .eq('document_id', documentId);
+
+    if (userIds?.length) {
+      request = request.in('created_by', userIds);
+    }
+
+    const { error } = await request;
     if (error) {
       this.logger.error(`Failed to update document folder ${documentId}: ${error.message}`);
       throw new Error('Failed to update document folder.');
     }
-    return this.findById(documentId);
+    return this.findById(documentId, userIds);
   }
 }

@@ -55,7 +55,7 @@ export class RecordingsController {
   @ApiQuery({ name: 'productArea', required: false, type: String })
   @ApiQuery({ name: 'search', required: false, type: String })
   async list(
-    @CurrentUser() _user: UserContext,
+    @CurrentUser() user: UserContext,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('productArea') productArea?: string,
@@ -67,7 +67,7 @@ export class RecordingsController {
       productArea,
       search,
     };
-    return this.recordingsService.list(query);
+    return this.recordingsService.list(query, user);
   }
 
   @Get(':id')
@@ -75,9 +75,9 @@ export class RecordingsController {
   @ApiOperation({ summary: 'Get a specific recording by ID' })
   async getById(
     @Param('id') id: string,
-    @CurrentUser() _user: UserContext,
+    @CurrentUser() user: UserContext,
   ) {
-    return this.recordingsService.getById(id);
+    return this.recordingsService.getById(id, user);
   }
 
   @Delete(':id')

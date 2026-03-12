@@ -68,6 +68,10 @@ export class AppConfig {
     return this.configService.get<string>('LOGTO_GITHUB_SIGN_IN_URL', '');
   }
 
+  get logtoGithubIdpName(): string {
+    return this.configService.get<string>('LOGTO_GITHUB_IDP_NAME', 'github');
+  }
+
   get githubAppId(): string {
     return this.configService.get<string>('GITHUB_APP_ID', '');
   }
@@ -94,6 +98,10 @@ export class AppConfig {
 
   get githubAppSetupUrl(): string {
     return this.configService.get<string>('GITHUB_APP_SETUP_URL', '');
+  }
+
+  get docflowApiBaseUrl(): string {
+    return this.configService.get<string>('DOCFLOW_API_BASE_URL', 'http://localhost:3001');
   }
 
   get docflowWebBaseUrl(): string {

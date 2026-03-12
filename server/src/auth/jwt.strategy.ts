@@ -140,10 +140,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       let lastError: unknown = null;
       for (const audience of candidateAudiences) {
         try {
-          const { payload } = await jwtVerify(token, this.logtoJwks, {
-            issuer: this.config.logtoIssuer,
-            audience,
-          });
+          const { payload } = await retryAsync(() =>
+            jwtVerify(token, this.logtoJwks!, {
+              issuer: this.config.logtoIssuer,
+              audience,
+            }),
+          );
           return payload as StrategyPayload;
         } catch (error) {
           lastError = error;
@@ -166,6 +168,47 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('Invalid Logto access token.');
     }
   }
+}
+
+async function retryAsync<T>(
+  operation: () => Promise<T>,
+  options: { retries?: number; delayMs?: number } = {},
+): Promise<T> {
+  const retries = options.retries ?? 3;
+  const delayMs = options.delayMs ?? 700;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableNetworkError(error) || attempt === retries - 1) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)));
+    }
+  }
+
+  throw lastError;
+}
+
+function isRetryableNetworkError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  const cause = error && typeof error === 'object' ? (error as { cause?: unknown }).cause : null;
+  const code =
+    cause && typeof cause === 'object'
+      ? (cause as { code?: string }).code
+      : undefined;
+
+  return (
+    code === 'EAI_AGAIN' ||
+    code === 'ENOTFOUND' ||
+    code === 'ECONNRESET' ||
+    code === 'ETIMEDOUT' ||
+    message.includes('fetch failed') ||
+    message.includes('eai_again')
+  );
 }
 
 function readUnverifiedIssuer(token: string): string | undefined {

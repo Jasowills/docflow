@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Post, Query, Redirect, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Put, Query, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ConnectGithubRequest, GithubRepoSelection, UserContext } from '@docflow/shared';
-import { CurrentUser } from '../auth/decorators';
+import type { Request, Response } from 'express';
+import { CurrentUser, Public } from '../auth/decorators';
 import { GithubService } from './github.service';
 
 @ApiTags('GitHub')
@@ -22,20 +23,50 @@ export class GithubController {
     return this.githubService.getInstallUrl(user.userId, user.workspaceId);
   }
 
+  @Get('app/install')
+  @Public()
+  @ApiOperation({ summary: 'Start the GitHub App installation flow' })
+  async beginInstall(
+    @Query('token') token: string | undefined,
+    @Res() res: Response,
+  ) {
+    const result = await this.githubService.beginAppInstall(token);
+    res.cookie(result.cookieName, result.cookieValue, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/api/integrations/github/app',
+      maxAge: 10 * 60 * 1000,
+    });
+    return res.redirect(result.installUrl);
+  }
+
   @Get('app/callback')
-  @Redirect()
+  @Public()
   @ApiOperation({ summary: 'Handle the GitHub App setup callback' })
   async handleCallback(
     @Query('installation_id') installationId?: string,
     @Query('setup_action') setupAction?: string,
     @Query('state') state?: string,
+    @Req() req?: Request,
+    @Res() res?: Response,
   ) {
-    const url = await this.githubService.handleAppCallback({
-      installationId: installationId ? Number(installationId) : undefined,
-      setupAction,
-      state,
-    });
-    return { url };
+    const cookieName = this.githubService.getInstallCookieName();
+    const cookieState = readCookie(req?.headers.cookie, cookieName);
+
+    try {
+      const url = await this.githubService.handleAppCallback({
+        installationId: installationId ? Number(installationId) : undefined,
+        setupAction,
+        state,
+        cookieState,
+      });
+      res?.clearCookie(cookieName, { path: '/api/integrations/github/app' });
+      return res?.redirect(url);
+    } catch {
+      res?.clearCookie(cookieName, { path: '/api/integrations/github/app' });
+      return res?.redirect(this.githubService.getGithubSettingsRedirectUrl('error'));
+    }
   }
 
   @Post('connect')
@@ -73,4 +104,17 @@ export class GithubController {
   ) {
     return this.githubService.updateSelectedRepositories(user.workspaceId, body);
   }
+}
+
+function readCookie(rawCookieHeader: string | undefined, name: string): string | undefined {
+  if (!rawCookieHeader) {
+    return undefined;
+  }
+
+  const prefix = `${name}=`;
+  return rawCookieHeader
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix))
+    ?.slice(prefix.length);
 }

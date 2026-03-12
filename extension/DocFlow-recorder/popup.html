@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocFlow Recorder</title>
+    <style>
+      @font-face {
+        font-family: "Inter";
+        src: url("./Inter-VariableFont_opsz,wght.ttf") format("truetype-variations");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Inter";
+        src: url("./Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype-variations");
+        font-weight: 100 900;
+        font-style: italic;
+        font-display: swap;
+      }
+
+      :root {
+        --bg: #000000;
+        --surface: #050505;
+        --surface-strong: #090909;
+        --surface-soft: #0d0d0d;
+        --surface-elevated: #111111;
+        --text: #f3f8f5;
+        --muted: #8f8f8f;
+        --border: rgba(255, 255, 255, 0.08);
+        --border-strong: rgba(255, 255, 255, 0.14);
+        --divider: rgba(255, 255, 255, 0.07);
+
+        --primary: #22c55e;
+        --primary-hover: #1faa52;
+        --primary-strong: #34d16f;
+        --danger: #f87171;
+        --danger-hover: #ef4444;
+
+        --success-bg: rgba(34, 197, 94, 0.08);
+        --success-fg: #86efac;
+        --success-border: rgba(74, 222, 128, 0.18);
+
+        --warn-bg: rgba(250, 204, 21, 0.08);
+        --warn-fg: #fde68a;
+        --warn-border: rgba(250, 204, 21, 0.16);
+
+        --shadow: none;
+        --radius: 10px;
+        --radius-sm: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        width: 400px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .shell {
+        position: relative;
+        margin: 10px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+
+      .shell::before {
+        content: none;
+      }
+
+      .header {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px;
+        background: var(--surface-strong);
+        border-bottom: 1px solid var(--divider);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+
+      .header-logo {
+        width: 30px;
+        height: 30px;
+        object-fit: contain;
+        display: block;
+        filter: none;
+      }
+
+      .title {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .header-copy {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .header-meta {
+        flex: 0 0 auto;
+      }
+
+      .studio-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--border-strong);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        background: #0d0d0d;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #6b7f75;
+      }
+
+      .studio-tag.connected {
+        background: var(--success-bg);
+        color: var(--success-fg);
+        border-color: var(--success-border);
+      }
+
+      .studio-tag.connected .dot {
+        background: #16a34a;
+      }
+
+      .studio-tag.disconnected {
+        background: var(--warn-bg);
+        color: var(--warn-fg);
+        border-color: var(--warn-border);
+      }
+
+      .studio-tag.disconnected .dot {
+        background: #f97316;
+      }
+
+      .status-strip {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--divider);
+        background: var(--surface-soft);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #64748b;
+        flex: 0 0 auto;
+      }
+
+      .status-copy {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .status-strip.recording {
+        background: rgba(248, 113, 113, 0.05);
+      }
+
+      .status-strip.recording .status-dot {
+        background: var(--danger);
+        animation: pulse 1.5s infinite;
+      }
+
+      .status-strip.stopped {
+        background: rgba(34, 197, 94, 0.05);
+      }
+
+      .status-strip.stopped .status-dot {
+        background: #16a34a;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 0.65;
+        }
+      }
+
+      .section {
+        position: relative;
+        padding: 14px;
+      }
+
+      .hero-panel,
+      .subpanel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-strong);
+      }
+
+      .hero-panel {
+        padding: 14px;
+      }
+
+      .hero-top {
+        display: block;
+        margin-bottom: 12px;
+      }
+
+      .hero-title {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+      }
+
+      .hero-body {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+        max-width: 32ch;
+      }
+
+      .hero-actions {
+        width: 100%;
+        margin-top: 12px;
+      }
+
+      .control-grid,
+      .snapshot-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .control-grid {
+        grid-template-columns: 1fr;
+        margin-top: 12px;
+      }
+
+      .snapshot-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mini-panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: #0b0b0b;
+        padding: 11px 12px;
+      }
+
+      .mini-panel-title {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .section + .section {
+        border-top: 1px solid var(--divider);
+      }
+
+      .field + .field,
+      .field + details,
+      details + button,
+      .btn-group,
+      .btn-group + .field,
+      .meta-panel .field + .field,
+      .stack > .field,
+      .stack > details {
+        margin-top: 10px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: #9aa09c;
+        text-transform: uppercase;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        font-family: inherit;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #0d0d0d;
+        color: var(--text);
+        font-size: 13px;
+        outline: none;
+        box-shadow: none;
+      }
+
+      input,
+      select {
+        height: 38px;
+        padding: 8px 10px;
+      }
+
+      textarea {
+        min-height: 68px;
+        padding: 8px 10px;
+        resize: vertical;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: rgba(74, 222, 128, 0.28);
+        box-shadow: none;
+      }
+
+      details {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: #0a0a0a;
+        overflow: hidden;
+      }
+
+      summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 12px 14px;
+        font-size: 12px;
+        color: #c7d0ca;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .meta-panel {
+        padding: 0 14px 14px;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .meta-grid .field {
+        margin-top: 0 !important;
+      }
+
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #0d0d0d;
+        padding: 10px 12px;
+        margin: 0;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .toggle-main {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .mic-icon {
+        width: 16px;
+        height: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+      }
+
+      .mic-icon svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+      }
+
+      input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        accent-color: var(--primary);
+      }
+
+      .field-help {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.3;
+      }
+
+      button {
+        width: 100%;
+        height: 40px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          border-color 140ms ease,
+          background-color 140ms ease,
+          color 140ms ease;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: #031008;
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-hover);
+      }
+
+      .btn-primary.is-busy,
+      .btn-outline.is-busy,
+      .btn-danger.is-busy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .btn-spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.22);
+        border-top-color: currentColor;
+        border-radius: 999px;
+        animation: spin 0.8s linear infinite;
+        flex: 0 0 auto;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .btn-danger {
+        background: #2a1111;
+        color: #fff7f7;
+        border-color: rgba(248, 113, 113, 0.22);
+      }
+
+      .btn-danger:hover {
+        background: #341414;
+      }
+
+      .btn-outline {
+        background: #0d0d0d;
+        color: var(--text);
+        border-color: var(--border);
+      }
+
+      .btn-outline:hover {
+        background: #141414;
+        border-color: var(--border-strong);
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn-group > button {
+        flex: 1 1 0;
+      }
+
+      .action-stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .upload-progress {
+        margin-top: 10px;
+      }
+
+      .section-title {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .stat-card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-strong);
+        overflow: hidden;
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .stat-cell {
+        padding: 12px 14px;
+      }
+
+      .stat-cell + .stat-cell {
+        border-left: 1px solid var(--divider);
+      }
+
+      .stat-label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .result-panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-strong);
+        padding: 12px;
+      }
+
+      .result-copy {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .result-heading {
+        margin: 0 0 6px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .stopped-summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .metric-panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: #0b0b0b;
+        padding: 10px 12px;
+      }
+
+      .metric-value {
+        margin-top: 8px;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .utility-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .utility-copy {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+
+      .utility-action {
+        width: auto;
+        min-width: 148px;
+      }
+
+      .upload-progress-track {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: #111111;
+        overflow: hidden;
+      }
+
+      .upload-progress-fill {
+        width: 0%;
+        height: 100%;
+        background: var(--primary);
+        transition: width 0.15s ease;
+      }
+
+      .upload-progress-copy {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .source-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: #0d0d0d;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .source-chip strong {
+        color: var(--text);
+      }
+
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--divider);
+      }
+
+      .footer-copy {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .spacious-input {
+        margin-top: 12px;
+      }
+
+      .stopped-actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      .version {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="shell">
+      <header class="header">
+        <div class="brand">
+          <img src="icons/brand-icon.svg" alt="DocFlow" class="header-logo" />
+          <div class="header-copy">
+            <span class="eyebrow">Capture Console</span>
+            <div class="title">DocFlow Recorder</div>
+          </div>
+        </div>
+        <div class="header-meta">
+          <span id="studioTag" class="studio-tag disconnected">
+            <span class="dot" aria-hidden="true"></span>
+            Not Connected
+          </span>
+        </div>
+      </header>
+
+      <div id="statusBar" class="status-strip idle">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-copy" id="statusSubText">Ready to start a new recording</span>
+      </div>
+
+      <div id="idleSection">
+        <section class="section">
+          <div class="stack">
+            <div class="hero-panel">
+              <div class="hero-top">
+                <div>
+                  <span class="eyebrow">New Session</span>
+                  <h1 class="hero-title">Capture a live workflow</h1>
+                  <p class="hero-body">
+                    Record the current tab into structured events, screenshots, and optional transcript-ready audio.
+                  </p>
+                </div>
+                <div class="hero-actions">
+                  <button id="btnStart" class="btn-primary">Start Recording</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="title">Session Title</label>
+                <input id="title" type="text" placeholder="e.g. Checkout settings review" />
+              </div>
+
+              <div class="control-grid">
+                <div class="mini-panel">
+                  <div class="mini-panel-title">Scope</div>
+                  <div class="field">
+                    <label for="productArea">Product Area</label>
+                    <select id="productArea">
+                      <option value="dashboard">Dashboard</option>
+                      <option value="device_management">Device Management</option>
+                      <option value="alerts">Alerts</option>
+                      <option value="reporting">Reporting</option>
+                      <option value="settings">Settings</option>
+                      <option value="user_management">User Management</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="environment">Environment</label>
+                    <select id="environment">
+                      <option value="production">Production</option>
+                      <option value="staging">Staging</option>
+                      <option value="development">Development</option>
+                      <option value="test">Test</option>
+                      <option value="demo">Demo</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="mini-panel">
+                  <div class="mini-panel-title">Capture Modes</div>
+                  <div class="field">
+                    <label for="captureMic">Audio Transcript</label>
+                    <label class="toggle-row" for="captureMic">
+                      <span class="toggle-main">
+                        <span class="mic-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="2.5" width="6" height="12" rx="3"></rect>
+                            <path d="M5 11a7 7 0 0 0 14 0"></path>
+                            <line x1="12" y1="18" x2="12" y2="22"></line>
+                            <line x1="8.5" y1="22" x2="15.5" y2="22"></line>
+                          </svg>
+                        </span>
+                        Capture microphone audio
+                      </span>
+                      <input id="captureMic" type="checkbox" checked />
+                    </label>
+                    <div class="field-help">Optional. Turn off to record only on-screen events.</div>
+                  </div>
+
+                  <div class="field">
+                    <label for="captureScreenshots">Key Screenshots</label>
+                    <label class="toggle-row" for="captureScreenshots">
+                      <span class="toggle-main">
+                        Capture focused key screenshots
+                      </span>
+                      <input id="captureScreenshots" type="checkbox" checked />
+                    </label>
+                    <div class="field-help">Recommended. Captures important UI moments for documentation steps.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <details class="subpanel">
+              <summary>Metadata and image settings</summary>
+              <div class="meta-panel">
+                <div class="field">
+                  <label for="description">Description</label>
+                  <textarea id="description" rows="2" placeholder="Short context for this recording"></textarea>
+                </div>
+
+                <div class="meta-grid">
+                  <div class="field">
+                    <label for="productVersion">Product Version</label>
+                    <input id="productVersion" type="text" placeholder="4.2.1" />
+                  </div>
+
+                  <div class="field">
+                    <label for="locale">Locale</label>
+                    <input id="locale" type="text" value="en-US" />
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="tags">Tags</label>
+                  <input id="tags" type="text" placeholder="checkout, settings, qa" />
+                </div>
+
+                <div class="field">
+                  <label>Screenshot Image Settings</label>
+                  <div class="meta-grid">
+                    <div class="field">
+                      <label for="screenshotWidth">Width</label>
+                      <input id="screenshotWidth" type="number" min="960" max="3840" step="16" value="2560" />
+                    </div>
+                    <div class="field">
+                      <label for="screenshotHeight">Height</label>
+                      <input id="screenshotHeight" type="number" min="540" max="2160" step="16" value="1440" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="screenshotQuality">JPEG Quality</label>
+                    <input id="screenshotQuality" type="number" min="60" max="100" step="1" value="100" />
+                  </div>
+                  <div class="field-help">Higher values increase clarity and upload size.</div>
+                </div>
+              </div>
+            </details>
+        </section>
+      </div>
+
+      <div id="recordingSection" class="hidden">
+        <section class="section">
+          <div class="stack">
+            <div class="stat-card">
+              <div class="stat-grid">
+                <div class="stat-cell">
+                  <span class="stat-label">Events</span>
+                  <div class="stat-value" id="eventCount">0</div>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-label">Duration</span>
+                  <div class="stat-value" id="duration">00:00</div>
+                </div>
+              </div>
+            </div>
+            <div class="result-panel">
+              <p class="result-copy">The current tab is being captured into a structured DocFlow session.</p>
+              <button id="btnStop" class="btn-danger">Stop Recording</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="stoppedSection" class="hidden">
+        <section class="section">
+          <div class="stack">
+            <div class="result-panel">
+              <span class="eyebrow">Recording Ready</span>
+              <p class="result-copy">Review the capture, keep a local export, or send it straight into DocFlow.</p>
+              <div class="stopped-summary-grid">
+                <div class="metric-panel">
+                  <div class="mini-panel-title">Events Captured</div>
+                  <div class="metric-value" id="finalEventCount">0</div>
+                </div>
+                <div class="metric-panel">
+                  <div class="mini-panel-title">Next Step</div>
+                  <div class="footer-copy">Upload or start a clean capture.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stopped-actions">
+              <div class="btn-group">
+                <button id="btnDownload" class="btn-primary">Download JSON</button>
+                <button id="btnUpload" class="btn-outline">Upload to Studio</button>
+              </div>
+              <button id="btnReset" class="btn-outline">New Recording</button>
+              <div id="uploadProgress" class="upload-progress hidden">
+                <div class="upload-progress-track" aria-hidden="true">
+                  <div id="uploadProgressFill" class="upload-progress-fill"></div>
+                </div>
+                <div class="upload-progress-copy">
+                  <span id="uploadProgressText">Preparing upload...</span>
+                  <span id="uploadProgressPct">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="section">
+        <div class="result-panel">
+          <div class="utility-row">
+            <div class="utility-copy">
+              <span class="eyebrow">Workspace Link</span>
+              <div id="authStatus" class="footer-copy">Not connected</div>
+            </div>
+            <button id="btnClearToken" class="btn-outline utility-action">Clear Connection</button>
+          </div>
+          <div class="footer">
+            <span class="footer-copy">Recorder extension surface</span>
+            <span class="version">v1.0.0.14</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

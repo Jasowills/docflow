@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { SignJWT, importPKCS8 } from 'jose';
+import { SignJWT } from 'jose';
+import { createPrivateKey } from 'node:crypto';
 import type {
   ConnectGithubRequest,
   GithubConnectionStatus,
@@ -13,6 +14,8 @@ import { GithubRepository } from './github.repository';
 
 @Injectable()
 export class GithubService {
+  private static readonly installCookieName = 'docflow_github_install';
+
   constructor(
     private readonly repository: GithubRepository,
     private readonly config: AppConfig,
@@ -44,7 +47,27 @@ export class GithubService {
 
     const state = await this.createGithubStateToken(userId, workspaceId);
     return {
-      installUrl: `https://github.com/apps/${this.config.githubAppSlug}/installations/new?state=${encodeURIComponent(state)}`,
+      installUrl: `${this.config.docflowApiBaseUrl.replace(/\/+$/, '')}/api/integrations/github/app/install?token=${encodeURIComponent(state)}`,
+    };
+  }
+
+  async beginAppInstall(token?: string): Promise<{
+    installUrl: string;
+    cookieValue: string;
+    cookieName: string;
+  }> {
+    if (!token) {
+      throw new BadRequestException('Missing GitHub app install token.');
+    }
+    if (!this.config.githubAppSlug) {
+      throw new BadRequestException('GitHub App is not configured.');
+    }
+
+    await this.verifyGithubStateToken(token);
+    return {
+      installUrl: `https://github.com/apps/${this.config.githubAppSlug}/installations/new?state=${encodeURIComponent(token)}`,
+      cookieValue: token,
+      cookieName: GithubService.installCookieName,
     };
   }
 
@@ -52,12 +75,14 @@ export class GithubService {
     installationId?: number;
     setupAction?: string;
     state?: string;
+    cookieState?: string;
   }): Promise<string> {
-    if (!input.state) {
+    const stateToken = input.state || input.cookieState;
+    if (!stateToken) {
       throw new BadRequestException('Missing GitHub app state.');
     }
 
-    const payload = await this.verifyGithubStateToken(input.state);
+    const payload = await this.verifyGithubStateToken(stateToken);
     if (!payload.workspaceId || !input.installationId) {
       throw new BadRequestException('Missing GitHub installation details.');
     }
@@ -70,6 +95,10 @@ export class GithubService {
     );
 
     return `${this.config.docflowWebBaseUrl.replace(/\/+$/, '')}/app/settings?section=github&github=connected&installation_id=${input.installationId}&setup_action=${encodeURIComponent(input.setupAction || 'install')}`;
+  }
+
+  getGithubSettingsRedirectUrl(status: 'connected' | 'error'): string {
+    return `${this.config.docflowWebBaseUrl.replace(/\/+$/, '')}/app/settings?section=github&github=${status}`;
   }
 
   async connect(userId: string, request: ConnectGithubRequest): Promise<GithubConnectionStatus> {
@@ -212,7 +241,7 @@ export class GithubService {
     }
 
     const normalizedKey = this.config.githubAppPrivateKey.replace(/\\n/g, '\n');
-    const key = await importPKCS8(normalizedKey, 'RS256');
+    const key = createPrivateKey(normalizedKey);
     const now = Math.floor(Date.now() / 1000);
     return new SignJWT({})
       .setProtectedHeader({ alg: 'RS256' })
@@ -250,6 +279,10 @@ export class GithubService {
       userId: typeof payload.userId === 'string' ? payload.userId : undefined,
       workspaceId: typeof payload.workspaceId === 'string' ? payload.workspaceId : undefined,
     };
+  }
+
+  getInstallCookieName(): string {
+    return GithubService.installCookieName;
   }
 }
 

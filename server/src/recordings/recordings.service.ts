@@ -10,6 +10,7 @@ import { ScreenshotStorageService } from './screenshot-storage.service';
 import { AuditService } from '../common/services/audit.service';
 import { UploadRecordingDto } from './dto/upload-recording.dto';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { WorkspacesRepository } from '../auth/workspaces.repository';
 import type {
   RecordingDocument,
   UserContext,
@@ -27,6 +28,7 @@ export class RecordingsService {
     private readonly screenshotStorage: ScreenshotStorageService,
     private readonly auditService: AuditService,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly workspacesRepository: WorkspacesRepository,
   ) {}
 
   async upload(
@@ -158,8 +160,10 @@ export class RecordingsService {
 
   async getById(
     recordingId: string,
+    user: UserContext,
   ): Promise<RecordingDocument> {
-    const recording = await this.repository.findByIdentifier(recordingId);
+    const scopeUserIds = await this.resolveScopeUserIds(user);
+    const recording = await this.repository.findByIdentifier(recordingId, scopeUserIds);
     if (!recording) {
       throw new NotFoundException(`Recording ${recordingId} not found`);
     }
@@ -168,12 +172,15 @@ export class RecordingsService {
 
   async list(
     query: RecordingListQuery,
+    user: UserContext,
   ): Promise<PaginatedResponse<RecordingSummary>> {
-    return this.repository.findAll(query);
+    const scopeUserIds = await this.resolveScopeUserIds(user);
+    return this.repository.findAll(query, scopeUserIds);
   }
 
   async delete(recordingId: string, user: UserContext): Promise<void> {
-    const existing = await this.repository.findByIdentifier(recordingId);
+    const scopeUserIds = await this.resolveScopeUserIds(user);
+    const existing = await this.repository.findByIdentifier(recordingId, scopeUserIds);
     if (!existing) {
       throw new NotFoundException(`Recording ${recordingId} not found`);
     }
@@ -199,6 +206,16 @@ export class RecordingsService {
       resourceType: 'recording',
       resourceId: recordingId,
     });
+  }
+
+  private async resolveScopeUserIds(user: UserContext): Promise<string[]> {
+    if (!user.workspaceId) {
+      return [user.userId];
+    }
+
+    const members = await this.workspacesRepository.listMembers(user.workspaceId);
+    const userIds = members.map((member) => member.userId).filter(Boolean);
+    return userIds.length > 0 ? userIds : [user.userId];
   }
 }
 

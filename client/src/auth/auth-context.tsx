@@ -56,6 +56,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (payload?: LoginPayload) => Promise<void>;
+  loginWithGithub: (idpName?: string) => Promise<void>;
   register: (payload?: RegisterPayload) => Promise<void>;
   logout: () => void;
   getAccessToken: () => Promise<string>;
@@ -136,6 +137,10 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
     [persistAuth],
   );
 
+  const loginWithGithub = useCallback(async () => {
+    throw new Error("GitHub sign-in requires Logto auth mode.");
+  }, []);
+
   const refresh = useCallback(async (): Promise<string> => {
     if (!refreshToken) {
       logout();
@@ -180,12 +185,13 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isLoading,
       login,
+      loginWithGithub,
       register,
       logout,
       getAccessToken,
       refreshUser,
     }),
-    [user, isLoading, login, register, logout, getAccessToken, refreshUser],
+    [user, isLoading, login, loginWithGithub, register, logout, getAccessToken, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -377,12 +383,26 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
     });
   }, [signIn]);
 
+  const loginWithGithub = useCallback(
+    async (idpName = "github") => {
+      await signIn({
+        redirectUri: getLogtoCallbackUrl(),
+        directSignIn: {
+          method: "social",
+          target: idpName,
+        },
+      });
+    },
+    [signIn],
+  );
+
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: !!user && isAuthenticated,
       isLoading: !user && (isLogtoLoading || isBootstrapping),
       login,
+      loginWithGithub,
       register,
       logout,
       getAccessToken,
@@ -394,6 +414,7 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
       isLogtoLoading,
       isBootstrapping,
       login,
+      loginWithGithub,
       register,
       logout,
       getAccessToken,

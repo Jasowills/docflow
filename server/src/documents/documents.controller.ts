@@ -74,9 +74,9 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Get a generated document by ID' })
   async getById(
     @Param('id') id: string,
-    @CurrentUser() _user: UserContext,
+    @CurrentUser() user: UserContext,
   ) {
-    return this.documentsService.getById(id);
+    return this.documentsService.getById(id, user);
   }
 
   @Patch(':id/folder')

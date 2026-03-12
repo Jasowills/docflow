@@ -52,11 +52,28 @@ export class RecordingsRepository {
     return data ? this.fromRow(data as Record<string, unknown>) : null;
   }
 
-  async findByIdentifier(recordingId: string): Promise<RecordingDocument | null> {
-    return this.findByRecordingId(recordingId);
+  async findByIdentifier(recordingId: string, userIds?: string[]): Promise<RecordingDocument | null> {
+    if (!userIds?.length) {
+      return this.findByRecordingId(recordingId);
+    }
+
+    const { data, error } = await this.supabase
+      .from('recordings')
+      .select('*')
+      .eq('recording_id', recordingId)
+      .in('user_id', userIds)
+      .maybeSingle();
+    if (error) {
+      this.logger.error(`Failed to load recording ${recordingId}: ${error.message}`);
+      throw new Error('Failed to load recording.');
+    }
+    return data ? this.fromRow(data as Record<string, unknown>) : null;
   }
 
-  async findAll(query: RecordingListQuery): Promise<PaginatedResponse<RecordingSummary>> {
+  async findAll(
+    query: RecordingListQuery,
+    userIds?: string[],
+  ): Promise<PaginatedResponse<RecordingSummary>> {
     const page = query.page || 1;
     const pageSize = Math.min(query.pageSize || 20, 100);
     const skip = (page - 1) * pageSize;
@@ -68,6 +85,7 @@ export class RecordingsRepository {
       })
       .order('uploaded_at_utc', { ascending: false });
 
+    if (userIds?.length) request = request.in('user_id', userIds);
     if (query.search) request = request.ilike('recording_name', `%${query.search.trim()}%`);
     if (query.productArea) request = request.eq('product_area', query.productArea);
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Circle, FolderGit2, Sparkles, UploadCloud, Users } from "lucide-react";
+import { CheckCircle2, Circle, Sparkles, UploadCloud, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
 import { useApi } from "../hooks/use-api";
@@ -11,7 +11,6 @@ import { Label } from "../components/ui/label";
 
 type OnboardingStepKey =
   | "workspace"
-  | "github"
   | "extension"
   | "recording"
   | "generation";
@@ -20,7 +19,6 @@ export function OnboardingPage() {
   const { user, refreshUser } = useAuth();
   const {
     updateOnboarding,
-    getGithubInstallUrl,
     updateCurrentWorkspace,
   } = useApi();
   const navigate = useNavigate();
@@ -63,22 +61,12 @@ export function OnboardingPage() {
     setError(null);
     try {
       await updateCurrentWorkspace({ name: workspaceName.trim() });
+      await refreshUser();
       await markStep("workspace");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to save workspace.");
     } finally {
       setSavingWorkspace(false);
-    }
-  };
-
-  const handleConnectGithub = async () => {
-    setError(null);
-    try {
-      await markStep("github");
-      const { installUrl } = await getGithubInstallUrl();
-      window.location.assign(installUrl);
-    } catch (connectError) {
-      setError(connectError instanceof Error ? connectError.message : "Unable to start GitHub setup.");
     }
   };
 
@@ -115,12 +103,12 @@ export function OnboardingPage() {
           <h1 className="app-page-title">Set up your workspace once</h1>
           <p className="app-page-copy">
             {user?.accountType === "team"
-              ? "Get your team workspace ready for capture, generation, GitHub linking, and test planning."
-              : "Finish your personal workspace setup, then move straight into recordings, docs, and test plans."}
+              ? "Get your team workspace ready for capture, generation, and shared documentation."
+              : "Finish your personal workspace setup, then move straight into recordings, generation, and documents."}
           </p>
         </div>
         <Badge variant="secondary">
-          {completedSteps.size}/5 steps
+          {completedSteps.size}/4 steps
         </Badge>
       </div>
 
@@ -156,27 +144,10 @@ export function OnboardingPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>2. Connect GitHub App</CardTitle>
-              <CardDescription>Authorize repository access for the workspace without personal access tokens.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                GitHub installation powers repository-aware test plans and future automation. You can manage selected repositories later in Settings.
-              </p>
-              <div className="pt-2">
-                <Button variant="outline" onClick={() => void handleConnectGithub()}>
-                  Connect GitHub App
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>3. Install the recorder</CardTitle>
+                <CardTitle>2. Install the recorder</CardTitle>
                 <CardDescription>Capture web flows with the DocFlow browser extension.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -193,7 +164,7 @@ export function OnboardingPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>4. Capture your first recording</CardTitle>
+                <CardTitle>3. Capture your first recording</CardTitle>
                 <CardDescription>Build the first workflow artifact for your workspace.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -211,8 +182,8 @@ export function OnboardingPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>5. Generate your first asset</CardTitle>
-              <CardDescription>Create documentation, test cases, release notes, or a test plan from recorded work.</CardDescription>
+              <CardTitle>4. Generate your first asset</CardTitle>
+              <CardDescription>Create documentation, test cases, or release notes from recorded work.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -240,11 +211,6 @@ export function OnboardingPage() {
                 done={completedSteps.has("workspace")}
               />
               <OnboardingStepItem
-                icon={FolderGit2}
-                label="GitHub App connection"
-                done={completedSteps.has("github")}
-              />
-              <OnboardingStepItem
                 icon={UploadCloud}
                 label="Recorder setup"
                 done={completedSteps.has("extension")}
@@ -269,7 +235,7 @@ export function OnboardingPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Once completed, onboarding disappears from navigation and help shows contextually inside Recordings, Documents, Test Plans, and Settings.
+                Once completed, onboarding disappears from navigation and help shows contextually inside Recordings, Generate, Documents, and Settings.
               </p>
               <div className="pt-2">
                 <Button onClick={() => void handleCompleteOnboarding()} disabled={completing}>

@@ -1,11 +1,11 @@
 {
   "name": "@docflow/extension",
-  "version": "1.0.0.14",
+  "version": "1.0.0.15",
   "private": true,
   "description": "DocFlow Recorder browser extension for capturing website and web app workflows",
   "scripts": {
     "build": "tsc && node build.mjs",
-    "build:publish": "node bump-version.mjs && set EXTENSION_OUTPUT_DIR=DocFlow-recorder&& tsc && node build.mjs && node publish.mjs",
+    "build:publish": "node publish-release.mjs",
     "watch": "tsc --watch",
     "clean": "rimraf dist DocFlow-recorder"
   },

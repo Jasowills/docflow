@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  FolderGit2,
   LayoutGrid,
   Settings2,
   SlidersHorizontal,
@@ -9,8 +8,6 @@ import {
   Users,
 } from "lucide-react";
 import type {
-  GithubRepoSelection,
-  GithubRepositorySummary,
   SystemConfig,
   WorkspaceDetails,
 } from "@docflow/shared";
@@ -26,7 +23,6 @@ import { Spinner } from "../components/ui/spinner";
 type SettingsSection =
   | "workspace"
   | "members"
-  | "github"
   | "profile"
   | "preferences"
   | "configuration";
@@ -38,107 +34,59 @@ const settingsSections: Array<{
 }> = [
   { key: "workspace", label: "Workspace", icon: LayoutGrid },
   { key: "members", label: "Members", icon: Users },
-  { key: "github", label: "GitHub", icon: FolderGit2 },
   { key: "profile", label: "Profile", icon: UserCircle2 },
   { key: "preferences", label: "Preferences", icon: SlidersHorizontal },
   { key: "configuration", label: "Configuration", icon: Settings2 },
 ];
 
 export function SettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const {
     getCurrentWorkspace,
     updateCurrentWorkspace,
     inviteWorkspaceMember,
     updateWorkspaceMemberRole,
     revokeWorkspaceInvitation,
-    getGithubStatus,
-    getGithubInstallUrl,
-    listGithubRepos,
-    listSelectedGithubRepos,
-    updateSelectedGithubRepos,
     getConfig,
   } = useApi();
   const [searchParams, setSearchParams] = useSearchParams();
   const [workspace, setWorkspace] = useState<WorkspaceDetails | null>(null);
-  const [githubStatus, setGithubStatus] = useState<Awaited<ReturnType<typeof getGithubStatus>> | null>(null);
-  const [repos, setRepos] = useState<GithubRepositorySummary[]>([]);
-  const [selectedRepos, setSelectedRepos] = useState<GithubRepoSelection[]>([]);
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [workspaceName, setWorkspaceName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "editor" | "viewer">("viewer");
   const [loading, setLoading] = useState(true);
   const [savingWorkspace, setSavingWorkspace] = useState(false);
-  const [savingRepos, setSavingRepos] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const section = (searchParams.get("section") as SettingsSection) || "workspace";
+  const requestedSection = searchParams.get("section") as SettingsSection | null;
+  const section = settingsSections.some((item) => item.key === requestedSection)
+    ? (requestedSection as SettingsSection)
+    : "workspace";
   const canManageWorkspace = !!user?.roles?.some((role) => role === "owner" || role === "admin");
 
   const loadPage = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [workspaceResponse, githubResponse, selectedReposResponse, configResponse] =
+      const [workspaceResponse, configResponse] =
         await Promise.all([
           getCurrentWorkspace(),
-          getGithubStatus(),
-          listSelectedGithubRepos(),
           getConfig().catch(() => null),
         ]);
       setWorkspace(workspaceResponse);
       setWorkspaceName(workspaceResponse.name);
-      setGithubStatus(githubResponse);
-      setSelectedRepos(selectedReposResponse);
       setConfig(configResponse);
-
-      if (githubResponse.connected) {
-        setRepos(await listGithubRepos());
-      } else {
-        setRepos([]);
-      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load settings.");
     } finally {
       setLoading(false);
     }
-  }, [
-    getConfig,
-    getCurrentWorkspace,
-    getGithubStatus,
-    listGithubRepos,
-    listSelectedGithubRepos,
-  ]);
+  }, [getConfig, getCurrentWorkspace]);
 
   useEffect(() => {
     void loadPage();
   }, [loadPage]);
-
-  const selectedRepoIds = useMemo(
-    () => new Set(selectedRepos.map((repo) => repo.repositoryId)),
-    [selectedRepos],
-  );
-
-  const toggleRepoSelection = (repo: GithubRepositorySummary) => {
-    setSelectedRepos((current) => {
-      if (current.some((item) => item.repositoryId === repo.id)) {
-        return current.filter((item) => item.repositoryId !== repo.id);
-      }
-
-      return [
-        ...current,
-        {
-          repositoryId: repo.id,
-          fullName: repo.fullName,
-          ownerLogin: repo.ownerLogin,
-          defaultBranch: repo.defaultBranch,
-          private: repo.private,
-          htmlUrl: repo.htmlUrl,
-        },
-      ];
-    });
-  };
 
   const handleSaveWorkspace = async () => {
     setSavingWorkspace(true);
@@ -150,34 +98,11 @@ export function SettingsPage() {
       setWorkspace((current) =>
         current ? { ...current, ...updated, name: updated.name } : current,
       );
+      await refreshUser();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to update workspace.");
     } finally {
       setSavingWorkspace(false);
-    }
-  };
-
-  const handleConnectGithub = async () => {
-    setError(null);
-    try {
-      const { installUrl } = await getGithubInstallUrl();
-      window.location.assign(installUrl);
-    } catch (connectError) {
-      setError(connectError instanceof Error ? connectError.message : "Unable to connect GitHub App.");
-    }
-  };
-
-  const handleSaveRepos = async () => {
-    setSavingRepos(true);
-    setError(null);
-    try {
-      const updated = await updateSelectedGithubRepos({ repositories: selectedRepos });
-      setSelectedRepos(updated);
-      setGithubStatus(await getGithubStatus());
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to save selected repositories.");
-    } finally {
-      setSavingRepos(false);
     }
   };
 
@@ -204,7 +129,7 @@ export function SettingsPage() {
           <p className="app-page-eyebrow">Settings</p>
           <h1 className="app-page-title">Workspace settings</h1>
           <p className="app-page-copy">
-            Manage workspace structure, teammates, GitHub access, profile details, and system preferences from one surface.
+            Manage workspace structure, teammates, profile details, and system preferences from one surface.
           </p>
         </div>
         {loading ? <Spinner className="text-primary" /> : null}
@@ -365,92 +290,6 @@ export function SettingsPage() {
                     ))
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {section === "github" ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>GitHub</CardTitle>
-                <CardDescription>Authorize the DocFlow GitHub App and control workspace repository access.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={githubStatus?.connected ? "secondary" : "outline"}>
-                    {githubStatus?.connected ? "GitHub App connected" : "GitHub App not connected"}
-                  </Badge>
-                  {githubStatus?.username ? <Badge variant="outline">@{githubStatus.username}</Badge> : null}
-                  {githubStatus?.installationId ? (
-                    <Badge variant="outline">Installation #{githubStatus.installationId}</Badge>
-                  ) : null}
-                </div>
-
-                {!githubStatus?.connected ? (
-                  <div className="context-help-card">
-                    <p className="text-sm text-muted-foreground">
-                      Connect the DocFlow GitHub App to authorize repository access for the entire workspace. Personal access tokens are not part of the product flow.
-                    </p>
-                    <Button className="mt-4" onClick={() => void handleConnectGithub()}>
-                      Connect GitHub App
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="rounded-2xl border border-border/80 bg-background/55 px-4 py-4">
-                      <p className="text-sm font-medium text-foreground">Accessible repositories</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Select which repositories should be considered active for planning and future automation.
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      {repos.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No repositories returned for this installation yet.</p>
-                      ) : (
-                        repos.map((repo) => {
-                          const selected = selectedRepoIds.has(repo.id);
-                          return (
-                            <button
-                              key={repo.id}
-                              type="button"
-                              className={`flex w-full flex-col gap-2 rounded-2xl border px-4 py-3 text-left transition ${
-                                selected
-                                  ? "border-primary/40 bg-accent/65"
-                                  : "border-border/80 bg-background/55 hover:bg-accent/45"
-                              }`}
-                              onClick={() => toggleRepoSelection(repo)}
-                            >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-medium text-foreground">{repo.fullName}</span>
-                                <Badge variant={selected ? "secondary" : "outline"}>
-                                  {selected ? "Selected" : repo.private ? "Private" : "Public"}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                Default branch: {repo.defaultBranch || "Not reported"}
-                              </p>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-3">
-                      <Button onClick={() => void handleSaveRepos()} disabled={savingRepos}>
-                        {savingRepos ? "Saving..." : "Save selected repos"}
-                      </Button>
-                      <a
-                        href="https://github.com/apps"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-input px-4 text-sm font-medium text-foreground transition hover:bg-accent sm:w-auto"
-                      >
-                        Manage installation in GitHub
-                      </a>
-                    </div>
-                  </>
-                )}
               </CardContent>
             </Card>
           ) : null}

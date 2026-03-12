@@ -229,7 +229,7 @@ export function DocumentsListPage() {
       <div className="context-help-card">
         <p className="text-sm font-medium text-foreground">Review generated assets in one place.</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Documents collect AI-generated references, tutorials, test cases, and release notes. Use folders to group by product area or release stream, then export or attach the output to test planning workflows.
+          Documents collect AI-generated references, tutorials, test cases, and release notes. Use folders to group by product area or release stream, then review and export the output from one place.
         </p>
       </div>
 

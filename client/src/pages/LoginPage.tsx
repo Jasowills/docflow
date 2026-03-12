@@ -15,7 +15,7 @@ type Mode = 'login' | 'register';
 type AccountType = 'individual' | 'team';
 
 export function LoginPage() {
-  const { isAuthenticated, login, register } = useAuth();
+  const { isAuthenticated, login, loginWithGithub, register } = useAuth();
   const { getAuthProviders } = useApi();
   const [mode, setMode] = useState<Mode>('login');
   const [displayName, setDisplayName] = useState('');
@@ -55,8 +55,9 @@ export function LoginPage() {
       !!providerConfig?.logtoEnabled ||
       !!providerConfig?.githubSignInEnabled);
   const shouldShowPasswordForm = !isLogtoPrimary && providerConfigLoaded;
-  const githubEnabled = !!providerConfig?.githubSignInEnabled;
+  const githubEnabled = providerConfigLoaded && (isConfiguredForLogto || !!providerConfig?.githubSignInEnabled);
   const githubSignInUrl = providerConfig?.logtoGithubSignInUrl;
+  const githubIdpName = providerConfig?.logtoGithubIdpName || 'github';
 
   const handleSubmit = async () => {
     setError(null);
@@ -96,6 +97,22 @@ export function LoginPage() {
       } else {
         await login();
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed');
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGithubAction = async () => {
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      if (githubSignInUrl) {
+        window.location.assign(githubSignInUrl);
+        return;
+      }
+
+      await loginWithGithub(githubIdpName);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
       setIsSubmitting(false);
@@ -157,11 +174,7 @@ export function LoginPage() {
                 <Button
                   variant="outline"
                   className="w-full justify-center px-4 py-6"
-                  onClick={() =>
-                    githubSignInUrl
-                      ? window.location.assign(githubSignInUrl)
-                      : void handlePrimaryLogtoAction()
-                  }
+                  onClick={() => void handleGithubAction()}
                   type="button"
                   disabled={!githubEnabled || isSubmitting}
                 >
