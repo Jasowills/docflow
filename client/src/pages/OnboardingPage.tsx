@@ -254,13 +254,17 @@ function getSuggestedWorkspaceName(
   user: ReturnType<typeof useAuth>["user"],
 ): string {
   const currentWorkspaceName = user?.workspaceName?.trim();
-  if (currentWorkspaceName && !looksGeneratedWorkspaceName(currentWorkspaceName, user)) {
+  if (
+    currentWorkspaceName &&
+    !looksGeneratedWorkspaceName(currentWorkspaceName, user) &&
+    !looksOpaqueWorkspaceName(currentWorkspaceName)
+  ) {
     return currentWorkspaceName;
   }
 
   const preferredName = getPreferredWorkspaceOwnerName(user);
   if (preferredName) {
-    return `${preferredName}'s Workspace`;
+    return user?.accountType === "team" ? preferredName : `${preferredName}'s Workspace`;
   }
 
   return currentWorkspaceName || "";
@@ -269,6 +273,11 @@ function getSuggestedWorkspaceName(
 function getPreferredWorkspaceOwnerName(
   user: ReturnType<typeof useAuth>["user"],
 ): string | undefined {
+  const teamName = user?.teamName?.trim();
+  if (user?.accountType === "team" && teamName && !looksOpaqueIdentifier(teamName)) {
+    return teamName;
+  }
+
   const displayName = user?.displayName?.trim();
   if (displayName && !looksOpaqueIdentifier(displayName)) {
     return displayName;
@@ -285,12 +294,23 @@ function looksGeneratedWorkspaceName(
   const normalized = workspaceName.trim();
   const displayName = user?.displayName?.trim();
   const generatedFromDisplayName = displayName ? `${displayName}'s Workspace` : null;
+  const teamName = user?.teamName?.trim();
+  const generatedFromTeamName = teamName ? `${teamName}'s Workspace` : null;
 
   return (
-    !!generatedFromDisplayName &&
-    normalized === generatedFromDisplayName &&
-    looksOpaqueIdentifier(displayName)
+    (!!generatedFromDisplayName &&
+      normalized === generatedFromDisplayName &&
+      looksOpaqueIdentifier(displayName)) ||
+    (!!generatedFromTeamName &&
+      normalized === generatedFromTeamName &&
+      looksOpaqueIdentifier(teamName))
   );
+}
+
+function looksOpaqueWorkspaceName(value: string): boolean {
+  const normalized = value.trim();
+  const withoutSuffix = normalized.replace(/'s Workspace$/i, "").trim();
+  return looksOpaqueIdentifier(withoutSuffix);
 }
 
 function humanizeIdentityToken(value?: string): string | undefined {
