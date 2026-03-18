@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Controller, Get, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { AppConfigModule } from './config/config.module';
+import { Public } from './auth/decorators';
 import { DatabaseModule } from './database/database.module';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
@@ -18,6 +19,15 @@ import { IntegrationsModule } from './integrations/integrations.module';
 import { TestPlansModule } from './test-plans/test-plans.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+
+@Controller()
+class AppController {
+  @Get()
+  @Public()
+  getRoot() {
+    return 'server running';
+  }
+}
 
 @Module({
   imports: [
@@ -41,6 +51,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     WorkspacesModule,
     DashboardModule,
   ],
+  controllers: [AppController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
