@@ -32,6 +32,7 @@ async function bootstrap() {
             ...allowedOrigins,
             'https://login.microsoftonline.com',
             'https://*.microsoftonline.com',
+            'https://docflow-ops.vercel.app',
             'https://graph.microsoft.com',
           ],
         },
