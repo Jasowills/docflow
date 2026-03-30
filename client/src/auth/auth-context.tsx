@@ -56,7 +56,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (payload?: LoginPayload) => Promise<void>;
-  loginWithGithub: (idpName?: string) => Promise<void>;
+  loginWithGithub: (idpName?: string, isRegister?: boolean) => Promise<void>;
+  loginWithGoogle: (idpName?: string, isRegister?: boolean) => Promise<void>;
   register: (payload?: RegisterPayload) => Promise<void>;
   logout: () => void;
   getAccessToken: () => Promise<string>;
@@ -137,8 +138,12 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
     [persistAuth],
   );
 
-  const loginWithGithub = useCallback(async () => {
+  const loginWithGithub = useCallback(async (_idpName?: string, _isRegister?: boolean) => {
     throw new Error("GitHub sign-in requires Logto auth mode.");
+  }, []);
+
+  const loginWithGoogle = useCallback(async (_idpName?: string, _isRegister?: boolean) => {
+    throw new Error("Google sign-in requires Logto auth mode.");
   }, []);
 
   const refresh = useCallback(async (): Promise<string> => {
@@ -186,12 +191,13 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       loginWithGithub,
+      loginWithGoogle,
       register,
       logout,
       getAccessToken,
       refreshUser,
     }),
-    [user, isLoading, login, loginWithGithub, register, logout, getAccessToken, refreshUser],
+    [user, isLoading, login, loginWithGithub, loginWithGoogle, register, logout, getAccessToken, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -384,13 +390,32 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
   }, [signIn]);
 
   const loginWithGithub = useCallback(
-    async (idpName = "github") => {
+    async (idpName = "github", isRegister = false) => {
       await signIn({
         redirectUri: getLogtoCallbackUrl(),
         directSignIn: {
           method: "social",
           target: idpName,
         },
+        ...(isRegister
+          ? { firstScreen: "identifier:register" as const, interactionMode: "signUp" as const }
+          : { firstScreen: "sign_in" as const, interactionMode: "signIn" as const }),
+      });
+    },
+    [signIn],
+  );
+
+  const loginWithGoogle = useCallback(
+    async (idpName = "google", isRegister = false) => {
+      await signIn({
+        redirectUri: getLogtoCallbackUrl(),
+        directSignIn: {
+          method: "social",
+          target: idpName,
+        },
+        ...(isRegister
+          ? { firstScreen: "identifier:register" as const, interactionMode: "signUp" as const }
+          : { firstScreen: "sign_in" as const, interactionMode: "signIn" as const }),
       });
     },
     [signIn],
@@ -403,6 +428,7 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
       isLoading: !user && (isLogtoLoading || isBootstrapping),
       login,
       loginWithGithub,
+      loginWithGoogle,
       register,
       logout,
       getAccessToken,
@@ -415,6 +441,7 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
       isBootstrapping,
       login,
       loginWithGithub,
+      loginWithGoogle,
       register,
       logout,
       getAccessToken,

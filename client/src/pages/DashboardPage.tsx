@@ -319,6 +319,7 @@ export function DashboardPage() {
 
               <Link
                 to="/app/getting-started"
+                state={{ fromGuide: true }}
                 className="flex items-center justify-between rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-accent/70"
               >
                 <span>Open install guide</span>

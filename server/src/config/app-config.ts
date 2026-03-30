@@ -72,6 +72,14 @@ export class AppConfig {
     return this.configService.get<string>('LOGTO_GITHUB_IDP_NAME', 'github');
   }
 
+  get logtoGoogleSignInUrl(): string {
+    return this.configService.get<string>('LOGTO_GOOGLE_SIGN_IN_URL', '');
+  }
+
+  get logtoGoogleIdpName(): string {
+    return this.configService.get<string>('LOGTO_GOOGLE_IDP_NAME', 'google');
+  }
+
   get githubAppId(): string {
     return this.configService.get<string>('GITHUB_APP_ID', '');
   }

@@ -14,7 +14,13 @@ import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { LandingPage } from "./pages/LandingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
+import { GettingStartedPage } from "./pages/GettingStartedPage";
 import { Spinner } from "./components/ui/spinner";
+
+function GettingStartedRedirect() {
+  const location = useLocation();
+  return <Navigate to="/app/onboarding" replace state={location.state} />;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -34,7 +40,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
   const isOnboardingRoute = location.pathname.startsWith("/app/onboarding");
   const hasCompletedOnboarding = !!user?.onboardingCompletedAt;
-  if (hasCompletedOnboarding && isOnboardingRoute) {
+  const cameFromGuide = location.state?.fromGuide === true;
+  if (hasCompletedOnboarding && isOnboardingRoute && !cameFromGuide) {
     return <Navigate to="/app/dashboard" replace />;
   }
   return <>{children}</>;
@@ -57,7 +64,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="onboarding" element={<OnboardingPage />} />
-          <Route path="getting-started" element={<Navigate to="/app/onboarding" replace />} />
+          <Route path="getting-started" element={<GettingStartedPage />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="recordings" element={<RecordingsListPage />} />
           <Route path="recordings/:id" element={<RecordingDetailPage />} />

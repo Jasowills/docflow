@@ -25,13 +25,20 @@ export class AuthController {
       this.config.authProvider === 'logto' &&
       !!(this.config.logtoGithubIdpName || this.config.logtoGithubSignInUrl);
 
+    const googleSignInEnabled =
+      this.config.authProvider === 'logto' &&
+      !!(this.config.logtoGoogleIdpName || this.config.logtoGoogleSignInUrl);
+
     return {
       primaryProvider: this.config.authProvider === 'logto' ? 'logto' : 'jwt',
       logtoEnabled: this.config.authProvider === 'logto' || !!this.config.logtoEndpoint,
       githubSignInEnabled,
+      googleSignInEnabled,
       logtoSignInUrl: this.config.logtoSignInUrl || undefined,
       logtoGithubSignInUrl: this.config.logtoGithubSignInUrl || undefined,
       logtoGithubIdpName: this.config.logtoGithubIdpName || undefined,
+      logtoGoogleSignInUrl: this.config.logtoGoogleSignInUrl || undefined,
+      logtoGoogleIdpName: this.config.logtoGoogleIdpName || undefined,
     };
   }
 
