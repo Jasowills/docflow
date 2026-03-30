@@ -138,13 +138,19 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
     [persistAuth],
   );
 
-  const loginWithGithub = useCallback(async (_idpName?: string, _isRegister?: boolean) => {
-    throw new Error("GitHub sign-in requires Logto auth mode.");
-  }, []);
+  const loginWithGithub = useCallback(
+    async (_idpName?: string, _isRegister?: boolean) => {
+      throw new Error("GitHub sign-in requires Logto auth mode.");
+    },
+    [],
+  );
 
-  const loginWithGoogle = useCallback(async (_idpName?: string, _isRegister?: boolean) => {
-    throw new Error("Google sign-in requires Logto auth mode.");
-  }, []);
+  const loginWithGoogle = useCallback(
+    async (_idpName?: string, _isRegister?: boolean) => {
+      throw new Error("Google sign-in requires Logto auth mode.");
+    },
+    [],
+  );
 
   const refresh = useCallback(async (): Promise<string> => {
     if (!refreshToken) {
@@ -197,7 +203,17 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       getAccessToken,
       refreshUser,
     }),
-    [user, isLoading, login, loginWithGithub, loginWithGoogle, register, logout, getAccessToken, refreshUser],
+    [
+      user,
+      isLoading,
+      login,
+      loginWithGithub,
+      loginWithGoogle,
+      register,
+      logout,
+      getAccessToken,
+      refreshUser,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -249,7 +265,13 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
       userId: user?.userId || null,
       workspaceId: user?.workspaceId || null,
     });
-  }, [isAuthenticated, isLogtoLoading, isBootstrapping, user?.userId, user?.workspaceId]);
+  }, [
+    isAuthenticated,
+    isLogtoLoading,
+    isBootstrapping,
+    user?.userId,
+    user?.workspaceId,
+  ]);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -271,45 +293,53 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
     return token;
   }, []);
 
-  const bootstrapLogtoUser = useCallback(async (token: string): Promise<AuthUser> => {
-    const userInfo = await fetchUserInfoRef.current().catch(() => null);
+  const bootstrapLogtoUser = useCallback(
+    async (token: string): Promise<AuthUser> => {
+      const userInfo = await fetchUserInfoRef.current().catch(() => null);
 
-    const email =
-      typeof userInfo?.email === "string" && userInfo.email.trim()
-        ? userInfo.email.trim()
-        : undefined;
-    const displayName = resolvePreferredProfileName({
-      name: typeof userInfo?.name === "string" ? userInfo.name : undefined,
-      username: typeof userInfo?.username === "string" ? userInfo.username : undefined,
-      email,
-    });
-
-    if (!email && !displayName) {
-      throw new Error("Logto profile did not include usable identity fields.");
-    }
-
-    const apiBaseUrl = getApiBaseUrl();
-    const response = await fetch(`${apiBaseUrl}/api/auth/logto-bootstrap`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+      const email =
+        typeof userInfo?.email === "string" && userInfo.email.trim()
+          ? userInfo.email.trim()
+          : undefined;
+      const displayName = resolvePreferredProfileName({
+        name: typeof userInfo?.name === "string" ? userInfo.name : undefined,
+        username:
+          typeof userInfo?.username === "string"
+            ? userInfo.username
+            : undefined,
         email,
-        displayName,
-      }),
-    });
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw new Error(
-        errorBody.message || `Request failed with status ${response.status}`,
-      );
-    }
+      if (!email && !displayName) {
+        throw new Error(
+          "Logto profile did not include usable identity fields.",
+        );
+      }
 
-    return response.json() as Promise<AuthUser>;
-  }, []);
+      const apiBaseUrl = getApiBaseUrl();
+      const response = await fetch(`${apiBaseUrl}/api/auth/logto-bootstrap`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          displayName,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(
+          errorBody.message || `Request failed with status ${response.status}`,
+        );
+      }
+
+      return response.json() as Promise<AuthUser>;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (isLogtoLoading) {
@@ -398,8 +428,14 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
           target: idpName,
         },
         ...(isRegister
-          ? { firstScreen: "identifier:register" as const, interactionMode: "signUp" as const }
-          : { firstScreen: "sign_in" as const, interactionMode: "signIn" as const }),
+          ? {
+              firstScreen: "identifier:register" as const,
+              interactionMode: "signUp" as const,
+            }
+          : {
+              firstScreen: "sign_in" as const,
+              interactionMode: "signIn" as const,
+            }),
       });
     },
     [signIn],
@@ -414,8 +450,14 @@ function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
           target: idpName,
         },
         ...(isRegister
-          ? { firstScreen: "identifier:register" as const, interactionMode: "signUp" as const }
-          : { firstScreen: "sign_in" as const, interactionMode: "signIn" as const }),
+          ? {
+              firstScreen: "identifier:register" as const,
+              interactionMode: "signUp" as const,
+            }
+          : {
+              firstScreen: "sign_in" as const,
+              interactionMode: "signIn" as const,
+            }),
       });
     },
     [signIn],

@@ -1,5 +1,5 @@
 export interface AuthProviderConfig {
-  primaryProvider: 'jwt' | 'logto';
+  primaryProvider: "jwt" | "logto";
   logtoEnabled: boolean;
   githubSignInEnabled: boolean;
   googleSignInEnabled: boolean;
@@ -12,14 +12,14 @@ export interface AuthProviderConfig {
 
 export interface GithubConnectionStatus {
   connected: boolean;
-  provider: 'manual-token' | 'oauth' | 'github-app' | null;
+  provider: "manual-token" | "oauth" | "github-app" | null;
   username?: string;
   connectedAtUtc?: string;
   installationId?: number;
   installUrl?: string;
   repoCount?: number;
   selectedRepoCount?: number;
-  mode?: 'workspace-app' | 'user-token';
+  mode?: "workspace-app" | "user-token";
 }
 
 export interface GithubRepositorySummary {
@@ -34,7 +34,7 @@ export interface GithubRepositorySummary {
 
 export interface ConnectGithubRequest {
   accessToken: string;
-  provider?: 'manual-token' | 'oauth';
+  provider?: "manual-token" | "oauth";
 }
 
 export interface GithubInstallUrlResponse {

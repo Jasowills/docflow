@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import { useAuth } from "./auth/auth-context";
 import { Layout } from "./components/layout/Layout";
 import { LoginPage } from "./pages/LoginPage";
@@ -30,7 +36,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <div className="flex items-center gap-3 rounded-2xl border border-border/80 bg-card/80 px-4 py-3">
           <Spinner className="h-4 w-4 text-primary" />
-          <span className="text-sm text-muted-foreground">Loading workspace...</span>
+          <span className="text-sm text-muted-foreground">
+            Loading workspace...
+          </span>
         </div>
       </div>
     );
@@ -72,10 +80,22 @@ export default function App() {
           <Route path="generate" element={<GenerateDocPage />} />
           <Route path="documents" element={<DocumentsListPage />} />
           <Route path="documents/:id" element={<DocumentDetailPage />} />
-          <Route path="workspace" element={<Navigate to="/app/settings?section=workspace" replace />} />
-          <Route path="github" element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="test-plans" element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="test-plans/:id" element={<Navigate to="/app/dashboard" replace />} />
+          <Route
+            path="workspace"
+            element={<Navigate to="/app/settings?section=workspace" replace />}
+          />
+          <Route
+            path="github"
+            element={<Navigate to="/app/dashboard" replace />}
+          />
+          <Route
+            path="test-plans"
+            element={<Navigate to="/app/dashboard" replace />}
+          />
+          <Route
+            path="test-plans/:id"
+            element={<Navigate to="/app/dashboard" replace />}
+          />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="admin/config" element={<AdminConfigPage />} />
         </Route>

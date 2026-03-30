@@ -12,7 +12,13 @@ import {
 import type { DashboardSummary } from "@docflow/shared";
 import { useApi } from "../hooks/use-api";
 import { useClientDataStore } from "../state/client-data-store";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Spinner } from "../components/ui/spinner";
@@ -39,7 +45,10 @@ export function DashboardPage() {
   }, [getLatestExtensionRelease]);
 
   useEffect(() => {
-    if (!headerRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (
+      !headerRef.current ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       return;
     }
 
@@ -72,14 +81,19 @@ export function DashboardPage() {
     setLoading(true);
     setError(null);
 
-    getDashboardSummaryRef.current()
+    getDashboardSummaryRef
+      .current()
       .then((response) => {
         if (!mounted) return;
         setSummary(response);
       })
       .catch((loadError) => {
         if (!mounted) return;
-        setError(loadError instanceof Error ? loadError.message : "Unable to load dashboard.");
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load dashboard.",
+        );
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -104,7 +118,11 @@ export function DashboardPage() {
       })
       .catch((loadError) => {
         if (!mounted) return;
-        setReleaseError(loadError instanceof Error ? loadError.message : "Unable to load extension release.");
+        setReleaseError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load extension release.",
+        );
       })
       .finally(() => {
         if (mounted) setLoadingRelease(false);
@@ -115,7 +133,9 @@ export function DashboardPage() {
     };
   }, [ensureExtensionRelease, extensionRelease]);
 
-  const downloadUrl = extensionRelease?.downloadUrl || import.meta.env.VITE_EXTENSION_DOWNLOAD_URL;
+  const downloadUrl =
+    extensionRelease?.downloadUrl ||
+    import.meta.env.VITE_EXTENSION_DOWNLOAD_URL;
 
   const handleDownloadExtension = () => {
     if (!downloadUrl) return;
@@ -161,10 +181,15 @@ export function DashboardPage() {
     <div className="space-y-6">
       <div ref={headerRef} className="app-page-header">
         <div>
-          <p data-dashboard-hero className="app-page-eyebrow">Workspace operations</p>
-          <h1 data-dashboard-hero className="app-page-title">Operations dashboard</h1>
+          <p data-dashboard-hero className="app-page-eyebrow">
+            Workspace operations
+          </p>
+          <h1 data-dashboard-hero className="app-page-title">
+            Operations dashboard
+          </h1>
           <p data-dashboard-hero className="app-page-copy">
-            Track capture volume, generated assets, and workspace activity from one place.
+            Track capture volume, generated assets, and workspace activity from
+            one place.
           </p>
         </div>
         {loading ? <Spinner className="text-primary" /> : null}
@@ -200,7 +225,10 @@ export function DashboardPage() {
             <CardHeader className="flex flex-row items-start justify-between space-y-0">
               <div>
                 <CardTitle>Activity trend</CardTitle>
-                <CardDescription>Recent workspace output across recordings and generated assets.</CardDescription>
+                <CardDescription>
+                  Recent workspace output across recordings and generated
+                  assets.
+                </CardDescription>
               </div>
               <Badge variant="secondary">7 days</Badge>
             </CardHeader>
@@ -221,7 +249,9 @@ export function DashboardPage() {
                 </p>
               ) : null}
               <CombinedTrendChart
-                labels={summary?.recordingsTrend?.map((point) => point.label) || []}
+                labels={
+                  summary?.recordingsTrend?.map((point) => point.label) || []
+                }
                 recordings={summary?.recordingsTrend || []}
                 documents={summary?.documentsTrend || []}
               />
@@ -259,11 +289,15 @@ export function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Recent workspace activity</CardTitle>
-              <CardDescription>Latest changes across recordings and generated documents.</CardDescription>
+              <CardDescription>
+                Latest changes across recordings and generated documents.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {(summary?.recentActivity || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No recent activity yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  No recent activity yet.
+                </p>
               ) : (
                 summary?.recentActivity.map((item) => (
                   <div
@@ -272,9 +306,13 @@ export function DashboardPage() {
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline">{item.type}</Badge>
-                      <span className="text-sm font-medium text-foreground">{item.title}</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {item.title}
+                      </span>
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {item.description}
+                    </p>
                     <p className="mt-2 text-[11px] text-muted-foreground">
                       {new Date(item.timestampUtc).toLocaleString()}
                     </p>
@@ -296,24 +334,37 @@ export function DashboardPage() {
             <CardContent className="space-y-3">
               {extensionRelease ? (
                 <div className="rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm">
-                  <p className="font-medium text-foreground">Latest published release: v{extensionRelease.version}</p>
+                  <p className="font-medium text-foreground">
+                    Latest published release: v{extensionRelease.version}
+                  </p>
                   <p className="mt-1 text-muted-foreground">
-                    Published {new Date(extensionRelease.publishedAtUtc).toLocaleString()}
+                    Published{" "}
+                    {new Date(extensionRelease.publishedAtUtc).toLocaleString()}
                   </p>
                   {extensionRelease.notes ? (
-                    <p className="mt-2 text-muted-foreground">{extensionRelease.notes}</p>
+                    <p className="mt-2 text-muted-foreground">
+                      {extensionRelease.notes}
+                    </p>
                   ) : null}
                 </div>
               ) : null}
 
               {downloadUrl ? (
-                <Button className="w-full" onClick={handleDownloadExtension} loading={downloadingExtension}>
+                <Button
+                  className="w-full"
+                  onClick={handleDownloadExtension}
+                  loading={downloadingExtension}
+                >
                   <Download className="h-4 w-4" />
-                  {downloadingExtension ? "Starting download..." : "Download extension"}
+                  {downloadingExtension
+                    ? "Starting download..."
+                    : "Download extension"}
                 </Button>
               ) : (
                 <div className="rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm text-muted-foreground">
-                  {loadingRelease ? "Loading latest extension release..." : releaseError || "Download URL is not configured yet."}
+                  {loadingRelease
+                    ? "Loading latest extension release..."
+                    : releaseError || "Download URL is not configured yet."}
                 </div>
               )}
 
@@ -331,16 +382,30 @@ export function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Quick actions</CardTitle>
-              <CardDescription>Move the workspace forward from the main bottlenecks.</CardDescription>
+              <CardDescription>
+                Move the workspace forward from the main bottlenecks.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading ? (
                 <InlineLoadingState message="Loading quick actions..." />
               ) : (
                 <>
-                  <QuickAction to="/app/recordings/upload" icon={Upload} label="Upload recording" />
-                  <QuickAction to="/app/generate" icon={Sparkles} label="Generate documents" />
-                  <QuickAction to="/app/documents" icon={FileText} label="Review documents" />
+                  <QuickAction
+                    to="/app/recordings/upload"
+                    icon={Upload}
+                    label="Upload recording"
+                  />
+                  <QuickAction
+                    to="/app/generate"
+                    icon={Sparkles}
+                    label="Generate documents"
+                  />
+                  <QuickAction
+                    to="/app/documents"
+                    icon={FileText}
+                    label="Review documents"
+                  />
                 </>
               )}
             </CardContent>
@@ -349,7 +414,9 @@ export function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Setup status</CardTitle>
-              <CardDescription>What still needs attention in this workspace.</CardDescription>
+              <CardDescription>
+                What still needs attention in this workspace.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading ? (
@@ -358,14 +425,22 @@ export function DashboardPage() {
                 <>
                   <div className="flex items-center gap-2">
                     <Badge
-                      variant={summary?.setup.onboardingCompleted ? "secondary" : "outline"}
+                      variant={
+                        summary?.setup.onboardingCompleted
+                          ? "secondary"
+                          : "outline"
+                      }
                     >
-                      {summary?.setup.onboardingCompleted ? "Onboarding done" : "Onboarding active"}
+                      {summary?.setup.onboardingCompleted
+                        ? "Onboarding done"
+                        : "Onboarding active"}
                     </Badge>
                   </div>
 
                   {(summary?.setup.missingSteps || []).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Workspace setup is in a strong state.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Workspace setup is in a strong state.
+                    </p>
                   ) : (
                     <div className="space-y-2">
                       {summary?.setup.missingSteps.map((item) => (
@@ -382,7 +457,6 @@ export function DashboardPage() {
               )}
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>
@@ -418,29 +492,34 @@ function CombinedTrendChart({
     ...recordings.map((point) => point.value),
     ...documents.map((point) => point.value),
   );
-  const stepX = labels.length > 1 ? (width - paddingX * 2) / (labels.length - 1) : 0;
+  const stepX =
+    labels.length > 1 ? (width - paddingX * 2) / (labels.length - 1) : 0;
 
-  const toCoordinates = (points: DashboardSummary["recordingsTrend"]) => points.map((point, index) => {
-    const x = paddingX + stepX * index;
-    const y = paddingTop + chartHeight - (point.value / maxValue) * chartHeight;
-    return { x, y, value: point.value, label: point.label };
-  });
+  const toCoordinates = (points: DashboardSummary["recordingsTrend"]) =>
+    points.map((point, index) => {
+      const x = paddingX + stepX * index;
+      const y =
+        paddingTop + chartHeight - (point.value / maxValue) * chartHeight;
+      return { x, y, value: point.value, label: point.label };
+    });
 
   const recordingsCoordinates = toCoordinates(recordings);
   const documentsCoordinates = toCoordinates(documents);
 
-  const buildLinePath = (coordinates: Array<{ x: number; y: number }>) => coordinates
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
+  const buildLinePath = (coordinates: Array<{ x: number; y: number }>) =>
+    coordinates
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ");
 
-  const buildAreaPath = (coordinates: Array<{ x: number; y: number }>) => coordinates.length > 0
-    ? [
-        `M ${coordinates[0].x} ${height - paddingBottom}`,
-        ...coordinates.map((point) => `L ${point.x} ${point.y}`),
-        `L ${coordinates[coordinates.length - 1].x} ${height - paddingBottom}`,
-        "Z",
-      ].join(" ")
-    : "";
+  const buildAreaPath = (coordinates: Array<{ x: number; y: number }>) =>
+    coordinates.length > 0
+      ? [
+          `M ${coordinates[0].x} ${height - paddingBottom}`,
+          ...coordinates.map((point) => `L ${point.x} ${point.y}`),
+          `L ${coordinates[coordinates.length - 1].x} ${height - paddingBottom}`,
+          "Z",
+        ].join(" ")
+      : "";
 
   const recordingsLinePath = buildLinePath(recordingsCoordinates);
   const documentsLinePath = buildLinePath(documentsCoordinates);
@@ -450,7 +529,10 @@ function CombinedTrendChart({
   return (
     <div className="rounded-2xl border border-border/60 bg-background/35 p-4">
       <div className="rounded-xl bg-white/[0.03] px-2 py-2">
-        <svg viewBox={`0 0 ${width} ${height}`} className="h-56 w-full overflow-visible">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-56 w-full overflow-visible"
+        >
           <path
             d={`M ${paddingX} ${height - paddingBottom} H ${width - paddingX}`}
             className="stroke-border/70"
@@ -470,8 +552,12 @@ function CombinedTrendChart({
               />
             );
           })}
-          {recordingsAreaPath ? <path d={recordingsAreaPath} className="fill-primary/10" /> : null}
-          {documentsAreaPath ? <path d={documentsAreaPath} className="fill-emerald-300/10" /> : null}
+          {recordingsAreaPath ? (
+            <path d={recordingsAreaPath} className="fill-primary/10" />
+          ) : null}
+          {documentsAreaPath ? (
+            <path d={documentsAreaPath} className="fill-emerald-300/10" />
+          ) : null}
           {recordingsLinePath ? (
             <path
               d={recordingsLinePath}
@@ -494,14 +580,34 @@ function CombinedTrendChart({
           ) : null}
           {recordingsCoordinates.map((point) => (
             <g key={point.label}>
-              <circle cx={point.x} cy={point.y} r="5.5" className="fill-background" />
-              <circle cx={point.x} cy={point.y} r="3.5" className="fill-primary" />
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="5.5"
+                className="fill-background"
+              />
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="3.5"
+                className="fill-primary"
+              />
             </g>
           ))}
           {documentsCoordinates.map((point) => (
             <g key={`document-${point.label}`}>
-              <circle cx={point.x} cy={point.y} r="5.5" className="fill-background" />
-              <circle cx={point.x} cy={point.y} r="3.5" className="fill-emerald-300" />
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="5.5"
+                className="fill-background"
+              />
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="3.5"
+                className="fill-emerald-300"
+              />
             </g>
           ))}
         </svg>
@@ -513,9 +619,7 @@ function CombinedTrendChart({
             <div className="text-[11px] font-medium text-foreground/80">
               {recordings[index]?.value ?? 0} / {documents[index]?.value ?? 0}
             </div>
-            <div className="text-[11px] text-muted-foreground">
-              {label}
-            </div>
+            <div className="text-[11px] text-muted-foreground">{label}</div>
           </div>
         ))}
       </div>
@@ -555,7 +659,13 @@ function ActivityCard({
   title: string;
   description: string;
   emptyText: string;
-  items: Array<{ key: string; title: string; description: string; href: string; badge?: string }>;
+  items: Array<{
+    key: string;
+    title: string;
+    description: string;
+    href: string;
+    badge?: string;
+  }>;
 }) {
   return (
     <Card>
@@ -574,10 +684,16 @@ function ActivityCard({
               className="block rounded-2xl border border-border/80 bg-background/55 px-4 py-3 transition hover:bg-accent/70"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-foreground">{item.title}</span>
-                {item.badge ? <Badge variant="outline">{item.badge}</Badge> : null}
+                <span className="text-sm font-medium text-foreground">
+                  {item.title}
+                </span>
+                {item.badge ? (
+                  <Badge variant="outline">{item.badge}</Badge>
+                ) : null}
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {item.description}
+              </p>
             </Link>
           ))
         )}

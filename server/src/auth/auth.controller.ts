@@ -1,15 +1,20 @@
-import { Body, Controller, Get, Patch, Post, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser, Public } from './decorators';
-import { AuthService } from './auth.service';
-import { UploadTokenService } from './upload-token.service';
-import type { UserContext } from '@docflow/shared';
-import type { Request } from 'express';
-import { LoginDto, LogtoProfileSyncDto, RefreshTokenDto, RegisterDto } from './dto/auth.dto';
-import { AppConfig } from '../config/app-config';
+import { Body, Controller, Get, Patch, Post, Req } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { CurrentUser, Public } from "./decorators";
+import { AuthService } from "./auth.service";
+import { UploadTokenService } from "./upload-token.service";
+import type { UserContext } from "@docflow/shared";
+import type { Request } from "express";
+import {
+  LoginDto,
+  LogtoProfileSyncDto,
+  RefreshTokenDto,
+  RegisterDto,
+} from "./dto/auth.dto";
+import { AppConfig } from "../config/app-config";
 
-@ApiTags('Auth')
-@Controller('auth')
+@ApiTags("Auth")
+@Controller("auth")
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -18,20 +23,21 @@ export class AuthController {
   ) {}
 
   @Public()
-  @Get('providers')
-  @ApiOperation({ summary: 'Get enabled sign-in providers' })
+  @Get("providers")
+  @ApiOperation({ summary: "Get enabled sign-in providers" })
   getProviders() {
     const githubSignInEnabled =
-      this.config.authProvider === 'logto' &&
+      this.config.authProvider === "logto" &&
       !!(this.config.logtoGithubIdpName || this.config.logtoGithubSignInUrl);
 
     const googleSignInEnabled =
-      this.config.authProvider === 'logto' &&
+      this.config.authProvider === "logto" &&
       !!(this.config.logtoGoogleIdpName || this.config.logtoGoogleSignInUrl);
 
     return {
-      primaryProvider: this.config.authProvider === 'logto' ? 'logto' : 'jwt',
-      logtoEnabled: this.config.authProvider === 'logto' || !!this.config.logtoEndpoint,
+      primaryProvider: this.config.authProvider === "logto" ? "logto" : "jwt",
+      logtoEnabled:
+        this.config.authProvider === "logto" || !!this.config.logtoEndpoint,
       githubSignInEnabled,
       googleSignInEnabled,
       logtoSignInUrl: this.config.logtoSignInUrl || undefined,
@@ -43,29 +49,31 @@ export class AuthController {
   }
 
   @Public()
-  @Post('register')
-  @ApiOperation({ summary: 'Create a new DocFlow account' })
+  @Post("register")
+  @ApiOperation({ summary: "Create a new DocFlow account" })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Public()
-  @Post('login')
-  @ApiOperation({ summary: 'Sign in with email and password' })
+  @Post("login")
+  @ApiOperation({ summary: "Sign in with email and password" })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
   @Public()
-  @Post('refresh')
-  @ApiOperation({ summary: 'Refresh an access token' })
+  @Post("refresh")
+  @ApiOperation({ summary: "Refresh an access token" })
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto.refreshToken);
   }
 
   @ApiBearerAuth()
-  @Post('logto-bootstrap')
-  @ApiOperation({ summary: 'Bootstrap or sync a local DocFlow user from Logto profile data' })
+  @Post("logto-bootstrap")
+  @ApiOperation({
+    summary: "Bootstrap or sync a local DocFlow user from Logto profile data",
+  })
   bootstrapLogtoProfile(
     @CurrentUser() user: UserContext,
     @Body() body: LogtoProfileSyncDto,
@@ -74,15 +82,17 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @Get('me')
-  @ApiOperation({ summary: 'Get the authenticated user profile' })
+  @Get("me")
+  @ApiOperation({ summary: "Get the authenticated user profile" })
   me(@CurrentUser() user: UserContext) {
     return this.authService.me(user.userId);
   }
 
   @ApiBearerAuth()
-  @Post('logto-profile-sync')
-  @ApiOperation({ summary: 'Sync Logto profile data into the authenticated DocFlow user' })
+  @Post("logto-profile-sync")
+  @ApiOperation({
+    summary: "Sync Logto profile data into the authenticated DocFlow user",
+  })
   syncLogtoProfile(
     @CurrentUser() user: UserContext,
     @Body() body: LogtoProfileSyncDto,
@@ -91,8 +101,10 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @Patch('onboarding')
-  @ApiOperation({ summary: 'Update onboarding progress for the authenticated user' })
+  @Patch("onboarding")
+  @ApiOperation({
+    summary: "Update onboarding progress for the authenticated user",
+  })
   updateOnboarding(
     @CurrentUser() user: UserContext,
     @Body() body: { completed?: boolean; state?: Record<string, unknown> },
@@ -101,8 +113,8 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @Post('extension-upload-token')
-  @ApiOperation({ summary: 'Create a short-lived token for extension uploads' })
+  @Post("extension-upload-token")
+  @ApiOperation({ summary: "Create a short-lived token for extension uploads" })
   createExtensionUploadToken(
     @CurrentUser() user: UserContext,
     @Req() req: Request,
@@ -113,13 +125,13 @@ export class AuthController {
 }
 
 function getRemainingBearerTokenSeconds(req: Request): number | undefined {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
   if (!token) return undefined;
-  const parts = token.split('.');
+  const parts = token.split(".");
   if (parts.length < 2) return undefined;
   try {
-    const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8');
+    const payloadJson = Buffer.from(parts[1], "base64url").toString("utf8");
     const payload = JSON.parse(payloadJson) as { exp?: number };
     if (!payload.exp) return undefined;
     const nowSec = Math.floor(Date.now() / 1000);
@@ -129,4 +141,3 @@ function getRemainingBearerTokenSeconds(req: Request): number | undefined {
     return undefined;
   }
 }
-
