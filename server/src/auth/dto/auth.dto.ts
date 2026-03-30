@@ -60,3 +60,20 @@ export class LogtoProfileSyncDto {
   @IsString()
   displayName?: string;
 }
+
+export class GoogleCallbackDto {
+  @ApiProperty()
+  @IsString()
+  code!: string;
+}
+
+export class AccountSetupDto {
+  @ApiProperty({ enum: ['individual', 'team'] })
+  @IsIn(['individual', 'team'])
+  accountType!: 'individual' | 'team';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  teamName?: string;
+}

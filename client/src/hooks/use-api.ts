@@ -250,6 +250,15 @@ export function useApi() {
     [api],
   );
 
+  const updateAccountSetup = useCallback(
+    (body: { accountType: 'individual' | 'team'; teamName?: string }) =>
+      api('/auth/account-setup', {
+        method: 'PATCH',
+        body,
+      }),
+    [api],
+  );
+
   // ── Documents ──────────────────────────────────
   const generateDocuments = useCallback(
     (request: GenerateDocumentRequest) =>
@@ -390,6 +399,7 @@ export function useApi() {
     createTestPlanRun,
     getDashboardSummary,
     updateOnboarding,
+    updateAccountSetup,
     getCurrentWorkspace,
     updateCurrentWorkspace,
     inviteWorkspaceMember,

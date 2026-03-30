@@ -17,10 +17,14 @@ import { DocumentsListPage } from "./pages/DocumentsListPage";
 import { DocumentDetailPage } from "./pages/DocumentDetailPage";
 import { AdminConfigPage } from "./pages/AdminConfigPage";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
+import { GoogleCallbackPage } from "./pages/GoogleCallbackPage";
 import { LandingPage } from "./pages/LandingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { GettingStartedPage } from "./pages/GettingStartedPage";
+import { AccountSetupPage } from "./pages/AccountSetupPage";
+import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
+import { TermsOfServicePage } from "./pages/TermsOfServicePage";
 import { Spinner } from "./components/ui/spinner";
 
 function GettingStartedRedirect() {
@@ -46,6 +50,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+  const needsAccountSetup = !!(user?.onboardingState as Record<string, unknown>)
+    ?.needsAccountSetup;
+  if (needsAccountSetup) {
+    return <Navigate to="/account-setup" replace />;
+  }
   const isOnboardingRoute = location.pathname.startsWith("/app/onboarding");
   const hasCompletedOnboarding = !!user?.onboardingCompletedAt;
   const cameFromGuide = location.state?.fromGuide === true;
@@ -62,6 +71,10 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/callback" element={<AuthCallbackPage />} />
+        <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+        <Route path="/account-setup" element={<AccountSetupPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfServicePage />} />
         <Route
           path="/app"
           element={

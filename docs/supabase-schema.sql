@@ -3,7 +3,7 @@ create table if not exists public.docflow_users (
   email text not null unique,
   display_name text not null,
   password_hash text,
-  external_provider text check (external_provider in ('logto')),
+  external_provider text check (external_provider in ('logto', 'google')),
   external_subject text unique,
   account_type text not null check (account_type in ('individual', 'team')),
   team_name text,

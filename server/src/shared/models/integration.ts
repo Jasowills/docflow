@@ -1,13 +1,8 @@
 export interface AuthProviderConfig {
   primaryProvider: "jwt" | "logto";
-  logtoEnabled: boolean;
-  githubSignInEnabled: boolean;
   googleSignInEnabled: boolean;
-  logtoSignInUrl?: string;
-  logtoGithubSignInUrl?: string;
-  logtoGithubIdpName?: string;
-  logtoGoogleSignInUrl?: string;
-  logtoGoogleIdpName?: string;
+  googleClientId?: string;
+  googleCallbackUrl?: string;
 }
 
 export interface GithubConnectionStatus {

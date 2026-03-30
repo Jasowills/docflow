@@ -4,19 +4,11 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { useLogto } from "@logto/react";
 import { emitSessionExpired } from "./session-events";
-import { pushDebugTrace } from "../lib/debug-trace";
-import {
-  getApiBaseUrl,
-  getAuthMode,
-  getLogtoApiResource,
-  getLogtoCallbackUrl,
-} from "../config/runtime-config";
+import { getApiBaseUrl } from "../config/runtime-config";
 import type { AccountType } from "@docflow/shared";
 
 export interface AuthUser {
@@ -56,8 +48,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (payload?: LoginPayload) => Promise<void>;
-  loginWithGithub: (idpName?: string, isRegister?: boolean) => Promise<void>;
-  loginWithGoogle: (idpName?: string, isRegister?: boolean) => Promise<void>;
+  loginWithGoogle: (clientId: string, callbackUrl: string) => void;
+  handleGoogleCallback: (code: string) => Promise<void>;
   register: (payload?: RegisterPayload) => Promise<void>;
   logout: () => void;
   getAccessToken: () => Promise<string>;
@@ -71,11 +63,7 @@ const USER_KEY = "docflow.auth.user";
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  return getAuthMode() === "logto" ? (
-    <LogtoManagedAuthProvider>{children}</LogtoManagedAuthProvider>
-  ) : (
-    <JwtAuthProvider>{children}</JwtAuthProvider>
-  );
+  return <JwtAuthProvider>{children}</JwtAuthProvider>;
 }
 
 function JwtAuthProvider({ children }: { children: ReactNode }) {
@@ -138,18 +126,31 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
     [persistAuth],
   );
 
-  const loginWithGithub = useCallback(
-    async (_idpName?: string, _isRegister?: boolean) => {
-      throw new Error("GitHub sign-in requires Logto auth mode.");
+  const loginWithGoogle = useCallback(
+    (clientId: string, callbackUrl: string) => {
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: callbackUrl,
+        response_type: "code",
+        scope: "openid email profile",
+        access_type: "offline",
+        prompt: "consent",
+      });
+      window.location.assign(
+        `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+      );
     },
     [],
   );
 
-  const loginWithGoogle = useCallback(
-    async (_idpName?: string, _isRegister?: boolean) => {
-      throw new Error("Google sign-in requires Logto auth mode.");
+  const handleGoogleCallback = useCallback(
+    async (code: string) => {
+      const response = await fetchJson<AuthResponse>("/auth/google/callback", {
+        code,
+      });
+      persistAuth(response);
     },
-    [],
+    [persistAuth],
   );
 
   const refresh = useCallback(async (): Promise<string> => {
@@ -196,8 +197,8 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isLoading,
       login,
-      loginWithGithub,
       loginWithGoogle,
+      handleGoogleCallback,
       register,
       logout,
       getAccessToken,
@@ -207,283 +208,8 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoading,
       login,
-      loginWithGithub,
       loginWithGoogle,
-      register,
-      logout,
-      getAccessToken,
-      refreshUser,
-    ],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-function LogtoManagedAuthProvider({ children }: { children: ReactNode }) {
-  const {
-    isAuthenticated,
-    isLoading: isLogtoLoading,
-    signIn,
-    signOut,
-    getAccessToken: getLogtoAccessToken,
-    fetchUserInfo,
-  } = useLogto();
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    try {
-      const storedUser = localStorage.getItem(USER_KEY);
-      return storedUser ? (JSON.parse(storedUser) as AuthUser) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [isBootstrapping, setIsBootstrapping] = useState(true);
-  const getLogtoAccessTokenRef = useRef(getLogtoAccessToken);
-  const fetchUserInfoRef = useRef(fetchUserInfo);
-  const userRef = useRef<AuthUser | null>(user);
-  const lastBootstrappedTokenRef = useRef<string | null>(null);
-  const bootstrapInFlightRef = useRef<Promise<void> | null>(null);
-  const bootstrapSettledRef = useRef(false);
-
-  useEffect(() => {
-    getLogtoAccessTokenRef.current = getLogtoAccessToken;
-  }, [getLogtoAccessToken]);
-
-  useEffect(() => {
-    fetchUserInfoRef.current = fetchUserInfo;
-  }, [fetchUserInfo]);
-
-  useEffect(() => {
-    userRef.current = user;
-  }, [user]);
-
-  useEffect(() => {
-    pushDebugTrace("state", "AuthProvider", "Auth state changed", {
-      authMode: "logto",
-      isAuthenticated,
-      isLogtoLoading,
-      isBootstrapping,
-      userId: user?.userId || null,
-      workspaceId: user?.workspaceId || null,
-    });
-  }, [
-    isAuthenticated,
-    isLogtoLoading,
-    isBootstrapping,
-    user?.userId,
-    user?.workspaceId,
-  ]);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    clearStoredAuth();
-    lastBootstrappedTokenRef.current = null;
-    bootstrapInFlightRef.current = null;
-    bootstrapSettledRef.current = false;
-    void signOut(`${window.location.origin}/login`);
-  }, [signOut]);
-
-  const getAccessToken = useCallback(async (): Promise<string> => {
-    const resource = getLogtoApiResource();
-    const token = resource
-      ? await getLogtoAccessTokenRef.current(resource)
-      : await getLogtoAccessTokenRef.current();
-    if (!token) {
-      throw new Error("No authenticated session");
-    }
-    return token;
-  }, []);
-
-  const bootstrapLogtoUser = useCallback(
-    async (token: string): Promise<AuthUser> => {
-      const userInfo = await fetchUserInfoRef.current().catch(() => null);
-
-      const email =
-        typeof userInfo?.email === "string" && userInfo.email.trim()
-          ? userInfo.email.trim()
-          : undefined;
-      const displayName = resolvePreferredProfileName({
-        name: typeof userInfo?.name === "string" ? userInfo.name : undefined,
-        username:
-          typeof userInfo?.username === "string"
-            ? userInfo.username
-            : undefined,
-        email,
-      });
-
-      if (!email && !displayName) {
-        throw new Error(
-          "Logto profile did not include usable identity fields.",
-        );
-      }
-
-      const apiBaseUrl = getApiBaseUrl();
-      const response = await fetch(`${apiBaseUrl}/api/auth/logto-bootstrap`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          displayName,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(
-          errorBody.message || `Request failed with status ${response.status}`,
-        );
-      }
-
-      return response.json() as Promise<AuthUser>;
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (isLogtoLoading) {
-      return;
-    }
-
-    if (!isAuthenticated) {
-      clearStoredAuth();
-      setUser(null);
-      setIsBootstrapping(false);
-      lastBootstrappedTokenRef.current = null;
-      bootstrapInFlightRef.current = null;
-      bootstrapSettledRef.current = false;
-      return;
-    }
-
-    if (bootstrapInFlightRef.current || bootstrapSettledRef.current) {
-      return;
-    }
-
-    setIsBootstrapping(true);
-    const run = async () => {
-      try {
-        const token = await getAccessToken();
-        if (userRef.current && lastBootstrappedTokenRef.current === token) {
-          bootstrapSettledRef.current = true;
-          return;
-        }
-
-        const profile =
-          lastBootstrappedTokenRef.current === token
-            ? await fetchMe(token)
-            : await bootstrapLogtoUser(token);
-
-        setUser(profile);
-        localStorage.setItem(USER_KEY, JSON.stringify(profile));
-        localStorage.setItem(ACCESS_TOKEN_KEY, token);
-        lastBootstrappedTokenRef.current = token;
-        bootstrapSettledRef.current = true;
-      } catch {
-        setUser(null);
-        clearStoredAuth();
-        bootstrapSettledRef.current = false;
-      } finally {
-        setIsBootstrapping(false);
-        bootstrapInFlightRef.current = null;
-      }
-    };
-
-    bootstrapInFlightRef.current = run();
-    void bootstrapInFlightRef.current;
-  }, [bootstrapLogtoUser, getAccessToken, isAuthenticated, isLogtoLoading]);
-
-  const refreshUser = useCallback(async () => {
-    const token = await getAccessToken();
-    const profile = await fetchMe(token);
-    setUser(profile);
-    localStorage.setItem(USER_KEY, JSON.stringify(profile));
-    localStorage.setItem(ACCESS_TOKEN_KEY, token);
-    lastBootstrappedTokenRef.current = token;
-    bootstrapSettledRef.current = true;
-  }, [getAccessToken]);
-
-  const login = useCallback(async () => {
-    await signIn({
-      redirectUri: getLogtoCallbackUrl(),
-      firstScreen: "sign_in",
-      interactionMode: "signIn",
-    });
-  }, [signIn]);
-
-  const register = useCallback(async () => {
-    await signIn({
-      redirectUri: getLogtoCallbackUrl(),
-      firstScreen: "identifier:register",
-      interactionMode: "signUp",
-    });
-  }, [signIn]);
-
-  const loginWithGithub = useCallback(
-    async (idpName = "github", isRegister = false) => {
-      await signIn({
-        redirectUri: getLogtoCallbackUrl(),
-        directSignIn: {
-          method: "social",
-          target: idpName,
-        },
-        ...(isRegister
-          ? {
-              firstScreen: "identifier:register" as const,
-              interactionMode: "signUp" as const,
-            }
-          : {
-              firstScreen: "sign_in" as const,
-              interactionMode: "signIn" as const,
-            }),
-      });
-    },
-    [signIn],
-  );
-
-  const loginWithGoogle = useCallback(
-    async (idpName = "google", isRegister = false) => {
-      await signIn({
-        redirectUri: getLogtoCallbackUrl(),
-        directSignIn: {
-          method: "social",
-          target: idpName,
-        },
-        ...(isRegister
-          ? {
-              firstScreen: "identifier:register" as const,
-              interactionMode: "signUp" as const,
-            }
-          : {
-              firstScreen: "sign_in" as const,
-              interactionMode: "signIn" as const,
-            }),
-      });
-    },
-    [signIn],
-  );
-
-  const value = useMemo(
-    () => ({
-      user,
-      isAuthenticated: !!user && isAuthenticated,
-      isLoading: !user && (isLogtoLoading || isBootstrapping),
-      login,
-      loginWithGithub,
-      loginWithGoogle,
-      register,
-      logout,
-      getAccessToken,
-      refreshUser,
-    }),
-    [
-      user,
-      isAuthenticated,
-      isLogtoLoading,
-      isBootstrapping,
-      login,
-      loginWithGithub,
-      loginWithGoogle,
+      handleGoogleCallback,
       register,
       logout,
       getAccessToken,

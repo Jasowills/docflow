@@ -176,6 +176,29 @@ export class UsersRepository {
     }
   }
 
+  async updateAccountSetup(
+    userId: string,
+    updates: {
+      accountType: 'individual' | 'team';
+      teamName?: string;
+    },
+  ): Promise<void> {
+    const payload: Record<string, unknown> = {
+      account_type: updates.accountType,
+      team_name: updates.accountType === 'team' ? (updates.teamName?.trim() || null) : null,
+    };
+
+    const { error } = await this.supabase
+      .from('docflow_users')
+      .update(payload)
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to update account setup for ${userId}: ${error.message}`);
+      throw mapSupabaseUserError(error.message, 'update account setup');
+    }
+  }
+
   private mapRow(row: Record<string, unknown>): AuthUserRecord {
     return {
       userId: String(row.user_id || ''),
@@ -183,7 +206,7 @@ export class UsersRepository {
       displayName: String(row.display_name || ''),
       passwordHash: typeof row.password_hash === 'string' ? row.password_hash : undefined,
       externalProvider:
-        row.external_provider === 'logto' ? 'logto' : undefined,
+        row.external_provider === 'logto' || row.external_provider === 'google' ? row.external_provider : undefined,
       externalSubject:
         typeof row.external_subject === 'string' ? row.external_subject : undefined,
       accountType: (row.account_type as AuthUserRecord['accountType']) || 'individual',

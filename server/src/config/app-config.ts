@@ -80,6 +80,21 @@ export class AppConfig {
     return this.configService.get<string>("LOGTO_GOOGLE_IDP_NAME", "google");
   }
 
+  get googleClientId(): string {
+    return this.configService.get<string>("GOOGLE_CLIENT_ID", "");
+  }
+
+  get googleClientSecret(): string {
+    return this.configService.get<string>("GOOGLE_CLIENT_SECRET", "");
+  }
+
+  get googleCallbackUrl(): string {
+    return this.configService.get<string>(
+      "GOOGLE_CALLBACK_URL",
+      "http://localhost:3000/auth/google/callback",
+    );
+  }
+
   get githubAppId(): string {
     return this.configService.get<string>("GITHUB_APP_ID", "");
   }

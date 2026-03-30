@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
 import { useApi } from "../hooks/use-api";
-import { getAuthMode } from "../config/runtime-config";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -13,15 +12,13 @@ import {
 } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Github } from "lucide-react";
 import type { AuthProviderConfig } from "@docflow/shared";
-import logtoMark from "../assets/logto-official.svg";
 
 type Mode = "login" | "register";
 type AccountType = "individual" | "team";
 
 export function LoginPage() {
-  const { isAuthenticated, login, loginWithGithub, loginWithGoogle, register } =
+  const { isAuthenticated, login, loginWithGoogle, register } =
     useAuth();
   const { getAuthProviders } = useApi();
   const [mode, setMode] = useState<Mode>("login");
@@ -53,50 +50,24 @@ export function LoginPage() {
   }
 
   const isRegister = mode === "register";
-  const authMode = getAuthMode();
-  const isConfiguredForLogto = authMode === "logto";
-  const isLogtoPrimary =
-    providerConfig?.primaryProvider === "logto" || isConfiguredForLogto;
-  const showProviderButtons =
-    providerConfigLoaded &&
-    (isConfiguredForLogto ||
-      !!providerConfig?.logtoEnabled ||
-      !!providerConfig?.githubSignInEnabled ||
-      !!providerConfig?.googleSignInEnabled);
-  const shouldShowPasswordForm = !isLogtoPrimary && providerConfigLoaded;
-  const githubEnabled =
-    providerConfigLoaded &&
-    (isConfiguredForLogto || !!providerConfig?.githubSignInEnabled);
-  const githubSignInUrl = providerConfig?.logtoGithubSignInUrl;
-  const githubIdpName = providerConfig?.logtoGithubIdpName || "github";
   const googleEnabled =
-    providerConfigLoaded &&
-    (isConfiguredForLogto || !!providerConfig?.googleSignInEnabled);
-  const googleSignInUrl = providerConfig?.logtoGoogleSignInUrl;
-  const googleIdpName = providerConfig?.logtoGoogleIdpName || "google";
+    providerConfigLoaded && !!providerConfig?.googleSignInEnabled;
+  const showProviderButtons = providerConfigLoaded && googleEnabled;
 
   const handleSubmit = async () => {
     setError(null);
     setIsSubmitting(true);
     try {
       if (isRegister) {
-        if (isLogtoPrimary) {
-          await register();
-        } else {
-          await register({
-            displayName: displayName.trim(),
-            email: email.trim(),
-            password,
-            accountType,
-            teamName: accountType === "team" ? teamName.trim() : undefined,
-          });
-        }
+        await register({
+          displayName: displayName.trim(),
+          email: email.trim(),
+          password,
+          accountType,
+          teamName: accountType === "team" ? teamName.trim() : undefined,
+        });
       } else {
-        if (isLogtoPrimary) {
-          await login();
-        } else {
-          await login({ email: email.trim(), password });
-        }
+        await login({ email: email.trim(), password });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
@@ -104,56 +75,18 @@ export function LoginPage() {
     }
   };
 
-  const handlePrimaryLogtoAction = async () => {
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      if (isRegister) {
-        await register();
-      } else {
-        await login();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGithubAction = async () => {
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      if (githubSignInUrl) {
-        window.location.assign(githubSignInUrl);
-        return;
-      }
-
-      await loginWithGithub(githubIdpName, isRegister);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleAction = async () => {
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      if (googleSignInUrl) {
-        window.location.assign(googleSignInUrl);
-        return;
-      }
-
-      await loginWithGoogle(googleIdpName, isRegister);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-      setIsSubmitting(false);
+  const handleGoogleAction = () => {
+    if (providerConfig?.googleClientId && providerConfig?.googleCallbackUrl) {
+      loginWithGoogle(
+        providerConfig.googleClientId,
+        providerConfig.googleCallbackUrl,
+      );
     }
   };
 
   return (
     <div className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-lg items-center justify-center">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-lg flex-col items-center justify-center">
         <Card className="w-full border-border/80 bg-card/95 backdrop-blur">
           <CardHeader className="space-y-5 p-6 text-center sm:p-8">
             <div className="space-y-3">
@@ -198,31 +131,6 @@ export function LoginPage() {
                 <Button
                   variant="outline"
                   className="w-full justify-center px-4 py-6"
-                  onClick={() => void handlePrimaryLogtoAction()}
-                  type="button"
-                  disabled={isSubmitting}
-                >
-                  <img
-                    src={logtoMark}
-                    alt=""
-                    className="h-4 w-4 rounded-sm"
-                    aria-hidden="true"
-                  />
-                  Continue with Logto
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-center px-4 py-6"
-                  onClick={() => void handleGithubAction()}
-                  type="button"
-                  disabled={!githubEnabled || isSubmitting}
-                >
-                  <Github className="h-4 w-4" />
-                  Continue with GitHub
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-center px-4 py-6"
                   onClick={() => void handleGoogleAction()}
                   type="button"
                   disabled={!googleEnabled || isSubmitting}
@@ -251,22 +159,20 @@ export function LoginPage() {
                   </svg>
                   Continue with Google
                 </Button>
-                {!isLogtoPrimary ? (
-                  <div className="relative py-1">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-3 text-muted-foreground">
-                        or use email
-                      </span>
-                    </div>
+                <div className="relative py-1">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
                   </div>
-                ) : null}
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-3 text-muted-foreground">
+                      or use email
+                    </span>
+                  </div>
+                </div>
               </div>
             ) : null}
 
-            {isRegister && shouldShowPasswordForm ? (
+            {isRegister && providerConfigLoaded ? (
               <div className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Full name</Label>
@@ -314,7 +220,7 @@ export function LoginPage() {
               </div>
             ) : null}
 
-            {shouldShowPasswordForm ? (
+            {providerConfigLoaded ? (
               <div className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -336,17 +242,11 @@ export function LoginPage() {
                   />
                 </div>
               </div>
-            ) : (
-              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4 text-sm leading-6 text-muted-foreground">
-                {isRegister
-                  ? "Continue with Logto to create your DocFlow account. Team and workspace setup follows after sign-in."
-                  : "Use Logto to sign in securely to your DocFlow workspace."}
-              </div>
-            )}
+            ) : null}
 
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-            {shouldShowPasswordForm ? (
+            {providerConfigLoaded ? (
               <div className="pt-1">
                 <Button
                   className="w-full justify-center px-4 py-6"
@@ -365,6 +265,12 @@ export function LoginPage() {
             ) : null}
           </CardContent>
         </Card>
+
+        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+          <span>·</span>
+          <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+        </div>
       </div>
     </div>
   );

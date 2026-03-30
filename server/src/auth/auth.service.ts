@@ -87,6 +87,97 @@ export class AuthService {
     });
   }
 
+  async googleAuth(code: string) {
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: this.config.googleClientId,
+        client_secret: this.config.googleClientSecret,
+        redirect_uri: this.config.googleCallbackUrl,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const errorBody = await tokenResponse.text();
+      throw new UnauthorizedException(`Google token exchange failed: ${errorBody}`);
+    }
+
+    const tokens = (await tokenResponse.json()) as { access_token: string };
+
+    const profileResponse = await fetch(
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      },
+    );
+
+    if (!profileResponse.ok) {
+      throw new UnauthorizedException('Failed to fetch Google profile.');
+    }
+
+    const profile = (await profileResponse.json()) as {
+      id: string;
+      email: string;
+      name?: string;
+      picture?: string;
+    };
+
+    if (!profile.email) {
+      throw new BadRequestException('Google account does not have an email address.');
+    }
+
+    const googleSubject = profile.id;
+    const email = profile.email.trim().toLowerCase();
+    const displayName = profile.name?.trim() || email.split('@')[0];
+
+    let user = await this.usersRepository.findByExternalIdentity('google', googleSubject);
+
+    if (!user) {
+      user = await this.usersRepository.findByEmail(email);
+      if (user) {
+        await this.usersRepository.linkExternalIdentity(user.userId, 'google', googleSubject);
+        user = { ...user, externalProvider: 'google', externalSubject: googleSubject };
+      }
+    }
+
+    if (!user) {
+      const now = new Date().toISOString();
+      const userId = uuidv4();
+      const workspaceId = uuidv4();
+      const newUser: AuthUserRecord = {
+        userId,
+        email,
+        displayName,
+        externalProvider: 'google',
+        externalSubject: googleSubject,
+        accountType: 'individual',
+        defaultWorkspaceId: workspaceId,
+        roles: ['member'],
+        createdAtUtc: now,
+        lastLoginAtUtc: now,
+        onboardingState: { needsAccountSetup: true },
+      };
+
+      await this.usersRepository.insert(newUser);
+      const workspace = await this.workspacesRepository.createDefaultWorkspace({
+        workspaceId,
+        ownerUserId: userId,
+        ownerEmail: email,
+        ownerDisplayName: displayName,
+        accountType: 'individual',
+        workspaceName: buildPersonalWorkspaceName(displayName, email),
+      });
+      return this.buildAuthResponse(newUser, workspace);
+    }
+
+    const now = new Date().toISOString();
+    await this.usersRepository.updateLastLogin(user.userId, now);
+    return this.buildAuthResponse({ ...user, lastLoginAtUtc: now });
+  }
+
   async refresh(refreshToken: string) {
     const claims = this.verifyRefreshToken(refreshToken);
     const user = await this.usersRepository.findByUserId(claims.sub);
@@ -142,6 +233,44 @@ export class AuthService {
         ? new Date().toISOString()
         : user.onboardingCompletedAt || null,
       onboardingState: nextState,
+    });
+
+    return this.me(userId);
+  }
+
+  async updateAccountSetup(
+    userId: string,
+    setup: { accountType: 'individual' | 'team'; teamName?: string },
+  ) {
+    const user = await this.usersRepository.findByUserId(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    if (setup.accountType === 'team' && !setup.teamName?.trim()) {
+      throw new BadRequestException('Team name is required for team accounts.');
+    }
+
+    await this.usersRepository.updateAccountSetup(userId, setup);
+
+    const workspaceName =
+      setup.accountType === 'team'
+        ? setup.teamName!.trim()
+        : buildPersonalWorkspaceName(user.displayName, user.email);
+
+    if (user.defaultWorkspaceId) {
+      await this.workspacesRepository.renameWorkspace(
+        user.defaultWorkspaceId,
+        workspaceName,
+      );
+    }
+
+    await this.usersRepository.updateOnboarding(userId, {
+      onboardingState: {
+        ...(user.onboardingState || {}),
+        needsAccountSetup: false,
+        accountSetupCompleted: true,
+      },
     });
 
     return this.me(userId);

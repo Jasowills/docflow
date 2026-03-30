@@ -6,7 +6,7 @@ export interface AuthUserRecord {
   email: string;
   displayName: string;
   passwordHash?: string;
-  externalProvider?: 'logto';
+  externalProvider?: 'logto' | 'google';
   externalSubject?: string;
   accountType: AccountType;
   teamName?: string;

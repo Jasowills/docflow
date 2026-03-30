@@ -10,6 +10,8 @@ import {
   LogtoProfileSyncDto,
   RefreshTokenDto,
   RegisterDto,
+  GoogleCallbackDto,
+  AccountSetupDto,
 } from "./dto/auth.dto";
 import { AppConfig } from "../config/app-config";
 
@@ -26,25 +28,17 @@ export class AuthController {
   @Get("providers")
   @ApiOperation({ summary: "Get enabled sign-in providers" })
   getProviders() {
-    const githubSignInEnabled =
-      this.config.authProvider === "logto" &&
-      !!(this.config.logtoGithubIdpName || this.config.logtoGithubSignInUrl);
-
-    const googleSignInEnabled =
-      this.config.authProvider === "logto" &&
-      !!(this.config.logtoGoogleIdpName || this.config.logtoGoogleSignInUrl);
+    const googleSignInEnabled = !!this.config.googleClientId;
 
     return {
       primaryProvider: this.config.authProvider === "logto" ? "logto" : "jwt",
-      logtoEnabled:
-        this.config.authProvider === "logto" || !!this.config.logtoEndpoint,
-      githubSignInEnabled,
       googleSignInEnabled,
-      logtoSignInUrl: this.config.logtoSignInUrl || undefined,
-      logtoGithubSignInUrl: this.config.logtoGithubSignInUrl || undefined,
-      logtoGithubIdpName: this.config.logtoGithubIdpName || undefined,
-      logtoGoogleSignInUrl: this.config.logtoGoogleSignInUrl || undefined,
-      logtoGoogleIdpName: this.config.logtoGoogleIdpName || undefined,
+      googleClientId: googleSignInEnabled
+        ? this.config.googleClientId
+        : undefined,
+      googleCallbackUrl: googleSignInEnabled
+        ? this.config.googleCallbackUrl
+        : undefined,
     };
   }
 
@@ -60,6 +54,13 @@ export class AuthController {
   @ApiOperation({ summary: "Sign in with email and password" })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Post("google/callback")
+  @ApiOperation({ summary: "Exchange Google OAuth authorization code for DocFlow tokens" })
+  googleCallback(@Body() dto: GoogleCallbackDto) {
+    return this.authService.googleAuth(dto.code);
   }
 
   @Public()
@@ -110,6 +111,18 @@ export class AuthController {
     @Body() body: { completed?: boolean; state?: Record<string, unknown> },
   ) {
     return this.authService.updateOnboarding(user.userId, body);
+  }
+
+  @ApiBearerAuth()
+  @Patch("account-setup")
+  @ApiOperation({
+    summary: "Set account type and team name after Google sign-up",
+  })
+  updateAccountSetup(
+    @CurrentUser() user: UserContext,
+    @Body() dto: AccountSetupDto,
+  ) {
+    return this.authService.updateAccountSetup(user.userId, dto);
   }
 
   @ApiBearerAuth()

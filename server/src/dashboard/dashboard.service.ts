@@ -321,7 +321,6 @@ function buildMissingSteps(input: {
   accountType: 'individual' | 'team';
 }): string[] {
   const items: string[] = [];
-  if (!input.githubConnected) items.push('Connect GitHub App');
   if (!input.hasRecordings) items.push('Capture or upload your first recording');
   if (!input.hasDocuments) items.push('Generate your first document');
   if (input.accountType === 'team' && input.teamMembers <= 1) {
