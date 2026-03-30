@@ -36,9 +36,7 @@ export function GoogleCallbackPage() {
     handleGoogleCallback(code)
       .then(() => setIsProcessing(false))
       .catch((err) => {
-        setError(
-          err instanceof Error ? err.message : "Authentication failed",
-        );
+        setError(err instanceof Error ? err.message : "Authentication failed");
         setIsProcessing(false);
       });
   }, [searchParams, handleGoogleCallback]);

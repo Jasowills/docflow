@@ -1,11 +1,11 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsEmail,
   IsIn,
   IsOptional,
   IsString,
   MinLength,
-} from 'class-validator';
+} from "class-validator";
 
 export class RegisterDto {
   @ApiProperty()
@@ -22,9 +22,9 @@ export class RegisterDto {
   @MinLength(8)
   password!: string;
 
-  @ApiProperty({ enum: ['individual', 'team'] })
-  @IsIn(['individual', 'team'])
-  accountType!: 'individual' | 'team';
+  @ApiProperty({ enum: ["individual", "team"] })
+  @IsIn(["individual", "team"])
+  accountType!: "individual" | "team";
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -68,9 +68,9 @@ export class GoogleCallbackDto {
 }
 
 export class AccountSetupDto {
-  @ApiProperty({ enum: ['individual', 'team'] })
-  @IsIn(['individual', 'team'])
-  accountType!: 'individual' | 'team';
+  @ApiProperty({ enum: ["individual", "team"] })
+  @IsIn(["individual", "team"])
+  accountType!: "individual" | "team";
 
   @ApiPropertyOptional()
   @IsOptional()

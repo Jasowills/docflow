@@ -1,5 +1,5 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   DashboardActivityItem,
   DashboardSeriesPoint,
@@ -7,10 +7,10 @@ import type {
   DocumentSummary,
   RecordingSummary,
   TestPlan,
-} from '@docflow/shared';
-import { SUPABASE_CLIENT } from '../database/supabase.providers';
-import { WorkspacesRepository } from '../auth/workspaces.repository';
-import { GithubRepository } from '../integrations/github.repository';
+} from "@docflow/shared";
+import { SUPABASE_CLIENT } from "../database/supabase.providers";
+import { WorkspacesRepository } from "../auth/workspaces.repository";
+import { GithubRepository } from "../integrations/github.repository";
 
 @Injectable()
 export class DashboardService {
@@ -21,18 +21,30 @@ export class DashboardService {
     private readonly githubRepository: GithubRepository,
   ) {}
 
-  async getSummary(userId: string, workspaceId?: string): Promise<DashboardSummary> {
+  async getSummary(
+    userId: string,
+    workspaceId?: string,
+  ): Promise<DashboardSummary> {
     if (!workspaceId) {
-      throw new BadRequestException('A workspace is required.');
+      throw new BadRequestException("A workspace is required.");
     }
 
-    const workspace = await this.workspacesRepository.getWorkspaceDetails(workspaceId);
+    const workspace =
+      await this.workspacesRepository.getWorkspaceDetails(workspaceId);
     if (!workspace) {
-      throw new BadRequestException('Workspace not found.');
+      throw new BadRequestException("Workspace not found.");
     }
 
     const memberIds = workspace.members.map((member) => member.userId);
-    const [recordings, documents, recordingTrendTimestamps, documentTrendTimestamps, testPlans, repoSelections, fallbackGithubStatus] = await Promise.all([
+    const [
+      recordings,
+      documents,
+      recordingTrendTimestamps,
+      documentTrendTimestamps,
+      testPlans,
+      repoSelections,
+      fallbackGithubStatus,
+    ] = await Promise.all([
       this.loadRecentRecordings(memberIds),
       this.loadRecentDocuments(memberIds),
       this.loadRecordingTrendTimestamps(memberIds),
@@ -42,12 +54,8 @@ export class DashboardService {
       this.githubRepository.findConnectionByUserId(userId),
     ]);
 
-    const recordingsTrend = buildDailyTrend(
-      recordingTrendTimestamps,
-    );
-    const documentsTrend = buildDailyTrend(
-      documentTrendTimestamps,
-    );
+    const recordingsTrend = buildDailyTrend(recordingTrendTimestamps);
+    const documentsTrend = buildDailyTrend(documentTrendTimestamps);
     const testPlanStatus = buildStatusSeries(testPlans);
 
     const githubConnected =
@@ -57,14 +65,19 @@ export class DashboardService {
       metrics: {
         recordings: recordings.total,
         documents: documents.total,
-        activeTestPlans: testPlans.filter((item) => item.status !== 'archived').length,
+        activeTestPlans: testPlans.filter((item) => item.status !== "archived")
+          .length,
         connectedRepos: repoSelections,
         teamMembers: workspace.members.length,
       },
       recentRecordings: recordings.items,
       recentDocuments: documents.items,
       recentTestPlans: testPlans.slice(0, 5),
-      recentActivity: buildRecentActivity(recordings.items, documents.items, testPlans),
+      recentActivity: buildRecentActivity(
+        recordings.items,
+        documents.items,
+        testPlans,
+      ),
       recordingsTrend,
       documentsTrend,
       testPlanStatus,
@@ -91,26 +104,31 @@ export class DashboardService {
     }
 
     const { data, count, error } = await this.supabase
-      .from('recordings')
-      .select('recording_id, metadata, uploaded_at_utc, event_count, transcript_count, screenshot_count', {
-        count: 'exact',
-      })
-      .in('user_id', userIds)
-      .order('uploaded_at_utc', { ascending: false })
+      .from("recordings")
+      .select(
+        "recording_id, metadata, uploaded_at_utc, event_count, transcript_count, screenshot_count",
+        {
+          count: "exact",
+        },
+      )
+      .in("user_id", userIds)
+      .order("uploaded_at_utc", { ascending: false })
       .limit(5);
 
     if (error) {
-      throw new Error('Failed to load dashboard recordings.');
+      throw new Error("Failed to load dashboard recordings.");
     }
 
-    const items = ((data as Array<Record<string, unknown>> | null) || []).map((row) => ({
-      recordingId: String(row.recording_id || ''),
-      metadata: row.metadata as RecordingSummary['metadata'],
-      uploadedAtUtc: String(row.uploaded_at_utc || ''),
-      eventCount: Number(row.event_count || 0),
-      transcriptCount: Number(row.transcript_count || 0),
-      screenshotCount: Number(row.screenshot_count || 0),
-    }));
+    const items = ((data as Array<Record<string, unknown>> | null) || []).map(
+      (row) => ({
+        recordingId: String(row.recording_id || ""),
+        metadata: row.metadata as RecordingSummary["metadata"],
+        uploadedAtUtc: String(row.uploaded_at_utc || ""),
+        eventCount: Number(row.event_count || 0),
+        transcriptCount: Number(row.transcript_count || 0),
+        screenshotCount: Number(row.screenshot_count || 0),
+      }),
+    );
 
     return { items, total: count || 0 };
   }
@@ -124,116 +142,134 @@ export class DashboardService {
     }
 
     const { data, count, error } = await this.supabase
-      .from('documents')
-      .select('document_id, document_title, document_type, recording_id, recording_name, product_area, folder, created_at_utc, created_by', {
-        count: 'exact',
-      })
-      .in('created_by', userIds)
-      .order('created_at_utc', { ascending: false })
+      .from("documents")
+      .select(
+        "document_id, document_title, document_type, recording_id, recording_name, product_area, folder, created_at_utc, created_by",
+        {
+          count: "exact",
+        },
+      )
+      .in("created_by", userIds)
+      .order("created_at_utc", { ascending: false })
       .limit(5);
 
     if (error) {
-      throw new Error('Failed to load dashboard documents.');
+      throw new Error("Failed to load dashboard documents.");
     }
 
-    const items = ((data as Array<Record<string, unknown>> | null) || []).map((row) => ({
-      documentId: String(row.document_id || ''),
-      documentTitle: String(row.document_title || ''),
-      documentType: String(row.document_type || ''),
-      recordingId: String(row.recording_id || ''),
-      recordingName: String(row.recording_name || ''),
-      productArea: String(row.product_area || ''),
-      folder: typeof row.folder === 'string' ? row.folder : undefined,
-      createdAtUtc: String(row.created_at_utc || ''),
-      createdBy: String(row.created_by || ''),
-    }));
+    const items = ((data as Array<Record<string, unknown>> | null) || []).map(
+      (row) => ({
+        documentId: String(row.document_id || ""),
+        documentTitle: String(row.document_title || ""),
+        documentType: String(row.document_type || ""),
+        recordingId: String(row.recording_id || ""),
+        recordingName: String(row.recording_name || ""),
+        productArea: String(row.product_area || ""),
+        folder: typeof row.folder === "string" ? row.folder : undefined,
+        createdAtUtc: String(row.created_at_utc || ""),
+        createdBy: String(row.created_by || ""),
+      }),
+    );
 
     return { items, total: count || 0 };
   }
 
   private async loadRecentTestPlans(workspaceId: string): Promise<TestPlan[]> {
     const { data, error } = await this.supabase
-      .from('test_plans')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('created_at_utc', { ascending: false })
+      .from("test_plans")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("created_at_utc", { ascending: false })
       .limit(5);
 
     if (error) {
-      throw new Error('Failed to load dashboard test plans.');
+      throw new Error("Failed to load dashboard test plans.");
     }
 
-    return ((data as Array<Record<string, unknown>> | null) || []).map((row) => ({
-      planId: String(row.plan_id || ''),
-      workspaceId: String(row.workspace_id || ''),
-      name: String(row.name || ''),
-      description: typeof row.description === 'string' ? row.description : undefined,
-      repositoryFullName:
-        typeof row.repository_full_name === 'string' ? row.repository_full_name : undefined,
-      branch: typeof row.branch === 'string' ? row.branch : undefined,
-      targetEnvironment:
-        typeof row.target_environment === 'string' ? row.target_environment : undefined,
-      status: String(row.status || 'draft') as TestPlan['status'],
-      createdAtUtc: String(row.created_at_utc || ''),
-      createdBy: String(row.created_by || ''),
-      lastModifiedAtUtc:
-        typeof row.last_modified_at_utc === 'string' ? row.last_modified_at_utc : undefined,
-      testCaseIds: Array.isArray(row.test_case_ids)
-        ? (row.test_case_ids as string[])
-        : [],
-    }));
+    return ((data as Array<Record<string, unknown>> | null) || []).map(
+      (row) => ({
+        planId: String(row.plan_id || ""),
+        workspaceId: String(row.workspace_id || ""),
+        name: String(row.name || ""),
+        description:
+          typeof row.description === "string" ? row.description : undefined,
+        repositoryFullName:
+          typeof row.repository_full_name === "string"
+            ? row.repository_full_name
+            : undefined,
+        branch: typeof row.branch === "string" ? row.branch : undefined,
+        targetEnvironment:
+          typeof row.target_environment === "string"
+            ? row.target_environment
+            : undefined,
+        status: String(row.status || "draft") as TestPlan["status"],
+        createdAtUtc: String(row.created_at_utc || ""),
+        createdBy: String(row.created_by || ""),
+        lastModifiedAtUtc:
+          typeof row.last_modified_at_utc === "string"
+            ? row.last_modified_at_utc
+            : undefined,
+        testCaseIds: Array.isArray(row.test_case_ids)
+          ? (row.test_case_ids as string[])
+          : [],
+      }),
+    );
   }
 
-  private async loadRecordingTrendTimestamps(userIds: string[]): Promise<string[]> {
+  private async loadRecordingTrendTimestamps(
+    userIds: string[],
+  ): Promise<string[]> {
     if (userIds.length === 0) {
       return [];
     }
 
     const dateFrom = getTrendWindowStartIso();
     const { data, error } = await this.supabase
-      .from('recordings')
-      .select('uploaded_at_utc')
-      .in('user_id', userIds)
-      .gte('uploaded_at_utc', dateFrom);
+      .from("recordings")
+      .select("uploaded_at_utc")
+      .in("user_id", userIds)
+      .gte("uploaded_at_utc", dateFrom);
 
     if (error) {
-      throw new Error('Failed to load dashboard recording trend.');
+      throw new Error("Failed to load dashboard recording trend.");
     }
 
     return ((data as Array<Record<string, unknown>> | null) || [])
-      .map((row) => String(row.uploaded_at_utc || ''))
+      .map((row) => String(row.uploaded_at_utc || ""))
       .filter(Boolean);
   }
 
-  private async loadDocumentTrendTimestamps(userIds: string[]): Promise<string[]> {
+  private async loadDocumentTrendTimestamps(
+    userIds: string[],
+  ): Promise<string[]> {
     if (userIds.length === 0) {
       return [];
     }
 
     const dateFrom = getTrendWindowStartIso();
     const { data, error } = await this.supabase
-      .from('documents')
-      .select('created_at_utc')
-      .in('created_by', userIds)
-      .gte('created_at_utc', dateFrom);
+      .from("documents")
+      .select("created_at_utc")
+      .in("created_by", userIds)
+      .gte("created_at_utc", dateFrom);
 
     if (error) {
-      throw new Error('Failed to load dashboard document trend.');
+      throw new Error("Failed to load dashboard document trend.");
     }
 
     return ((data as Array<Record<string, unknown>> | null) || [])
-      .map((row) => String(row.created_at_utc || ''))
+      .map((row) => String(row.created_at_utc || ""))
       .filter(Boolean);
   }
 
   private async loadSelectedRepoCount(workspaceId: string): Promise<number> {
     const { count, error } = await this.supabase
-      .from('workspace_repo_selections')
-      .select('repository_id', { count: 'exact', head: true })
-      .eq('workspace_id', workspaceId);
+      .from("workspace_repo_selections")
+      .select("repository_id", { count: "exact", head: true })
+      .eq("workspace_id", workspaceId);
 
     if (error) {
-      throw new Error('Failed to load selected repositories.');
+      throw new Error("Failed to load selected repositories.");
     }
 
     return count || 0;
@@ -272,7 +308,7 @@ function getTrendWindowStartIso(): string {
 }
 
 function buildStatusSeries(testPlans: TestPlan[]): DashboardSeriesPoint[] {
-  const statuses: TestPlan['status'][] = ['draft', 'ready', 'archived'];
+  const statuses: TestPlan["status"][] = ["draft", "ready", "archived"];
   return statuses.map((status) => ({
     label: status,
     value: testPlans.filter((item) => item.status === status).length,
@@ -287,21 +323,21 @@ function buildRecentActivity(
   const items: DashboardActivityItem[] = [
     ...recordings.map((recording) => ({
       id: `recording:${recording.recordingId}`,
-      type: 'recording' as const,
+      type: "recording" as const,
       title: recording.metadata.name,
-      description: 'Recording uploaded',
+      description: "Recording uploaded",
       timestampUtc: recording.uploadedAtUtc,
     })),
     ...documents.map((document) => ({
       id: `document:${document.documentId}`,
-      type: 'document' as const,
+      type: "document" as const,
       title: document.documentTitle,
       description: `${document.documentType} generated`,
       timestampUtc: document.createdAtUtc,
     })),
     ...testPlans.map((plan) => ({
       id: `test-plan:${plan.planId}`,
-      type: 'test-plan' as const,
+      type: "test-plan" as const,
       title: plan.name,
       description: `Test plan ${plan.status}`,
       timestampUtc: plan.createdAtUtc,
@@ -309,7 +345,10 @@ function buildRecentActivity(
   ];
 
   return items
-    .sort((a, b) => new Date(b.timestampUtc).getTime() - new Date(a.timestampUtc).getTime())
+    .sort(
+      (a, b) =>
+        new Date(b.timestampUtc).getTime() - new Date(a.timestampUtc).getTime(),
+    )
     .slice(0, 8);
 }
 
@@ -318,13 +357,14 @@ function buildMissingSteps(input: {
   hasRecordings: boolean;
   hasDocuments: boolean;
   teamMembers: number;
-  accountType: 'individual' | 'team';
+  accountType: "individual" | "team";
 }): string[] {
   const items: string[] = [];
-  if (!input.hasRecordings) items.push('Capture or upload your first recording');
-  if (!input.hasDocuments) items.push('Generate your first document');
-  if (input.accountType === 'team' && input.teamMembers <= 1) {
-    items.push('Invite teammates');
+  if (!input.hasRecordings)
+    items.push("Capture or upload your first recording");
+  if (!input.hasDocuments) items.push("Generate your first document");
+  if (input.accountType === "team" && input.teamMembers <= 1) {
+    items.push("Invite teammates");
   }
   return items;
 }

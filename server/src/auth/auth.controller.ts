@@ -58,7 +58,9 @@ export class AuthController {
 
   @Public()
   @Post("google/callback")
-  @ApiOperation({ summary: "Exchange Google OAuth authorization code for DocFlow tokens" })
+  @ApiOperation({
+    summary: "Exchange Google OAuth authorization code for DocFlow tokens",
+  })
   googleCallback(@Body() dto: GoogleCallbackDto) {
     return this.authService.googleAuth(dto.code);
   }

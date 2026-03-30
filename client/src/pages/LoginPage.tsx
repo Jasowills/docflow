@@ -18,8 +18,7 @@ type Mode = "login" | "register";
 type AccountType = "individual" | "team";
 
 export function LoginPage() {
-  const { isAuthenticated, login, loginWithGoogle, register } =
-    useAuth();
+  const { isAuthenticated, login, loginWithGoogle, register } = useAuth();
   const { getAuthProviders } = useApi();
   const [mode, setMode] = useState<Mode>("login");
   const [displayName, setDisplayName] = useState("");
@@ -267,9 +266,16 @@ export function LoginPage() {
         </Card>
 
         <div className="mt-6 flex items-center justify-center gap-4 text-xs text-muted-foreground">
-          <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+          <Link
+            to="/privacy"
+            className="hover:text-foreground transition-colors"
+          >
+            Privacy Policy
+          </Link>
           <span>·</span>
-          <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+          <Link to="/terms" className="hover:text-foreground transition-colors">
+            Terms of Service
+          </Link>
         </div>
       </div>
     </div>

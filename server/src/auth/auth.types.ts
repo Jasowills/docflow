@@ -1,4 +1,4 @@
-import type { AccountType } from '@docflow/shared';
+import type { AccountType } from "@docflow/shared";
 
 export interface AuthUserRecord {
   _id?: string;
@@ -6,7 +6,7 @@ export interface AuthUserRecord {
   email: string;
   displayName: string;
   passwordHash?: string;
-  externalProvider?: 'logto' | 'google';
+  externalProvider?: "logto" | "google";
   externalSubject?: string;
   accountType: AccountType;
   teamName?: string;

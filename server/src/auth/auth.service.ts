@@ -2,21 +2,21 @@ import {
   BadRequestException,
   Injectable,
   UnauthorizedException,
-} from '@nestjs/common';
-import { sign, verify, type Secret, type SignOptions } from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
-import type { UserContext, WorkspaceSummary } from '@docflow/shared';
-import { AppConfig } from '../config/app-config';
-import type { AuthUserRecord } from './auth.types';
-import { UsersRepository } from './users.repository';
-import { hashPassword, verifyPassword } from './password.util';
-import type { LoginDto, RegisterDto } from './dto/auth.dto';
-import { WorkspacesRepository } from './workspaces.repository';
+} from "@nestjs/common";
+import { sign, verify, type Secret, type SignOptions } from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
+import type { UserContext, WorkspaceSummary } from "@docflow/shared";
+import { AppConfig } from "../config/app-config";
+import type { AuthUserRecord } from "./auth.types";
+import { UsersRepository } from "./users.repository";
+import { hashPassword, verifyPassword } from "./password.util";
+import type { LoginDto, RegisterDto } from "./dto/auth.dto";
+import { WorkspacesRepository } from "./workspaces.repository";
 
 interface RefreshTokenClaims {
   sub: string;
   email: string;
-  type: 'refresh';
+  type: "refresh";
 }
 
 @Injectable()
@@ -31,18 +31,20 @@ export class AuthService {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.usersRepository.findByEmail(email);
     if (existing) {
-      throw new BadRequestException('An account with this email already exists.');
+      throw new BadRequestException(
+        "An account with this email already exists.",
+      );
     }
 
-    if (dto.accountType === 'team' && !dto.teamName?.trim()) {
-      throw new BadRequestException('Team name is required for team accounts.');
+    if (dto.accountType === "team" && !dto.teamName?.trim()) {
+      throw new BadRequestException("Team name is required for team accounts.");
     }
 
     const now = new Date().toISOString();
     const userId = uuidv4();
     const workspaceId = uuidv4();
     const workspaceName =
-      dto.accountType === 'team'
+      dto.accountType === "team"
         ? dto.teamName!.trim()
         : buildPersonalWorkspaceName(dto.displayName, email);
     const user: AuthUserRecord = {
@@ -53,7 +55,7 @@ export class AuthService {
       accountType: dto.accountType,
       teamName: dto.teamName?.trim() || undefined,
       defaultWorkspaceId: workspaceId,
-      roles: dto.accountType === 'team' ? ['owner'] : ['member'],
+      roles: dto.accountType === "team" ? ["owner"] : ["member"],
       createdAtUtc: now,
       lastLoginAtUtc: now,
       onboardingState: {},
@@ -74,8 +76,12 @@ export class AuthService {
   async login(dto: LoginDto) {
     const email = dto.email.trim().toLowerCase();
     const user = await this.usersRepository.findByEmail(email);
-    if (!user || !user.passwordHash || !verifyPassword(dto.password, user.passwordHash)) {
-      throw new UnauthorizedException('Invalid email or password.');
+    if (
+      !user ||
+      !user.passwordHash ||
+      !verifyPassword(dto.password, user.passwordHash)
+    ) {
+      throw new UnauthorizedException("Invalid email or password.");
     }
 
     const now = new Date().toISOString();
@@ -88,34 +94,36 @@ export class AuthService {
   }
 
   async googleAuth(code: string) {
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code,
         client_id: this.config.googleClientId,
         client_secret: this.config.googleClientSecret,
         redirect_uri: this.config.googleCallbackUrl,
-        grant_type: 'authorization_code',
+        grant_type: "authorization_code",
       }),
     });
 
     if (!tokenResponse.ok) {
       const errorBody = await tokenResponse.text();
-      throw new UnauthorizedException(`Google token exchange failed: ${errorBody}`);
+      throw new UnauthorizedException(
+        `Google token exchange failed: ${errorBody}`,
+      );
     }
 
     const tokens = (await tokenResponse.json()) as { access_token: string };
 
     const profileResponse = await fetch(
-      'https://www.googleapis.com/oauth2/v2/userinfo',
+      "https://www.googleapis.com/oauth2/v2/userinfo",
       {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
       },
     );
 
     if (!profileResponse.ok) {
-      throw new UnauthorizedException('Failed to fetch Google profile.');
+      throw new UnauthorizedException("Failed to fetch Google profile.");
     }
 
     const profile = (await profileResponse.json()) as {
@@ -126,20 +134,33 @@ export class AuthService {
     };
 
     if (!profile.email) {
-      throw new BadRequestException('Google account does not have an email address.');
+      throw new BadRequestException(
+        "Google account does not have an email address.",
+      );
     }
 
     const googleSubject = profile.id;
     const email = profile.email.trim().toLowerCase();
-    const displayName = profile.name?.trim() || email.split('@')[0];
+    const displayName = profile.name?.trim() || email.split("@")[0];
 
-    let user = await this.usersRepository.findByExternalIdentity('google', googleSubject);
+    let user = await this.usersRepository.findByExternalIdentity(
+      "google",
+      googleSubject,
+    );
 
     if (!user) {
       user = await this.usersRepository.findByEmail(email);
       if (user) {
-        await this.usersRepository.linkExternalIdentity(user.userId, 'google', googleSubject);
-        user = { ...user, externalProvider: 'google', externalSubject: googleSubject };
+        await this.usersRepository.linkExternalIdentity(
+          user.userId,
+          "google",
+          googleSubject,
+        );
+        user = {
+          ...user,
+          externalProvider: "google",
+          externalSubject: googleSubject,
+        };
       }
     }
 
@@ -151,11 +172,11 @@ export class AuthService {
         userId,
         email,
         displayName,
-        externalProvider: 'google',
+        externalProvider: "google",
         externalSubject: googleSubject,
-        accountType: 'individual',
+        accountType: "individual",
         defaultWorkspaceId: workspaceId,
-        roles: ['member'],
+        roles: ["member"],
         createdAtUtc: now,
         lastLoginAtUtc: now,
         onboardingState: { needsAccountSetup: true },
@@ -167,7 +188,7 @@ export class AuthService {
         ownerUserId: userId,
         ownerEmail: email,
         ownerDisplayName: displayName,
-        accountType: 'individual',
+        accountType: "individual",
         workspaceName: buildPersonalWorkspaceName(displayName, email),
       });
       return this.buildAuthResponse(newUser, workspace);
@@ -182,7 +203,7 @@ export class AuthService {
     const claims = this.verifyRefreshToken(refreshToken);
     const user = await this.usersRepository.findByUserId(claims.sub);
     if (!user || user.email !== claims.email) {
-      throw new UnauthorizedException('Invalid refresh token.');
+      throw new UnauthorizedException("Invalid refresh token.");
     }
 
     return this.buildAuthResponse(user);
@@ -191,7 +212,7 @@ export class AuthService {
   async me(userId: string) {
     const user = await this.usersRepository.findByUserId(userId);
     if (!user) {
-      throw new UnauthorizedException('User not found.');
+      throw new UnauthorizedException("User not found.");
     }
 
     const workspace = await this.resolveWorkspace(user);
@@ -220,7 +241,7 @@ export class AuthService {
   ) {
     const user = await this.usersRepository.findByUserId(userId);
     if (!user) {
-      throw new UnauthorizedException('User not found.');
+      throw new UnauthorizedException("User not found.");
     }
 
     const nextState = {
@@ -240,21 +261,21 @@ export class AuthService {
 
   async updateAccountSetup(
     userId: string,
-    setup: { accountType: 'individual' | 'team'; teamName?: string },
+    setup: { accountType: "individual" | "team"; teamName?: string },
   ) {
     const user = await this.usersRepository.findByUserId(userId);
     if (!user) {
-      throw new UnauthorizedException('User not found.');
+      throw new UnauthorizedException("User not found.");
     }
 
-    if (setup.accountType === 'team' && !setup.teamName?.trim()) {
-      throw new BadRequestException('Team name is required for team accounts.');
+    if (setup.accountType === "team" && !setup.teamName?.trim()) {
+      throw new BadRequestException("Team name is required for team accounts.");
     }
 
     await this.usersRepository.updateAccountSetup(userId, setup);
 
     const workspaceName =
-      setup.accountType === 'team'
+      setup.accountType === "team"
         ? setup.teamName!.trim()
         : buildPersonalWorkspaceName(user.displayName, user.email);
 
@@ -285,7 +306,7 @@ export class AuthService {
   ) {
     const user = await this.usersRepository.findByUserId(userId);
     if (!user) {
-      throw new UnauthorizedException('User not found.');
+      throw new UnauthorizedException("User not found.");
     }
 
     const nextEmail = profile.email?.trim().toLowerCase();
@@ -293,31 +314,37 @@ export class AuthService {
     const shouldUpdateEmail =
       !!nextEmail &&
       nextEmail !== user.email &&
-      user.email.endsWith('@logto.local');
+      user.email.endsWith("@logto.local");
     const shouldUpdateDisplayName =
       !!nextDisplayName &&
       nextDisplayName !== user.displayName &&
-      (user.email.endsWith('@logto.local') ||
-        user.displayName === user.email.split('@')[0] ||
+      (user.email.endsWith("@logto.local") ||
+        user.displayName === user.email.split("@")[0] ||
         user.displayName.trim().length === 0);
 
     if (shouldUpdateEmail || shouldUpdateDisplayName) {
       const resolvedEmail = shouldUpdateEmail ? nextEmail : user.email;
-      const resolvedDisplayName = shouldUpdateDisplayName ? nextDisplayName : user.displayName;
+      const resolvedDisplayName = shouldUpdateDisplayName
+        ? nextDisplayName
+        : user.displayName;
       const previousDisplayName = user.displayName;
 
       await this.usersRepository.updateProfile(user.userId, {
         email: resolvedEmail,
         displayName: resolvedDisplayName,
-        externalProvider: 'logto',
+        externalProvider: "logto",
         externalSubject: user.externalSubject,
       });
 
       if (user.defaultWorkspaceId) {
-        await this.workspacesRepository.syncMemberProfile(user.defaultWorkspaceId, user.userId, {
-          email: resolvedEmail,
-          displayName: resolvedDisplayName,
-        });
+        await this.workspacesRepository.syncMemberProfile(
+          user.defaultWorkspaceId,
+          user.userId,
+          {
+            email: resolvedEmail,
+            displayName: resolvedDisplayName,
+          },
+        );
         await this.syncDefaultWorkspaceNameIfNeeded(
           user.defaultWorkspaceId,
           user.accountType,
@@ -346,16 +373,15 @@ export class AuthService {
 
     const subject = context.externalSubject;
     if (!subject) {
-      throw new UnauthorizedException('Missing Logto subject.');
+      throw new UnauthorizedException("Missing Logto subject.");
     }
 
     const email = profile.email?.trim().toLowerCase();
-    const displayName =
-      profile.displayName?.trim() || email || subject;
+    const displayName = profile.displayName?.trim() || email || subject;
 
     if (!email) {
       throw new BadRequestException(
-        'Logto profile is missing an email address. Ensure the application requests the email scope and the user has an email in Logto.',
+        "Logto profile is missing an email address. Ensure the application requests the email scope and the user has an email in Logto.",
       );
     }
 
@@ -369,7 +395,10 @@ export class AuthService {
   }
 
   async findLogtoUserContext(subject: string): Promise<UserContext | null> {
-    const user = await this.usersRepository.findByExternalIdentity('logto', subject);
+    const user = await this.usersRepository.findByExternalIdentity(
+      "logto",
+      subject,
+    );
     if (!user) return null;
     return this.buildUserContext(user);
   }
@@ -380,15 +409,22 @@ export class AuthService {
     displayName: string;
   }): Promise<AuthUserRecord> {
     const normalizedEmail = params.email.trim().toLowerCase();
-    let user = await this.usersRepository.findByExternalIdentity('logto', params.subject);
+    let user = await this.usersRepository.findByExternalIdentity(
+      "logto",
+      params.subject,
+    );
 
     if (!user) {
       user = await this.usersRepository.findByEmail(normalizedEmail);
       if (user) {
-        await this.usersRepository.linkExternalIdentity(user.userId, 'logto', params.subject);
+        await this.usersRepository.linkExternalIdentity(
+          user.userId,
+          "logto",
+          params.subject,
+        );
         user = {
           ...user,
-          externalProvider: 'logto',
+          externalProvider: "logto",
           externalSubject: params.subject,
         };
       }
@@ -398,16 +434,17 @@ export class AuthService {
       const now = new Date().toISOString();
       const userId = uuidv4();
       const workspaceId = uuidv4();
-      const displayName = params.displayName.trim() || normalizedEmail.split('@')[0];
+      const displayName =
+        params.displayName.trim() || normalizedEmail.split("@")[0];
       const createdUser: AuthUserRecord = {
         userId,
         email: normalizedEmail,
         displayName,
-        externalProvider: 'logto',
+        externalProvider: "logto",
         externalSubject: params.subject,
-        accountType: 'individual',
+        accountType: "individual",
         defaultWorkspaceId: workspaceId,
-        roles: ['member'],
+        roles: ["member"],
         createdAtUtc: now,
         lastLoginAtUtc: now,
         onboardingState: {},
@@ -419,7 +456,7 @@ export class AuthService {
         ownerUserId: userId,
         ownerEmail: normalizedEmail,
         ownerDisplayName: displayName,
-        accountType: 'individual',
+        accountType: "individual",
         workspaceName: buildPersonalWorkspaceName(displayName, normalizedEmail),
       });
       return createdUser;
@@ -428,31 +465,39 @@ export class AuthService {
     const shouldUpdateFallbackEmail =
       normalizedEmail &&
       normalizedEmail !== user.email &&
-      user.email.endsWith('@logto.local');
+      user.email.endsWith("@logto.local");
     const shouldUpdateDisplayName =
       params.displayName.trim() &&
       params.displayName.trim() !== user.displayName &&
-      (user.displayName === user.email.split('@')[0] ||
+      (user.displayName === user.email.split("@")[0] ||
         user.displayName === params.subject ||
-        user.email.endsWith('@logto.local'));
+        user.email.endsWith("@logto.local"));
 
     if (shouldUpdateFallbackEmail || shouldUpdateDisplayName) {
-      const nextEmail = shouldUpdateFallbackEmail ? normalizedEmail : user.email;
-      const nextDisplayName = shouldUpdateDisplayName ? params.displayName.trim() : user.displayName;
+      const nextEmail = shouldUpdateFallbackEmail
+        ? normalizedEmail
+        : user.email;
+      const nextDisplayName = shouldUpdateDisplayName
+        ? params.displayName.trim()
+        : user.displayName;
       const previousDisplayName = user.displayName;
 
       await this.usersRepository.updateProfile(user.userId, {
         email: nextEmail,
         displayName: nextDisplayName,
-        externalProvider: 'logto',
+        externalProvider: "logto",
         externalSubject: params.subject,
       });
 
       if (user.defaultWorkspaceId) {
-        await this.workspacesRepository.syncMemberProfile(user.defaultWorkspaceId, user.userId, {
-          email: nextEmail,
-          displayName: nextDisplayName,
-        });
+        await this.workspacesRepository.syncMemberProfile(
+          user.defaultWorkspaceId,
+          user.userId,
+          {
+            email: nextEmail,
+            displayName: nextDisplayName,
+          },
+        );
         await this.syncDefaultWorkspaceNameIfNeeded(
           user.defaultWorkspaceId,
           user.accountType,
@@ -465,7 +510,7 @@ export class AuthService {
         ...user,
         email: nextEmail,
         displayName: nextDisplayName,
-        externalProvider: 'logto',
+        externalProvider: "logto",
         externalSubject: params.subject,
       };
     }
@@ -485,7 +530,7 @@ export class AuthService {
       displayName: user.displayName,
       roles: await this.resolveWorkspaceRoles(user),
       workspaceId: user.defaultWorkspaceId,
-      authProvider: user.externalProvider === 'logto' ? 'logto' : 'jwt',
+      authProvider: user.externalProvider === "logto" ? "logto" : "jwt",
       externalSubject: user.externalSubject,
       provisioned: true,
     };
@@ -498,10 +543,10 @@ export class AuthService {
     const workspace = workspaceOverride ?? (await this.resolveWorkspace(user));
     const roles = await this.resolveWorkspaceRoles(user);
     const accessTokenOptions: SignOptions = {
-      algorithm: 'HS256',
-      expiresIn: this.config.jwtAccessTokenTtl as SignOptions['expiresIn'],
-      issuer: 'docflow-api',
-      audience: 'docflow-web',
+      algorithm: "HS256",
+      expiresIn: this.config.jwtAccessTokenTtl as SignOptions["expiresIn"],
+      issuer: "docflow-api",
+      audience: "docflow-web",
       subject: user.userId,
     };
 
@@ -520,17 +565,17 @@ export class AuthService {
     );
 
     const refreshTokenOptions: SignOptions = {
-      algorithm: 'HS256',
-      expiresIn: this.config.jwtRefreshTokenTtl as SignOptions['expiresIn'],
-      issuer: 'docflow-api',
-      audience: 'docflow-refresh',
+      algorithm: "HS256",
+      expiresIn: this.config.jwtRefreshTokenTtl as SignOptions["expiresIn"],
+      issuer: "docflow-api",
+      audience: "docflow-refresh",
       subject: user.userId,
     };
 
     const refreshToken = sign(
       {
         email: user.email,
-        type: 'refresh',
+        type: "refresh",
       },
       this.config.jwtRefreshTokenSecret as Secret,
       refreshTokenOptions,
@@ -554,7 +599,9 @@ export class AuthService {
     };
   }
 
-  private async resolveWorkspace(user: AuthUserRecord): Promise<WorkspaceSummary | null> {
+  private async resolveWorkspace(
+    user: AuthUserRecord,
+  ): Promise<WorkspaceSummary | null> {
     if (!user.defaultWorkspaceId) return null;
     return this.workspacesRepository.findSummaryById(user.defaultWorkspaceId);
   }
@@ -572,52 +619,63 @@ export class AuthService {
 
   private async syncDefaultWorkspaceNameIfNeeded(
     workspaceId: string,
-    accountType: AuthUserRecord['accountType'],
+    accountType: AuthUserRecord["accountType"],
     previousDisplayName: string,
     nextDisplayName: string,
   ): Promise<void> {
-    if (accountType !== 'individual') {
+    if (accountType !== "individual") {
       return;
     }
 
-    const workspace = await this.workspacesRepository.findSummaryById(workspaceId);
+    const workspace =
+      await this.workspacesRepository.findSummaryById(workspaceId);
     if (!workspace) {
       return;
     }
 
-    const expectedPreviousName = buildPersonalWorkspaceName(previousDisplayName);
+    const expectedPreviousName =
+      buildPersonalWorkspaceName(previousDisplayName);
     const expectedNextName = buildPersonalWorkspaceName(nextDisplayName);
-    if (workspace.name !== expectedPreviousName || workspace.name === expectedNextName) {
+    if (
+      workspace.name !== expectedPreviousName ||
+      workspace.name === expectedNextName
+    ) {
       return;
     }
 
-    await this.workspacesRepository.renameWorkspace(workspaceId, expectedNextName);
+    await this.workspacesRepository.renameWorkspace(
+      workspaceId,
+      expectedNextName,
+    );
   }
 
   private verifyRefreshToken(refreshToken: string): RefreshTokenClaims {
     try {
       const decoded = verify(refreshToken, this.config.jwtRefreshTokenSecret, {
-        algorithms: ['HS256'],
-        issuer: 'docflow-api',
-        audience: 'docflow-refresh',
+        algorithms: ["HS256"],
+        issuer: "docflow-api",
+        audience: "docflow-refresh",
       }) as RefreshTokenClaims;
 
-      if (decoded.type !== 'refresh') {
-        throw new UnauthorizedException('Invalid refresh token.');
+      if (decoded.type !== "refresh") {
+        throw new UnauthorizedException("Invalid refresh token.");
       }
 
       return decoded;
     } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token.');
+      throw new UnauthorizedException("Invalid or expired refresh token.");
     }
   }
 }
 
-function buildPersonalWorkspaceName(displayName?: string, email?: string): string {
+function buildPersonalWorkspaceName(
+  displayName?: string,
+  email?: string,
+): string {
   const preferredName =
     getHumanFriendlyName(displayName) ||
-    getHumanFriendlyName(email?.split('@')[0]) ||
-    'My';
+    getHumanFriendlyName(email?.split("@")[0]) ||
+    "My";
 
   return `${preferredName}'s Workspace`;
 }
@@ -631,10 +689,10 @@ function getHumanFriendlyName(value?: string): string | undefined {
   }
 
   const cleaned = normalized
-    .replace(/@.*$/, '')
-    .replace(/[_\-.]+/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\s+/g, ' ')
+    .replace(/@.*$/, "")
+    .replace(/[_\-.]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
     .trim();
 
   if (!cleaned) {
@@ -642,10 +700,10 @@ function getHumanFriendlyName(value?: string): string | undefined {
   }
 
   return cleaned
-    .split(' ')
+    .split(" ")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ');
+    .join(" ");
 }
 
 function looksOpaqueIdentifier(value: string): boolean {
