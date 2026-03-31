@@ -52,6 +52,7 @@ export interface UserContext {
 
 /** Audit log entry */
 export interface AuditLogEntry {
+  id?: number;
   action: string;
   userId: string;
   userEmail: string;
@@ -59,6 +60,8 @@ export interface AuditLogEntry {
   resourceId?: string;
   details?: Record<string, unknown>;
   timestamp: string;
+  read?: boolean;
+  readAtUtc?: string;
 }
 
 /** Published extension release metadata */

@@ -28,7 +28,6 @@ import {
   sendExtensionUploadAuth,
 } from "../../lib/extension-bridge";
 import { APP_TOAST_EVENT, type AppToastDetail } from "../../lib/app-toast";
-import { DebugPanel } from "../debug/DebugPanel";
 import { pushDebugTrace } from "../../lib/debug-trace";
 
 type AppToastItem = {
@@ -563,8 +562,6 @@ export function Layout() {
           </div>
         </aside>
       </div>
-
-      <DebugPanel />
     </div>
   );
 }

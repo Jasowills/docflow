@@ -202,10 +202,10 @@ export class PromptBuilderService {
     sections.push(
       'Use the events and narration to produce clear, professional content. Output in Markdown format.',
     );
+    sections.push(
+      'IMPORTANT: Do not include, mention, or reference any screenshot IDs, screenshot filenames, UUIDs, or technical identifiers anywhere in the output. These are internal technical details.',
+    );
     if (docType.key === 'test_case_suite') {
-      sections.push(
-        'Do not mention screenshot IDs, screenshot filenames, or image references in the output.',
-      );
       sections.push(
         'For every test case, each numbered step must be immediately followed by its own "Expected Result:" line inside the Steps content.',
       );
@@ -214,10 +214,6 @@ export class PromptBuilderService {
       );
       sections.push(
         'Keep the top-level "Expected Result" field as the final overall case outcome only.',
-      );
-    } else {
-      sections.push(
-        'Where screenshot IDs are provided, mention them naturally in relevant steps.',
       );
     }
 

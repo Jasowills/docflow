@@ -115,6 +115,7 @@ function getAllowedCorsOrigins(configuredOrigins?: string): string[] {
     "http://127.0.0.1:3001",
     "http://127.0.0.1:5173",
     "https://docflow-ops.vercel.app",
+    "https://docflow-client.vercel.app",
   ];
   const configured = (configuredOrigins || "")
     .split(",")

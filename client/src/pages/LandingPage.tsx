@@ -494,6 +494,11 @@ export function LandingPage() {
               <a href="#product">Generated documents</a>
               <a href="#roadmap">Mobile coming soon</a>
             </div>
+            <div className="landing-footer-column">
+              <span>Legal</span>
+              <Link to="/privacy">Privacy Policy</Link>
+              <Link to="/terms">Terms of Service</Link>
+            </div>
           </div>
         </div>
       </footer>

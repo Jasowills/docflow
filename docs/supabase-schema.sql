@@ -155,7 +155,7 @@ create index if not exists idx_recordings_product_area
 
 create table if not exists public.documents (
   document_id text primary key,
-  recording_id text not null references public.recordings(recording_id) on delete cascade,
+  recording_id text not null references public.recordings(recording_id) on delete restrict,
   document_type text not null,
   document_title text not null,
   content text not null,
@@ -212,3 +212,16 @@ create table if not exists public.extension_releases (
   published_by text,
   published_at_utc timestamptz not null default timezone('utc', now())
 );
+
+create table if not exists public.notification_reads (
+  user_id text not null,
+  audit_log_id bigint not null references public.audit_log(id) on delete cascade,
+  read_at_utc timestamptz not null default timezone('utc', now()),
+  primary key (user_id, audit_log_id)
+);
+
+create index if not exists idx_notification_reads_user_id
+  on public.notification_reads(user_id);
+
+create index if not exists idx_notification_reads_audit_log_id
+  on public.notification_reads(audit_log_id);

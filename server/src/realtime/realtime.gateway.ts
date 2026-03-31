@@ -7,8 +7,9 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger, Optional } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { SseService } from './sse.service';
 
 export interface RecordingPersistedEvent {
   recordingId: string;
@@ -35,6 +36,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   @WebSocketServer()
   server!: Server;
+
+  constructor(
+    @Optional() @Inject(SseService) private readonly sseService: SseService,
+  ) {}
 
   handleConnection(client: Socket) {
     const userId = this.extractUserId(client);
@@ -63,10 +68,12 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   emitRecordingPersisted(userId: string, event: RecordingPersistedEvent) {
     this.server.to(this.userRoom(userId)).emit('recording.persisted', event);
+    this.sseService?.sendRecordingPersisted(userId, event);
   }
 
   emitDocumentPersisted(userId: string, event: DocumentPersistedEvent) {
     this.server.to(this.userRoom(userId)).emit('document.persisted', event);
+    this.sseService?.sendDocumentPersisted(userId, event);
   }
 
   private extractUserId(client: Socket): string {

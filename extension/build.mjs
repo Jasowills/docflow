@@ -39,6 +39,11 @@ if (existsSync(srcIconsDir)) {
   cpSync(srcIconsDir, distIconsDir, { recursive: true });
 }
 
+const docflowMarkSvg = join(__dirname, '..', 'client', 'src', 'assets', 'docflow-mark.svg');
+if (existsSync(docflowMarkSvg)) {
+  cpSync(docflowMarkSvg, join(distIconsDir, 'docflow-mark.svg'));
+}
+
 if (outputDirName !== 'dist' && existsSync(compiledDir)) {
   const compiledFiles = readdirSync(compiledDir).filter(
     (name) => name.endsWith('.js') || name.endsWith('.js.map'),

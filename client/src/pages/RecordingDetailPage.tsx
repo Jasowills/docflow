@@ -245,7 +245,7 @@ export function RecordingDetailPage() {
                     href={blobUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="block border rounded-md overflow-hidden bg-muted/20 hover:ring-2 hover:ring-primary/40 transition"
+                    className="block border rounded-none overflow-hidden bg-muted/20 hover:ring-2 hover:ring-primary/40 transition"
                   >
                     <img
                       src={previewSrc}
@@ -263,7 +263,7 @@ export function RecordingDetailPage() {
                     </div>
                   </a>
                 ) : (
-                  <div key={shot.id} className="block border rounded-md overflow-hidden bg-muted/20">
+                  <div key={shot.id} className="block border rounded-none overflow-hidden bg-muted/20">
                     <div className="w-full h-28 flex items-center justify-center text-xs text-muted-foreground">
                       Screenshot unavailable
                     </div>

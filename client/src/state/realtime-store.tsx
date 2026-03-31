@@ -8,10 +8,9 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import { io, type Socket } from 'socket.io-client';
 import { useAuth } from '../auth/auth-context';
 import { useAccessToken } from '../auth/use-access-token';
-import { getApiBaseUrl, getRealtimeBaseUrl } from '../config/runtime-config';
+import { getApiBaseUrl } from '../config/runtime-config';
 import type { AuditLogEntry } from '@docflow/shared';
 import { emitSessionExpired } from '../auth/session-events';
 import { pushDebugTrace } from '../lib/debug-trace';
@@ -205,20 +204,13 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
           return;
         }
         const entries = (await res.json()) as AuditLogEntry[];
-        const readIds = loadReadNotificationIds(userId);
         const mapped = entries.map((entry) => {
           const next = toAuditNotification(entry);
           return {
             ...next,
-            read: markAsRead || readIds.has(next.id),
+            read: entry.read ?? false,
           };
         });
-        if (markAsRead) {
-          persistReadNotificationIds(
-            userId,
-            mapped.map((item) => item.id),
-          );
-        }
         dispatch({
           type: 'SET_AUDIT_NOTIFICATIONS',
           payload: mapped,
@@ -271,64 +263,91 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      pushDebugTrace('effect', 'RealtimeStore.socket', 'Resetting realtime because user is not authenticated');
+      pushDebugTrace('effect', 'RealtimeStore.sse', 'Resetting realtime because user is not authenticated');
       dispatch({ type: 'RESET' });
       return;
     }
 
     if (!userId) {
-      pushDebugTrace('effect', 'RealtimeStore.socket', 'Missing userId for realtime session');
+      pushDebugTrace('effect', 'RealtimeStore.sse', 'Missing userId for realtime session');
       dispatch({ type: 'DISCONNECTED', error: 'Missing user claim for realtime session' });
       return;
     }
 
-    pushDebugTrace('effect', 'RealtimeStore.socket', 'Opening realtime socket', { userId });
+    pushDebugTrace('effect', 'RealtimeStore.sse', 'Opening SSE connection', { userId });
     dispatch({ type: 'CONNECTING' });
-    const baseUrl = getRealtimeBaseUrl();
-    const socket: Socket = io(baseUrl, {
-      path: '/socket.io',
-      auth: { userId },
-    });
 
-    socket.on('connect', () => {
-      pushDebugTrace('state', 'RealtimeStore.socket', 'Socket connected', { userId });
-      dispatch({ type: 'CONNECTED' });
-    });
-    socket.on('disconnect', () => {
-      pushDebugTrace('state', 'RealtimeStore.socket', 'Socket disconnected', { userId });
-      dispatch({ type: 'DISCONNECTED' });
-    });
-    socket.on('connect_error', (err: Error) =>
-      {
-        pushDebugTrace('state', 'RealtimeStore.socket', 'Socket connection error', {
-          userId,
-          message: err.message || 'Realtime connection failed',
-        });
-        dispatch({ type: 'DISCONNECTED', error: err.message || 'Realtime connection failed' });
-      },
-    );
-    socket.on('recording.persisted', (payload: RecordingPersistedEvent) =>
-      void (async () => {
-        pushDebugTrace('state', 'RealtimeStore.socket', 'recording.persisted received', {
-          recordingId: payload.recordingId,
-        });
-        dispatch({ type: 'RECORDING_PERSISTED', payload });
-        await fetchAuditNotifications(false);
-      })(),
-    );
-    socket.on('document.persisted', (payload: DocumentPersistedEvent) =>
-      void (async () => {
-        pushDebugTrace('state', 'RealtimeStore.socket', 'document.persisted received', {
-          documentId: payload.documentId,
-        });
-        dispatch({ type: 'DOCUMENT_PERSISTED', payload });
-        await fetchAuditNotifications(false);
-      })(),
-    );
+    const baseUrl = getApiBaseUrl();
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isManualClose = false;
+
+    const connect = async () => {
+      if (!isAuthenticated) return;
+
+      const token = await getAccessTokenRef.current();
+      if (!token) {
+        dispatch({ type: 'DISCONNECTED', error: 'No access token available' });
+        return;
+      }
+
+      eventSource = new EventSource(`${baseUrl}/api/realtime/events`, {
+        withCredentials: true,
+      });
+
+      eventSource.onopen = () => {
+        pushDebugTrace('state', 'RealtimeStore.sse', 'SSE connected', { userId });
+        dispatch({ type: 'CONNECTED' });
+      };
+
+      eventSource.onerror = () => {
+        pushDebugTrace('state', 'RealtimeStore.sse', 'SSE error', { userId });
+        if (eventSource?.readyState === EventSource.CLOSED || isManualClose) {
+          dispatch({ type: 'DISCONNECTED' });
+          return;
+        }
+        dispatch({ type: 'DISCONNECTED', error: 'SSE connection lost' });
+        eventSource?.close();
+        reconnectTimeout = setTimeout(connect, 5000);
+      };
+
+      eventSource.addEventListener('recording.persisted', async (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as RecordingPersistedEvent;
+          pushDebugTrace('state', 'RealtimeStore.sse', 'recording.persisted received', {
+            recordingId: payload.recordingId,
+          });
+          dispatch({ type: 'RECORDING_PERSISTED', payload });
+          await fetchAuditNotifications(false);
+        } catch (parseErr) {
+          console.warn('Failed to parse recording.persisted event:', parseErr);
+        }
+      });
+
+      eventSource.addEventListener('document.persisted', async (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as DocumentPersistedEvent;
+          pushDebugTrace('state', 'RealtimeStore.sse', 'document.persisted received', {
+            documentId: payload.documentId,
+          });
+          dispatch({ type: 'DOCUMENT_PERSISTED', payload });
+          await fetchAuditNotifications(false);
+        } catch (parseErr) {
+          console.warn('Failed to parse document.persisted event:', parseErr);
+        }
+      });
+    };
+
+    void connect();
 
     return () => {
-      pushDebugTrace('effect', 'RealtimeStore.socket', 'Closing realtime socket', { userId });
-      socket.disconnect();
+      isManualClose = true;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (eventSource) {
+        pushDebugTrace('effect', 'RealtimeStore.sse', 'Closing SSE connection', { userId });
+        eventSource.close();
+      }
+      dispatch({ type: 'DISCONNECTED' });
     };
   }, [isAuthenticated, fetchAuditNotifications, userId]);
 
@@ -336,13 +355,27 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DISCONNECTED' });
   }, []);
 
-  const markAllNotificationsRead = useCallback(() => {
+  const markAllNotificationsRead = useCallback(async () => {
     dispatch({ type: 'MARK_ALL_NOTIFICATIONS_READ' });
-    persistReadNotificationIds(
-      userId,
-      notificationsRef.current.map((item) => item.id),
-    );
-  }, [userId]);
+    
+    try {
+      const token = await getAccessToken();
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/audit/mark-all-read`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        console.warn('Failed to mark all notifications as read on server');
+      }
+    } catch (error) {
+      console.warn('Failed to mark all notifications as read:', error);
+    }
+  }, [userId, getAccessToken]);
 
   const eventsValue = useMemo<RealtimeEventsValue>(
     () => ({
@@ -389,37 +422,6 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
       </RealtimeNotificationsContext.Provider>
     </RealtimeEventsContext.Provider>
   );
-}
-
-function readNotificationKey(userId: string | null): string | null {
-  if (!userId) return null;
-  return `rt-notification-read:${window.location.origin}:${userId}`;
-}
-
-function loadReadNotificationIds(userId: string | null): Set<string> {
-  const key = readNotificationKey(userId);
-  if (!key) return new Set<string>();
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return new Set<string>();
-    const parsed = JSON.parse(raw) as string[];
-    return new Set(parsed.filter((value) => typeof value === 'string'));
-  } catch {
-    return new Set<string>();
-  }
-}
-
-function persistReadNotificationIds(userId: string | null, ids: string[]) {
-  const key = readNotificationKey(userId);
-  if (!key) return;
-  try {
-    const existing = loadReadNotificationIds(userId);
-    for (const id of ids) existing.add(id);
-    const next = Array.from(existing).slice(-1000);
-    localStorage.setItem(key, JSON.stringify(next));
-  } catch {
-    // Ignore storage write errors.
-  }
 }
 
 export function useRealtimeStore() {

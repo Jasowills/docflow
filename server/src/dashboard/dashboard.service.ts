@@ -281,8 +281,8 @@ function buildDailyTrend(timestamps: string[]): DashboardSeriesPoint[] {
   const counts = new Map<string, number>();
   for (let index = days - 1; index >= 0; index -= 1) {
     const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - index);
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCDate(date.getUTCDate() - index);
     const key = date.toISOString().slice(0, 10);
     counts.set(key, 0);
   }
@@ -302,8 +302,8 @@ function buildDailyTrend(timestamps: string[]): DashboardSeriesPoint[] {
 
 function getTrendWindowStartIso(): string {
   const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() - 6);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() - 6);
   return date.toISOString();
 }
 
