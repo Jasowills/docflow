@@ -20,6 +20,7 @@ import { useAuth } from '../auth/auth-context';
 import docflowLogo from '../assets/docflow-logo-light.svg';
 import recordingsVisual from '../assets/docflow-showcase-dashboard.png';
 import documentsVisual from '../assets/docflow-showcase-documents.png';
+import generateVisual from '../assets/docflow-showcase-testplans.png';
 
 const HeroScene = lazy(async () => import('../components/landing/HeroScene').then((module) => ({
   default: module.HeroScene,
@@ -52,6 +53,13 @@ const productFrames = [
     lines: ['Session timeline', 'Event stream', 'Transcript markers', 'Capture context'],
     image: recordingsVisual,
     alt: 'DocFlow recordings view visual',
+  },
+  {
+    eyebrow: 'Generate',
+    title: 'AI-powered conversion from workflows to output',
+    lines: ['Multiple document types', 'AI customization', 'Real-time preview', 'Batch generation'],
+    image: generateVisual,
+    alt: 'DocFlow generation and processing visual',
   },
   {
     eyebrow: 'Documents',

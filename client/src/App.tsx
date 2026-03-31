@@ -27,11 +27,6 @@ import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
 import { TermsOfServicePage } from "./pages/TermsOfServicePage";
 import { Spinner } from "./components/ui/spinner";
 
-function GettingStartedRedirect() {
-  const location = useLocation();
-  return <Navigate to="/app/onboarding" replace state={location.state} />;
-}
-
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();

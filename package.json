@@ -16,6 +16,7 @@
     "build:client": "npm --prefix client run build",
     "build:extension": "npm --prefix extension run build",
     "migrate:supabase": "node scripts/apply-supabase-schema.mjs",
+    "capture:screenshots": "node scripts/capture-product-screenshots.mjs",
     "clean": "npx shx rm -rf node_modules client/dist client/node_modules server/dist server/node_modules extension/dist extension/node_modules",
     "install:all": "npm install && npm --prefix server install && npm --prefix client install && npm --prefix extension install",
     "dev:server": "npm --prefix server run start:dev",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "concurrently": "^9.1.2",
     "pg": "^8.20.0",
+    "puppeteer": "^21.0.0",
     "shx": "^0.4.0"
   },
   "engines": {

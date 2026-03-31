@@ -38,3 +38,5 @@ packages/extension/src/static/
 packages/extension/src/Inter-VariableFont_opsz,wght.ttf
 packages/extension/src/Inter-Italic-VariableFont_opsz,wght.ttf
 packages/extension/Routectrl-recorder/static/
+.vercel
+.env*.local
