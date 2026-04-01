@@ -216,6 +216,20 @@ export class UsersRepository {
     }
   }
 
+  async delete(userId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("docflow_users")
+      .delete()
+      .eq("user_id", userId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to delete user ${userId}: ${error.message}`,
+      );
+      throw mapSupabaseUserError(error.message, "delete user");
+    }
+  }
+
   private mapRow(row: Record<string, unknown>): AuthUserRecord {
     return {
       userId: String(row.user_id || ""),

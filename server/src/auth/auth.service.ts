@@ -259,6 +259,21 @@ export class AuthService {
     return this.me(userId);
   }
 
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await this.usersRepository.findByUserId(userId);
+    if (!user) {
+      throw new UnauthorizedException("User not found.");
+    }
+
+    if (user.accountType === "team") {
+      throw new BadRequestException(
+        "Team accounts cannot be deleted directly. Please remove workspace members first.",
+      );
+    }
+
+    await this.usersRepository.delete(userId);
+  }
+
   async updateAccountSetup(
     userId: string,
     setup: { accountType: "individual" | "team"; teamName?: string },

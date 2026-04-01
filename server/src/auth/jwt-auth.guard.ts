@@ -19,6 +19,14 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (isPublic) {
       return true;
     }
+
+    const request = context.switchToHttp().getRequest();
+    const queryToken = request.query?.token as string | undefined;
+    
+    if (queryToken) {
+      request.headers['authorization'] = `Bearer ${queryToken}`;
+    }
+
     return super.canActivate(context);
   }
 
@@ -37,7 +45,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
             ? info.message
             : typeof info === 'string'
               ? info
-              : 'Unknown authentication failure';
+              : 'No auth token';
       this.logger.warn(
         `Auth rejected ${request.method || 'UNKNOWN'} ${request.url || ''}: ${reason}`,
       );

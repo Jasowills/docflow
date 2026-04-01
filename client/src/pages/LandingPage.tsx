@@ -258,9 +258,7 @@ export function LandingPage() {
               ))}
             </h1>
             <p className="landing-hero-body">
-              DocFlow helps teams record browser workflows, generate structured documentation, and
-              keep that output organized in one shared workspace. Current flows center on capture,
-              generation, documents, and workspace collaboration.
+              Record browser workflows, generate documentation automatically, and organize everything in a shared workspace. Turn one recording into guides, test cases, and release notes.
             </p>
             <div className="landing-hero-actions">
               <Button asChild size="lg">

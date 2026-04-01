@@ -97,13 +97,25 @@ export class DocumentsService {
       let result;
       try {
         result = await this.aiProvider.generate(messages);
-      } catch (error) {
+      } catch (error: any) {
+        const errorMessage = error?.message || String(error);
+        
         if (this.aiProvider.providerName === 'openrouter' && isOpenRouterBudgetError(error)) {
           throw new HttpException(
             'OpenRouter could not generate this document within the current credit budget. Top up credits or lower AI_MAX_TOKENS in your environment.',
             HttpStatus.PAYMENT_REQUIRED,
           );
         }
+        
+        if (errorMessage.toLowerCase().includes('does not support image') ||
+            errorMessage.toLowerCase().includes('image input') ||
+            errorMessage.toLowerCase().includes('vision')) {
+          throw new HttpException(
+            'Your AI model does not support image inputs. Please use a vision-capable model like gpt-4o, claude-3-sonnet, or similar. Update OPENROUTER_MODEL to "openai/gpt-4o" or a vision-enabled model.',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        
         throw error;
       }
 

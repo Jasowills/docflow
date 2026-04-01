@@ -86,8 +86,8 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-lg flex-col items-center justify-center">
-        <Card className="w-full border-border/80 bg-card/95 backdrop-blur">
-          <CardHeader className="space-y-5 p-6 text-center sm:p-8">
+        <Card className="w-full border-border/80 bg-card/95 backdrop-blur shadow-lg">
+          <CardHeader className="space-y-4 p-6 text-center sm:p-8">
             <div className="space-y-3">
               <p className="text-xs uppercase tracking-[0.22em] text-primary/80">
                 DocFlow
@@ -97,21 +97,21 @@ export function LoginPage() {
               </CardTitle>
               <CardDescription className="mx-auto max-w-md text-sm leading-6">
                 {isRegister
-                  ? "Choose Individual or Team and start capturing product workflows."
-                  : "Sign in to access your recordings, documents, and team workspace."}
+                  ? "Choose how you'll use DocFlow and get set up."
+                  : "Sign in to access your workspace and documents."}
               </CardDescription>
             </div>
-            <div className="inline-flex self-center rounded-lg border border-border bg-background/50 p-1">
+            <div className="inline-flex self-center rounded-sm border border-border bg-background/50 p-1">
               <button
                 type="button"
-                className={`min-w-[132px] rounded-md px-4 py-2 text-sm font-medium transition ${!isRegister ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                className={`min-w-[132px] rounded-sm px-4 py-2 text-sm font-medium transition ${!isRegister ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                 onClick={() => setMode("login")}
               >
                 Sign in
               </button>
               <button
                 type="button"
-                className={`min-w-[132px] rounded-md px-4 py-2 text-sm font-medium transition ${isRegister ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                className={`min-w-[132px] rounded-sm px-4 py-2 text-sm font-medium transition ${isRegister ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                 onClick={() => setMode("register")}
               >
                 Create account
@@ -120,8 +120,8 @@ export function LoginPage() {
           </CardHeader>
           <CardContent className="space-y-5 p-6 pt-0 sm:p-8 sm:pt-0">
             {!providerConfigLoaded ? (
-              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-                Loading authentication options...
+              <div className="rounded-sm border border-border/70 bg-muted/20 px-4 py-3 text-sm text-muted-foreground animate-pulse">
+                Setting up authentication...
               </div>
             ) : null}
 

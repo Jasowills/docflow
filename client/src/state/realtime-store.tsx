@@ -291,7 +291,7 @@ export function RealtimeStoreProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      eventSource = new EventSource(`${baseUrl}/api/realtime/events`, {
+      eventSource = new EventSource(`${baseUrl}/api/realtime/events?token=${encodeURIComponent(token)}`, {
         withCredentials: true,
       });
 

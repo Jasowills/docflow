@@ -6,26 +6,26 @@
 
 @layer base {
   :root {
-    --background: 156 18% 5%;
-    --foreground: 120 14% 94%;
-    --card: 156 15% 9%;
-    --card-foreground: 120 14% 94%;
-    --popover: 156 15% 8%;
-    --popover-foreground: 120 14% 94%;
-    --primary: 142 72% 46%;
-    --primary-foreground: 156 22% 7%;
-    --secondary: 156 12% 14%;
-    --secondary-foreground: 120 12% 92%;
-    --muted: 156 10% 12%;
-    --muted-foreground: 150 8% 64%;
-    --accent: 151 24% 16%;
-    --accent-foreground: 138 64% 75%;
-    --destructive: 0 72% 54%;
+    --background: 156 20% 4%;
+    --foreground: 120 10% 92%;
+    --card: 156 18% 7%;
+    --card-foreground: 120 10% 92%;
+    --popover: 156 18% 6%;
+    --popover-foreground: 120 10% 92%;
+    --primary: 142 50% 38%;
+    --primary-foreground: 156 25% 5%;
+    --secondary: 156 15% 11%;
+    --secondary-foreground: 120 8% 88%;
+    --muted: 156 15% 10%;
+    --muted-foreground: 150 6% 55%;
+    --accent: 156 18% 13%;
+    --accent-foreground: 138 45% 58%;
+    --destructive: 0 60% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 154 14% 18%;
-    --input: 154 14% 18%;
-    --ring: 142 72% 46%;
-    --radius: 16px;
+    --border: 156 14% 15%;
+    --input: 156 14% 15%;
+    --ring: 142 50% 38%;
+    --radius: 4px;
   }
 }
 
@@ -55,20 +55,16 @@
 
   .app-shell {
     @apply min-h-screen text-foreground;
-    background-image:
-      radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), transparent 26%),
-      radial-gradient(circle at top right, rgba(34, 197, 94, 0.08), transparent 24%),
-      linear-gradient(180deg, rgba(5, 10, 8, 0.98), rgba(4, 7, 6, 1));
+    background-color: hsl(var(--background));
   }
 
   .app-sidebar {
-    background:
-      linear-gradient(180deg, rgba(10, 17, 14, 0.95), rgba(7, 11, 9, 0.98));
+    background-color: hsl(var(--card));
   }
 
   .app-panel {
-    @apply rounded-2xl border border-border/80 bg-card/90 backdrop-blur-xl;
-    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.34);
+    @apply rounded-lg border border-border bg-card;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   }
 
   .app-page-header {
@@ -124,7 +120,7 @@
   }
 
   .app-settings-nav button {
-    @apply flex min-w-[180px] items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium text-muted-foreground transition xl:w-full xl:min-w-0;
+    @apply flex min-w-[180px] items-center justify-between rounded px-3 py-3 text-left text-sm font-medium text-muted-foreground transition xl:w-full xl:min-w-0;
   }
 
   .app-settings-nav button:hover {
@@ -140,7 +136,7 @@
   }
 
   .app-inline-bar {
-    @apply flex-1 rounded-t-2xl bg-primary/85;
+    @apply flex-1 rounded bg-primary/85;
     min-height: 10%;
     box-shadow: 0 12px 24px rgba(34, 197, 94, 0.24);
   }
@@ -206,7 +202,7 @@
   }
 
   .doc-blockquote {
-    @apply my-6 border-l-4 border-primary/70 bg-accent/35 px-4 py-3 rounded-r-sm text-foreground/90;
+    @apply my-6 border-l-4 border-primary/70 bg-accent/35 px-4 py-3 rounded text-foreground/90;
   }
 
   .doc-hr {
@@ -214,11 +210,11 @@
   }
 
   .doc-code-inline {
-    @apply rounded-sm bg-muted px-1.5 py-0.5 text-[0.85em] font-semibold text-foreground;
+    @apply rounded bg-muted px-1.5 py-0.5 text-[0.85em] font-semibold text-foreground;
   }
 
   .doc-pre {
-    @apply my-6 rounded-sm border border-border bg-card p-4 overflow-x-auto;
+    @apply my-6 rounded border border-border bg-card p-4 overflow-x-auto;
   }
 
   .doc-code-block {
@@ -226,7 +222,7 @@
   }
 
   .doc-table-wrap {
-    @apply my-6 overflow-x-auto rounded-sm border border-border;
+    @apply my-6 overflow-x-auto rounded border border-border;
   }
 
   .doc-table {
@@ -254,7 +250,7 @@
   }
 
   .test-suite-header {
-    @apply rounded-sm border border-border bg-gradient-to-br from-accent/50 via-card to-card p-4 sm:p-5 md:p-6;
+    @apply rounded border border-border bg-gradient-to-br from-accent/50 via-card to-card p-4 sm:p-5 md:p-6;
   }
 
   .test-suite-eyebrow {
@@ -274,7 +270,7 @@
   }
 
   .test-suite-count-card {
-    @apply rounded-sm border border-border/80 bg-background/85 px-3 py-2.5 sm:px-4 sm:py-3;
+    @apply rounded border border-border/80 bg-background/85 px-3 py-2.5 sm:px-4 sm:py-3;
   }
 
   .test-suite-count-value {
@@ -318,7 +314,7 @@
   }
 
   .test-case-card {
-    @apply rounded-sm border border-border bg-card px-3 py-3 sm:px-4 sm:py-4 md:px-5;
+    @apply rounded border border-border bg-card px-3 py-3 sm:px-4 sm:py-4 md:px-5;
   }
 
   .test-case-card-header {
@@ -326,7 +322,7 @@
   }
 
   .test-case-id-badge {
-    @apply inline-flex items-center rounded-sm bg-accent/70 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary;
+    @apply inline-flex items-center rounded bg-accent/70 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary;
   }
 
   .test-case-title {
@@ -418,7 +414,7 @@
   }
 
   .test-case-step-expected {
-    @apply ml-5 rounded-md border border-border/70 bg-transparent px-3 py-2 sm:ml-6 sm:px-4;
+    @apply ml-5 rounded border border-border/70 bg-transparent px-3 py-2 sm:ml-6 sm:px-4;
   }
 
   .test-case-step-expected-label {
@@ -469,15 +465,15 @@
   }
 
   .landing-nav-toggle {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10 lg:hidden;
+    @apply inline-flex h-10 w-10 items-center justify-center border border-white/10 bg-white/5 text-white transition hover:bg-white/10 lg:hidden rounded-sm;
   }
 
   .landing-mobile-nav {
-    @apply hidden w-full flex-col gap-2 rounded-2xl border border-white/10 bg-[#08110d]/95 p-3 text-sm text-slate-200;
+    @apply hidden w-full flex-col gap-2 border border-white/10 bg-[#08110d]/95 p-3 text-sm text-slate-200 rounded-sm;
   }
 
   .landing-mobile-nav a {
-    @apply rounded-xl px-3 py-2 transition-colors hover:bg-white/10 hover:text-white;
+    @apply px-3 py-2 transition-colors hover:bg-white/10 hover:text-white rounded-sm;
   }
 
   .landing-mobile-nav-open {
@@ -493,7 +489,8 @@
   }
 
   .landing-pill {
-    @apply inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100;
+    @apply inline-flex items-center gap-2 border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100;
+    border-radius: 20px;
   }
 
   .landing-hero-title {
@@ -526,7 +523,8 @@
   }
 
   .landing-hero-trust span {
-    @apply rounded-full border border-white/10 bg-white/5 px-3 py-1.5;
+    @apply border border-white/10 bg-white/5 px-3 py-1.5;
+    border-radius: 20px;
   }
 
   .landing-hero-stats {
@@ -534,7 +532,7 @@
   }
 
   .landing-hero-stat {
-    @apply rounded-[1.15rem] border border-white/10 bg-white/[0.05] px-4 py-4;
+    @apply border border-white/10 bg-white/[0.05] px-4 py-4 rounded-sm;
   }
 
   .landing-hero-stat strong {
@@ -550,7 +548,7 @@
   }
 
   .landing-hero-scene {
-    @apply h-full w-full rounded-[2rem] border border-white/10 shadow-[0_30px_120px_rgba(0,0,0,0.56)];
+    @apply h-full w-full border border-white/10 shadow-[0_30px_120px_rgba(0,0,0,0.56)] rounded-sm;
     background-color: rgba(3, 7, 5, 0.96);
     background-image:
       radial-gradient(circle at 50% 18%, rgba(29, 196, 110, 0.09), transparent 18%),
@@ -570,7 +568,7 @@
   }
 
   .landing-float-card {
-    @apply absolute rounded-2xl border border-white/10 bg-white/[0.08] px-4 py-4 text-left backdrop-blur-xl;
+    @apply absolute border border-white/10 bg-white/[0.08] px-4 py-4 text-left backdrop-blur-xl rounded-sm;
     box-shadow: 0 20px 80px rgba(6, 14, 35, 0.35);
     animation: landingFloat 7.5s ease-in-out infinite;
   }
@@ -605,7 +603,7 @@
   }
 
   .landing-section-band {
-    @apply rounded-[2rem] border border-white/10 bg-white/5;
+    @apply border border-white/10 bg-white/5 rounded-sm;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.04),
       0 0 0 1px rgba(34, 197, 94, 0.04);
@@ -628,8 +626,8 @@
   }
 
   .landing-feature-card {
-    @apply rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-6;
-    transition: transform 220ms ease, border-color 220ms ease, background 220ms ease;
+    @apply border border-white/10 bg-white/[0.055] p-6 rounded-sm;
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), border-color 220ms ease, background 220ms ease;
   }
 
   .landing-feature-card:hover {
@@ -639,7 +637,7 @@
   }
 
   .landing-feature-icon {
-    @apply inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/15 bg-emerald-400/10 text-emerald-200;
+    @apply inline-flex h-11 w-11 items-center justify-center border border-emerald-400/15 bg-emerald-400/10 text-emerald-200 rounded-sm;
   }
 
   .landing-feature-card h3 {
@@ -655,7 +653,7 @@
   }
 
   .landing-workflow-step {
-    @apply rounded-[1.4rem] border border-white/10 bg-[#08110d]/80 p-5;
+    @apply border border-white/10 bg-[#08110d]/80 p-5 rounded-sm;
   }
 
   .landing-step-index {
@@ -671,7 +669,7 @@
   }
 
   .landing-product-frame {
-    @apply relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(10,18,13,0.92),rgba(5,10,8,0.98))] p-5;
+    @apply relative overflow-hidden border border-white/10 bg-[linear-gradient(180deg,rgba(10,18,13,0.92),rgba(5,10,8,0.98))] p-5 rounded-sm;
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
   }
 
@@ -702,7 +700,7 @@
   }
 
   .landing-product-visual {
-    @apply mt-5 overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#07100c];
+    @apply mt-5 overflow-hidden border border-white/10 bg-[#07100c] rounded-sm;
   }
 
   .landing-product-visual img {
@@ -714,7 +712,7 @@
   }
 
   .landing-product-line {
-    @apply flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200;
+    @apply flex items-center gap-3 border border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200 rounded-sm;
     animation: landingPulse 5.5s ease-in-out infinite;
   }
 
@@ -743,7 +741,7 @@
   }
 
   .landing-integration-card {
-    @apply flex gap-4 rounded-[1.4rem] border border-white/10 bg-white/[0.055] p-5;
+    @apply flex gap-4 border border-white/10 bg-white/[0.055] p-5 rounded-sm;
   }
 
   .landing-integration-card h3 {
@@ -767,7 +765,7 @@
   }
 
   .landing-roadmap-item {
-    @apply flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-slate-200;
+    @apply flex items-center gap-3 border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-slate-200 rounded-sm;
   }
 
   .landing-proof-grid {
@@ -775,7 +773,7 @@
   }
 
   .landing-proof-card {
-    @apply rounded-[1.6rem] border border-white/10 bg-white/[0.055] p-6;
+    @apply border border-white/10 bg-white/[0.055] p-6 rounded-sm;
   }
 
   .landing-proof-card h3 {
@@ -787,7 +785,7 @@
   }
 
   .landing-final-cta {
-    @apply grid gap-6 rounded-[2rem] border border-white/10 bg-white/[0.055] p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center;
+    @apply grid gap-6 border border-white/10 bg-white/[0.055] p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center rounded-sm;
   }
 
   .landing-final-cta-copy h2 {
@@ -1045,10 +1043,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
-    background-image:
-      radial-gradient(circle at 15% 10%, hsl(var(--primary) / 0.12) 0, transparent 35%),
-      radial-gradient(circle at 85% 0%, hsl(var(--accent) / 0.2) 0, transparent 30%);
-    background-attachment: fixed;
   }
 }
 

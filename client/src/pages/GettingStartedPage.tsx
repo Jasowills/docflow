@@ -59,7 +59,7 @@ export function GettingStartedPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Badge variant="secondary" className="rounded-sm px-2.5 py-1 text-xs">
+          <Badge variant="secondary" className="rounded-sm px-2.5 py-1 text-xs uppercase tracking-wider">
             First-Time Setup
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight mt-2">Getting Started</h1>
@@ -83,10 +83,10 @@ export function GettingStartedPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {extensionRelease && (
-            <div className="rounded-sm border border-border bg-muted/30 p-3 text-sm">
-              <p className="font-medium">Latest published release: v{extensionRelease.version}</p>
-              <p className="text-muted-foreground mt-1">
-                Published {new Date(extensionRelease.publishedAtUtc).toLocaleString()}
+              <div className="rounded-sm border border-border bg-muted/30 p-3 text-sm space-y-1">
+              <p className="font-medium text-sm">Latest release: v{extensionRelease.version}</p>
+              <p className="text-muted-foreground text-xs">
+                {new Date(extensionRelease.publishedAtUtc).toLocaleDateString()}
               </p>
               {extensionRelease.notes && (
                 <p className="text-muted-foreground mt-2">{extensionRelease.notes}</p>
@@ -100,17 +100,18 @@ export function GettingStartedPage() {
           ) : (
             <div className="rounded-sm border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
               {loadingRelease
-                ? 'Loading latest extension release...'
-                : releaseFetchError || 'Download URL is not configured yet.'}
+                ? 'Fetching latest release...'
+                : releaseFetchError || 'Download URL not configured.'}
             </div>
           )}
-          <div className="rounded-sm border border-border bg-muted/30 p-3 text-sm">
-            <p className="font-medium">After download</p>
-            <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
-              <li>Open your browser extensions page.</li>
-              <li>Enable developer mode.</li>
-              <li>Load the extension package and pin DocFlow Recorder.</li>
-            </ul>
+          <div className="rounded-sm border border-border bg-muted/30 p-3 text-sm space-y-2">
+            <p className="font-medium text-sm">After download</p>
+            <ol className="list-decimal pl-5 space-y-1 text-muted-foreground text-xs">
+              <li>Open your browser extensions page</li>
+              <li>Enable developer mode</li>
+              <li>Load the extension package</li>
+              <li>Pin the DocFlow Recorder extension</li>
+            </ol>
           </div>
           </CardContent>
         </Card>

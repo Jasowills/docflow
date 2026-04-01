@@ -35,12 +35,6 @@ export function ShowcaseScreenPage() {
               Personal operations for workflow capture, generation, and documentation.
             </p>
           </div>
-          <div className="p-5">
-            <Button className="w-full justify-between rounded-2xl bg-emerald-500 text-black hover:bg-emerald-400">
-              New generation
-              <Sparkles className="h-4 w-4" />
-            </Button>
-          </div>
           <nav className="grid gap-1 px-4">
             {navItems.map((item) => {
               const Icon = item.icon;

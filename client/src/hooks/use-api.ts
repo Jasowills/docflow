@@ -373,6 +373,11 @@ export function useApi() {
     [api],
   );
 
+  const deleteAccount = useCallback(
+    () => api<void>("/auth/account", { method: "DELETE" }),
+    [api],
+  );
+
   return {
     // Recordings
     uploadRecording,
@@ -416,5 +421,7 @@ export function useApi() {
     upsertFolderConfig,
     deleteFolderConfig,
     uploadFolderPreviewImage,
+    // Auth
+    deleteAccount,
   };
 }

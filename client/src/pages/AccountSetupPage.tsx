@@ -58,8 +58,8 @@ export function AccountSetupPage() {
   return (
     <div className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-lg items-center justify-center">
-        <Card className="w-full border-border/80 bg-card/95 backdrop-blur">
-          <CardHeader className="space-y-3 p-6 text-center sm:p-8">
+        <Card className="w-full border-border/80 bg-card/95 backdrop-blur shadow-lg">
+          <CardHeader className="space-y-4 p-6 text-center sm:p-8">
             <p className="text-xs uppercase tracking-[0.22em] text-primary/80">
               DocFlow
             </p>
@@ -67,7 +67,7 @@ export function AccountSetupPage() {
               Set up your account
             </CardTitle>
             <CardDescription className="mx-auto max-w-md text-sm leading-6">
-              Welcome, {user.displayName}! Choose how you'll use DocFlow.
+              Welcome, {user.displayName}. Choose your account type.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5 p-6 pt-0 sm:p-8 sm:pt-0">
@@ -76,7 +76,7 @@ export function AccountSetupPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  className={`rounded-lg border px-4 py-4 text-left transition ${accountType === "individual" ? "border-primary bg-primary/5" : "border-border bg-background/40 hover:bg-accent/40"}`}
+                  className={`rounded-sm border px-4 py-4 text-left transition cursor-pointer ${accountType === "individual" ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background/40 hover:bg-accent/40"}`}
                   onClick={() => setAccountType("individual")}
                 >
                   <div className="font-medium">Individual</div>
@@ -86,7 +86,7 @@ export function AccountSetupPage() {
                 </button>
                 <button
                   type="button"
-                  className={`rounded-lg border px-4 py-4 text-left transition ${accountType === "team" ? "border-primary bg-primary/5" : "border-border bg-background/40 hover:bg-accent/40"}`}
+                  className={`rounded-sm border px-4 py-4 text-left transition cursor-pointer ${accountType === "team" ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background/40 hover:bg-accent/40"}`}
                   onClick={() => setAccountType("team")}
                 >
                   <div className="font-medium">Team</div>

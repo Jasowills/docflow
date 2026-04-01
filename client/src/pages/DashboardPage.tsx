@@ -302,7 +302,7 @@ export function DashboardPage() {
                 summary?.recentActivity.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-border/80 bg-background/55 px-4 py-3"
+                    className="rounded border border-border/80 bg-background/55 px-4 py-3"
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline">{item.type}</Badge>
@@ -333,7 +333,7 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {extensionRelease ? (
-                <div className="rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm">
+                <div className="rounded border border-border/80 bg-background/55 px-4 py-3 text-sm">
                   <p className="font-medium text-foreground">
                     Latest published release: v{extensionRelease.version}
                   </p>
@@ -361,7 +361,7 @@ export function DashboardPage() {
                     : "Download extension"}
                 </Button>
               ) : (
-                <div className="rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm text-muted-foreground">
+                <div className="rounded border border-border/80 bg-background/55 px-4 py-3 text-sm text-muted-foreground">
                   {loadingRelease
                     ? "Loading latest extension release..."
                     : releaseError || "Download URL is not configured yet."}
@@ -371,7 +371,7 @@ export function DashboardPage() {
               <Link
                 to="/app/getting-started"
                 state={{ fromGuide: true }}
-                className="flex items-center justify-between rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-accent/70"
+                className="flex items-center justify-between rounded border border-border/80 bg-background/55 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-accent/70"
               >
                 <span>Open install guide</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -446,7 +446,7 @@ export function DashboardPage() {
                       {summary?.setup.missingSteps.map((item) => (
                         <div
                           key={item}
-                          className="rounded-2xl border border-border/80 bg-background/50 px-4 py-3 text-sm text-muted-foreground"
+                          className="rounded border border-border/80 bg-background/50 px-4 py-3 text-sm text-muted-foreground"
                         >
                           {item}
                         </div>
@@ -465,7 +465,7 @@ export function DashboardPage() {
 
 function InlineLoadingState({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 rounded border border-border/80 bg-background/55 px-4 py-3 text-sm text-muted-foreground">
       <Spinner className="h-4 w-4 text-primary" />
       <span>{message}</span>
     </div>
@@ -527,8 +527,8 @@ function CombinedTrendChart({
   const documentsAreaPath = buildAreaPath(documentsCoordinates);
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/35 p-4">
-      <div className="rounded-xl bg-white/[0.03] px-2 py-2">
+    <div className="rounded border border-border/60 bg-background/35 p-4">
+      <div className="rounded bg-white/[0.03] px-2 py-2">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="h-56 w-full overflow-visible"
@@ -639,7 +639,7 @@ function QuickAction({
   return (
     <Link
       to={to}
-      className="flex items-center justify-between rounded-2xl border border-border/80 bg-background/55 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-accent/70"
+      className="flex items-center justify-between rounded border border-border/80 bg-background/55 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-accent/70"
     >
       <span className="flex items-center gap-3">
         <Icon className="h-4 w-4 text-primary" />
@@ -681,7 +681,7 @@ function ActivityCard({
             <Link
               key={item.key}
               to={item.href}
-              className="block rounded-2xl border border-border/80 bg-background/55 px-4 py-3 transition hover:bg-accent/70"
+              className="block rounded border border-border/80 bg-background/55 px-4 py-3 transition hover:bg-accent/70"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium text-foreground">

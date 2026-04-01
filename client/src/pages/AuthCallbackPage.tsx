@@ -29,10 +29,10 @@ function LogtoAuthCallbackPage() {
     return (
       <div className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-lg items-center justify-center">
-          <div className="w-full rounded-xl border border-border/80 bg-card/95 p-6 text-center shadow-sm backdrop-blur sm:p-8">
+          <div className="w-full rounded-sm border border-border/80 bg-card/95 p-6 text-center shadow-lg backdrop-blur sm:p-8">
             <p className="text-xs uppercase tracking-[0.22em] text-primary/80">DocFlow</p>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight">Sign-in failed</h1>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">{error.message}</p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">We couldn't complete your sign-in. {error.message}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button asChild className="w-full">
                 <Link to="/login">Back to sign in</Link>
@@ -50,14 +50,14 @@ function LogtoAuthCallbackPage() {
         <div className="w-full rounded-xl border border-border/80 bg-card/95 p-6 text-center shadow-sm backdrop-blur sm:p-8">
           <p className="text-xs uppercase tracking-[0.22em] text-primary/80">DocFlow</p>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight">
-            {isLoading ? 'Completing sign-in...' : 'Signing you in...'}
+            Completing sign-in...
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            DocFlow is finalizing your secure session.
+            Please wait while we set up your workspace.
           </p>
           <div className="mt-6 flex justify-center">
-            <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
-              <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
+            <div className="h-2 w-24 overflow-hidden rounded-sm bg-muted">
+              <div className="h-full animate-[pulse] rounded-sm bg-primary" />
             </div>
           </div>
         </div>

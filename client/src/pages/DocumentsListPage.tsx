@@ -343,6 +343,7 @@ function FolderCardPreview({
 }) {
   const [hasError, setHasError] = useState(false);
   const showImage = Boolean(imageUrl) && !hasError;
+  const isUnfiled = title === 'Unfiled';
 
   return (
     <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-muted/60 via-muted/30 to-muted/10">
@@ -355,6 +356,21 @@ function FolderCardPreview({
           onError={() => setHasError(true)}
         />
       ) : null}
+      {isUnfiled && (
+        <svg
+          className="absolute bottom-0 right-0 h-40 w-40 text-primary opacity-10"
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Bottom document */}
+          <rect x="10" y="50" width="60" height="40" rx="2" fill="currentColor" opacity="0.6" />
+          {/* Middle document */}
+          <rect x="18" y="42" width="60" height="40" rx="2" fill="currentColor" opacity="0.8" />
+          {/* Top document */}
+          <rect x="26" y="34" width="60" height="40" rx="2" fill="currentColor" />
+        </svg>
+      )}
     </div>
   );
 }

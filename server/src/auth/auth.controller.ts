@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Req } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser, Public } from "./decorators";
 import { AuthService } from "./auth.service";
@@ -136,6 +136,14 @@ export class AuthController {
   ) {
     const remainingSeconds = getRemainingBearerTokenSeconds(req);
     return this.uploadTokenService.createUploadToken(user, remainingSeconds);
+  }
+
+  @ApiBearerAuth()
+  @Delete("account")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Delete the authenticated user's account" })
+  deleteAccount(@CurrentUser() user: UserContext) {
+    return this.authService.deleteAccount(user.userId);
   }
 }
 

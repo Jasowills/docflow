@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
+  AlertTriangle,
   LayoutGrid,
   Settings2,
   SlidersHorizontal,
@@ -13,12 +14,23 @@ import type {
 } from "@docflow/shared";
 import { useApi } from "../hooks/use-api";
 import { useAuth } from "../auth/auth-context";
+import { showAppToast } from "../lib/app-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Spinner } from "../components/ui/spinner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 
 type SettingsSection =
   | "workspace"
@@ -41,6 +53,8 @@ const settingsSections: Array<{
 
 export function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const {
     getCurrentWorkspace,
     updateCurrentWorkspace,
@@ -48,6 +62,7 @@ export function SettingsPage() {
     updateWorkspaceMemberRole,
     revokeWorkspaceInvitation,
     getConfig,
+    deleteAccount,
   } = useApi();
   const [searchParams, setSearchParams] = useSearchParams();
   const [workspace, setWorkspace] = useState<WorkspaceDetails | null>(null);
@@ -58,6 +73,10 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [savingWorkspace, setSavingWorkspace] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const requestedSection = searchParams.get("section") as SettingsSection | null;
   const section = settingsSections.some((item) => item.key === requestedSection)
@@ -122,6 +141,26 @@ export function SettingsPage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE") return;
+    
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount();
+      showAppToast({
+        title: "Account deleted",
+        message: "Your account and all associated data have been permanently removed.",
+        variant: "success",
+      });
+      await logout();
+      navigate("/");
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete account.");
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="app-page-header">
@@ -159,7 +198,6 @@ export function SettingsPage() {
                   <Icon className="h-4 w-4" />
                   {item.label}
                 </span>
-                {active ? <Badge variant="secondary">Current</Badge> : null}
               </button>
             );
           })}
@@ -229,7 +267,7 @@ export function SettingsPage() {
                   {(workspace?.members || []).map((member) => (
                     <div
                       key={member.userId}
-                      className="rounded-2xl border border-border/80 bg-background/55 px-4 py-3"
+                      className="rounded-md border border-border/80 bg-background/55 px-4 py-3"
                     >
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div>
@@ -267,7 +305,7 @@ export function SettingsPage() {
                     workspace?.invitations.map((invite) => (
                       <div
                         key={invite.invitationId}
-                        className="rounded-2xl border border-border/80 bg-background/55 px-4 py-3"
+                        className="rounded-md border border-border/80 bg-background/55 px-4 py-3"
                       >
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                           <div>
@@ -295,18 +333,46 @@ export function SettingsPage() {
           ) : null}
 
           {section === "profile" ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile</CardTitle>
-                <CardDescription>Current identity and workspace context.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <ProfileField label="Name" value={user?.displayName || "Unknown"} />
-                <ProfileField label="Email" value={user?.email || "Unknown"} />
-                <ProfileField label="Account type" value={user?.accountType || "Unknown"} />
-                <ProfileField label="Workspace" value={user?.workspaceName || "Unknown"} />
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile</CardTitle>
+                  <CardDescription>Current identity and workspace context.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <ProfileField label="Name" value={user?.displayName || "Unknown"} />
+                  <ProfileField label="Email" value={user?.email || "Unknown"} />
+                  <ProfileField label="Account type" value={user?.accountType || "Unknown"} />
+                  <ProfileField label="Workspace" value={user?.workspaceName || "Unknown"} />
+                </CardContent>
+              </Card>
+
+              <Card className="border-destructive/20">
+                <CardHeader>
+                  <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                  <CardDescription>
+                    Irreversible actions that will permanently affect your account.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-foreground">Delete Account</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently delete your account and all associated data. This action cannot be undone.
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="shrink-0"
+                    >
+                      Delete Account
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           ) : null}
 
           {section === "preferences" ? (
@@ -316,13 +382,13 @@ export function SettingsPage() {
                 <CardDescription>Operational defaults and contextual help.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-border/80 bg-background/55 p-4">
+                <div className="rounded-md border border-border/80 bg-background/55 p-4">
                   <p className="text-sm font-medium text-foreground">Theme</p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     DocFlow now uses a unified dark black/green workspace theme.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border/80 bg-background/55 p-4">
+                <div className="rounded-md border border-border/80 bg-background/55 p-4">
                   <p className="text-sm font-medium text-foreground">Extension guidance</p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Setup help now appears contextually in Recordings rather than as a permanent nav page.
@@ -339,7 +405,7 @@ export function SettingsPage() {
                 <CardDescription>Admin-level generation templates and folders.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-2xl border border-border/80 bg-background/55 p-4">
+                <div className="rounded-md border border-border/80 bg-background/55 p-4">
                   <p className="text-sm text-muted-foreground">
                     Document types: {config?.documentTypes.length || 0} · Folder configs: {config?.folderConfigs.length || 0}
                   </p>
@@ -352,13 +418,65 @@ export function SettingsPage() {
           ) : null}
         </div>
       </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="p-8">
+          <AlertDialogHeader className="space-y-4">
+            <AlertDialogTitle className="flex items-center gap-3 text-lg">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Account
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-5">
+              <p className="text-sm leading-6">
+                This action cannot be undone. This will permanently delete your account and remove all of your data from our servers.
+              </p>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">
+                  Type <span className="font-mono bg-muted px-2 py-1 rounded text-xs">DELETE</span> to confirm.
+                </p>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type DELETE to confirm"
+                  className="h-10"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="mt-6">
+            <AlertDialogFooter className="gap-3 sm:gap-2">
+              <AlertDialogCancel onClick={() => {
+                setShowDeleteDialog(false);
+                setDeleteConfirmText("");
+                setDeleteError(null);
+              }}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => void handleDeleteAccount()}
+                disabled={deleteConfirmText !== "DELETE" || deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? (
+                  <>
+                    <Spinner className="mr-2 h-4 w-4" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete Account"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function ProfileField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/80 bg-background/55 p-4">
+    <div className="rounded-md border border-border/80 bg-background/55 p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
       <p className="mt-3 text-sm font-medium text-foreground">{value}</p>
     </div>

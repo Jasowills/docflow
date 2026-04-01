@@ -329,15 +329,6 @@ export function Layout() {
         </p>
       </div>
 
-      <div className="px-4 pt-4">
-        <Link to="/app/generate">
-          <Button className="w-full justify-between rounded-xl">
-            New generation
-            <PlusCircle className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-
       <nav className="grid gap-1 p-4">
         {navItems.map((item) => {
           const isActive =
@@ -350,7 +341,7 @@ export function Layout() {
             <button
               key={item.path}
               type="button"
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition-all ${
+              className={`flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-medium transition-all ${
                 isActive
                   ? "bg-primary text-primary-foreground shadow-[0_14px_28px_hsl(var(--primary)/0.24)]"
                   : isPending
@@ -368,7 +359,7 @@ export function Layout() {
       </nav>
 
       <div className="mt-auto px-4 pb-4">
-        <div className="rounded-2xl border border-border/80 bg-background/60 p-4">
+        <div className="rounded-md border border-border bg-background/60 p-4">
           <div className="text-sm font-medium text-foreground">{user?.displayName || "User"}</div>
           <div className="mt-1 text-xs text-muted-foreground">{user?.email || ""}</div>
           <Button
@@ -470,7 +461,7 @@ export function Layout() {
           {toastItems.map((item) => (
             <div
               key={item.id}
-              className={`rounded-2xl border bg-card/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.36)] ${
+              className={`rounded-md border bg-card/95 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.36)] ${
                 item.variant === "error"
                   ? "border-destructive/40"
                   : item.variant === "success"
@@ -488,7 +479,7 @@ export function Layout() {
       ) : null}
 
       {sessionToast ? (
-        <div className="fixed right-4 top-4 z-[60] rounded-2xl border border-primary/30 bg-card px-4 py-3 shadow-lg">
+        <div className="fixed right-4 top-4 z-[60] rounded-md border border-primary/30 bg-card px-4 py-3 shadow-lg">
           <p className="text-sm text-foreground">{sessionToast}</p>
         </div>
       ) : null}
@@ -531,7 +522,7 @@ export function Layout() {
                 notifications.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-2xl border p-4 ${
+                    className={`rounded-md border p-4 ${
                       item.read
                         ? "border-border/70 bg-background/40"
                         : "border-primary/20 bg-accent/55"
