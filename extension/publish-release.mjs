@@ -27,14 +27,17 @@ async function main() {
 
 function runStep(command, args, extraEnv = {}) {
   return new Promise((resolve, reject) => {
-    const executable = IS_WINDOWS && command === 'tsc' ? 'tsc.cmd' : command;
-    const child = spawn(executable, args, {
+    const isTsc = command === 'tsc';
+    const executable = IS_WINDOWS && isTsc ? 'npx' : command;
+    const execArgs = IS_WINDOWS && isTsc ? ['tsc', ...args] : args;
+    
+    const child = spawn(executable, execArgs, {
       cwd: process.cwd(),
       env: {
         ...process.env,
         ...extraEnv,
       },
-      shell: false,
+      shell: IS_WINDOWS,
       stdio: 'inherit',
     });
 

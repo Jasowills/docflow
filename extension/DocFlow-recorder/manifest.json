@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "DocFlow Recorder",
-  "version": "1.0.0.15",
-  "description": "Capture website and web application workflows for automated documentation generation.",
+  "name": "DocFlow",
+  "version": "1.0.0.16",
+  "description": "Capture workflows, generate docs with AI, and manage your documentation workspace.",
   "permissions": [
     "activeTab",
     "tabs",
