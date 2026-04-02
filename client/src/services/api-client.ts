@@ -73,7 +73,9 @@ export function createApiClient(getAccessToken: () => Promise<string>) {
       status: response.status,
       durationMs: Math.round(performance.now() - startedAt),
     });
-    return response.json() as Promise<T>;
+    const text = await response.text();
+    if (!text) return undefined as T;
+    return JSON.parse(text) as T;
   };
 }
 
@@ -128,7 +130,9 @@ export function createPublicApiClient() {
       status: response.status,
       durationMs: Math.round(performance.now() - startedAt),
     });
-    return response.json() as Promise<T>;
+    const text = await response.text();
+    if (!text) return undefined as T;
+    return JSON.parse(text) as T;
   };
 }
 

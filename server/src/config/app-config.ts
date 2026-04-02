@@ -301,4 +301,12 @@ export class AppConfig {
       10,
     );
   }
+
+  get supabaseEdgeFunctionUrl(): string {
+    return this.configService.get<string>("SUPABASE_EDGE_FUNCTION_URL", "");
+  }
+
+  get resendApiKey(): string {
+    return this.configService.get<string>("RESEND_API_KEY", "");
+  }
 }

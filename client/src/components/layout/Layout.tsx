@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
@@ -8,7 +8,7 @@ import {
   List,
   LogOut,
   Menu,
-  PlusCircle,
+  
   Settings,
   Sparkles,
   X,

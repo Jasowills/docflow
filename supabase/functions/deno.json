@@ -1,0 +1,11 @@
+{
+  "functions": [
+    {
+      "path": "./send-invitation-email",
+      "name": "send-invitation-email"
+    }
+  ],
+  "imports": {
+    "npm:resend@3.2.0": "npm:resend@3.2.0"
+  }
+}

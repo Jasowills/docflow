@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type {
   InviteWorkspaceMemberRequest,
   UpdateWorkspaceRequest,
@@ -7,10 +7,18 @@ import type {
   WorkspaceInvitation,
 } from '@docflow/shared';
 import { WorkspacesRepository } from '../auth/workspaces.repository';
+import { UsersRepository } from '../auth/users.repository';
+import { EmailService } from '../common/services/email.service';
 
 @Injectable()
 export class WorkspacesService {
-  constructor(private readonly repository: WorkspacesRepository) {}
+  private readonly logger = new Logger(WorkspacesService.name);
+
+  constructor(
+    private readonly repository: WorkspacesRepository,
+    private readonly usersRepository: UsersRepository,
+    private readonly emailService: EmailService,
+  ) {}
 
   async getWorkspace(workspaceId: string | undefined): Promise<WorkspaceDetails> {
     if (!workspaceId) {
@@ -32,7 +40,39 @@ export class WorkspacesService {
     if (!workspaceId) {
       throw new BadRequestException('A workspace is required.');
     }
-    return this.repository.createInvitation(workspaceId, invitedByUserId, request);
+    
+    const invitation = await this.repository.createInvitation(workspaceId, invitedByUserId, request);
+
+    void this.sendInvitationEmail(workspaceId, invitedByUserId, invitation);
+
+    return invitation;
+  }
+
+  private async sendInvitationEmail(
+    workspaceId: string,
+    invitedByUserId: string,
+    invitation: WorkspaceInvitation,
+  ): Promise<void> {
+    try {
+      const [workspace, inviter] = await Promise.all([
+        this.repository.findSummaryById(workspaceId),
+        this.usersRepository.findByUserId(invitedByUserId),
+      ]);
+
+      if (!workspace || !inviter) {
+        this.logger.warn('Could not send invitation email: missing workspace or inviter data');
+        return;
+      }
+
+      await this.emailService.sendInvitationEmail({
+        to: invitation.email,
+        workspaceName: workspace.name,
+        inviterName: inviter.displayName || inviter.email,
+        invitationToken: invitation.invitationId,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to send invitation email: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   async updateMemberRole(

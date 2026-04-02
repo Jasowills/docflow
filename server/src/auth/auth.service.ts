@@ -265,10 +265,8 @@ export class AuthService {
       throw new UnauthorizedException("User not found.");
     }
 
-    if (user.accountType === "team") {
-      throw new BadRequestException(
-        "Team accounts cannot be deleted directly. Please remove workspace members first.",
-      );
+    if (user.defaultWorkspaceId) {
+      await this.workspacesRepository.deleteWorkspace(user.defaultWorkspaceId);
     }
 
     await this.usersRepository.delete(userId);

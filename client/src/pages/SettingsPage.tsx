@@ -69,7 +69,6 @@ export function SettingsPage() {
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [workspaceName, setWorkspaceName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "editor" | "viewer">("viewer");
   const [loading, setLoading] = useState(true);
   const [savingWorkspace, setSavingWorkspace] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +130,7 @@ export function SettingsPage() {
       return;
     }
     try {
-      const invitation = await inviteWorkspaceMember({ email: inviteEmail.trim(), role: inviteRole });
+      const invitation = await inviteWorkspaceMember({ email: inviteEmail.trim(), role: 'viewer' });
       setWorkspace((current) =>
         current ? { ...current, invitations: [invitation, ...current.invitations] } : current,
       );
@@ -244,21 +243,12 @@ export function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {canManageWorkspace ? (
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_auto]">
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
                     <Input
                       placeholder="teammate@company.com"
                       value={inviteEmail}
                       onChange={(event) => setInviteEmail(event.target.value)}
                     />
-                    <select
-                      className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={inviteRole}
-                      onChange={(event) => setInviteRole(event.target.value as "admin" | "editor" | "viewer")}
-                    >
-                      <option value="viewer">viewer</option>
-                      <option value="editor">editor</option>
-                      <option value="admin">admin</option>
-                    </select>
                     <Button onClick={() => void handleInvite()}>Invite member</Button>
                   </div>
                 ) : null}
@@ -318,7 +308,28 @@ export function SettingsPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => void revokeWorkspaceInvitation(invite.invitationId).then(() => void loadPage())}
+                              onClick={async () => {
+                                try {
+                                  await revokeWorkspaceInvitation(invite.invitationId);
+                                  setWorkspace((current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          invitations: current.invitations.filter(
+                                            (i) => i.invitationId !== invite.invitationId,
+                                          ),
+                                        }
+                                      : current,
+                                  );
+                                  showAppToast({
+                                    title: "Invitation revoked",
+                                    message: `Invitation for ${invite.email} has been revoked.`,
+                                    variant: "info",
+                                  });
+                                } catch (err) {
+                                  setError(err instanceof Error ? err.message : "Failed to revoke invitation.");
+                                }
+                              }}
                             >
                               Revoke
                             </Button>

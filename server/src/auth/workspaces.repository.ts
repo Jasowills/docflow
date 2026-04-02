@@ -141,6 +141,18 @@ export class WorkspacesRepository {
     }
   }
 
+  async deleteWorkspace(workspaceId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('workspaces')
+      .delete()
+      .eq('workspace_id', workspaceId);
+
+    if (error) {
+      this.logger.error(`Failed to delete workspace ${workspaceId}: ${error.message}`);
+      throw new Error('Failed to delete workspace.');
+    }
+  }
+
   async getWorkspaceDetails(workspaceId: string): Promise<WorkspaceDetails | null> {
     const [workspace, members, invitations] = await Promise.all([
       this.findSummaryById(workspaceId),
@@ -202,6 +214,7 @@ export class WorkspacesRepository {
         'invitation_id, workspace_id, email, role, invited_by_user_id, invited_at_utc, accepted_at_utc, status',
       )
       .eq('workspace_id', workspaceId)
+      .eq('status', 'pending')
       .order('invited_at_utc', { ascending: false });
 
     if (error) {
