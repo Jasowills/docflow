@@ -155,10 +155,10 @@ export function TermsOfServicePage() {
             <p>
               For questions about these Terms of Service, contact us at{" "}
               <a
-                href="mailto:Jasowills01@gmail.com"
+                href="mailto:docflowops@gmail.com"
                 className="text-primary hover:underline"
               >
-                Jasowills01@gmail.com
+                docflowops@gmail.com
               </a>
               .
             </p>
