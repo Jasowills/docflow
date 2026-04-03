@@ -29,23 +29,9 @@ import { InvitePage } from "./pages/InvitePage";
 import { JoinWorkspacePage } from "./pages/JoinWorkspacePage";
 import { Spinner } from "./components/ui/spinner";
 
-function DebugPanel({ data }: { data: Record<string, unknown> }) {
-  return (
-    <div className="fixed top-2 left-2 z-[100] max-h-80 w-[22rem] overflow-auto rounded-md border border-cyan-500/40 bg-black/90 p-3 font-mono text-[11px] text-cyan-300">
-      <div className="mb-1 font-bold text-cyan-200">DEBUG: App Router</div>
-      <pre className="whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
-    </div>
-  );
-}
-
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
-
-  if (import.meta.env.DEV) {
-    console.log("[ProtectedRoute] path:", location.pathname, "isAuth:", isAuthenticated, "needsSetup:", !!(user?.onboardingState as Record<string, unknown>)?.needsAccountSetup);
-  }
-
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">

@@ -54,6 +54,7 @@ interface AuthContextValue {
   logout: () => void;
   getAccessToken: () => Promise<string>;
   refreshUser: () => Promise<void>;
+  refreshSession: () => Promise<string>;
 }
 
 const ACCESS_TOKEN_KEY = "docflow.auth.accessToken";
@@ -153,7 +154,7 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
     [persistAuth],
   );
 
-  const refresh = useCallback(async (): Promise<string> => {
+  const refreshSession = useCallback(async (): Promise<string> => {
     if (!refreshToken) {
       logout();
       throw new Error("No refresh token available");
@@ -181,8 +182,9 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       return accessToken;
     }
 
-    return refresh();
-  }, [accessToken, refresh]);
+    await refreshSession();
+    return accessToken || "";
+  }, [accessToken, refreshSession]);
 
   const refreshUser = useCallback(async () => {
     const token = await getAccessToken();
@@ -203,6 +205,7 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       logout,
       getAccessToken,
       refreshUser,
+      refreshSession,
     }),
     [
       user,
@@ -214,6 +217,7 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
       logout,
       getAccessToken,
       refreshUser,
+      refreshSession,
     ],
   );
 

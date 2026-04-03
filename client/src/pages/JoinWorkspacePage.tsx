@@ -17,7 +17,7 @@ export function JoinWorkspacePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
-  const { isAuthenticated, user, isLoading: authLoading, refreshUser } = useAuth();
+  const { isAuthenticated, user, isLoading: authLoading, refreshUser, refreshSession } = useAuth();
   const { getInvitationDetails, acceptWorkspaceInvitation } = useApi();
 
   const [workspaceName, setWorkspaceName] = useState<string | null>(null);
@@ -32,6 +32,8 @@ export function JoinWorkspacePage() {
     setIsAccepting(true);
     acceptWorkspaceInvitation(token)
       .then(async (workspace) => {
+        // Refresh the JWT to get a new token with the updated workspaceId
+        await refreshSession();
         await refreshUser();
         setWorkspaceName(workspace.name);
         setHasJoined(true);
@@ -42,7 +44,7 @@ export function JoinWorkspacePage() {
       .finally(() => {
         setIsAccepting(false);
       });
-  }, [token, isAuthenticated, acceptWorkspaceInvitation, refreshUser]);
+  }, [token, isAuthenticated, acceptWorkspaceInvitation, refreshSession, refreshUser]);
 
   // If user tries to access directly without auth or token
   if (!token) {

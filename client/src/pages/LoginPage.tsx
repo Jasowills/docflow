@@ -84,13 +84,12 @@ export function LoginPage() {
   }, [getAuthProviders]);
 
   if (isAuthenticated) {
-    // Invitation flow: redirect back to invite page, but only if the
-    // logged-in user's email matches the invitation email. Otherwise
-    // clear stale auth and force a full reload so the login form renders.
-    if (isInvitationFlow && redirectUrl) {
+    // If they explicitly came to register, let them — don't redirect away
+    if (urlMode === "register") {
+      // Stay on login with register tab active
+    } else if (isInvitationFlow && redirectUrl) {
       const emailsMatch = user?.email?.toLowerCase() === inviteEmail.toLowerCase();
       if (!emailsMatch) {
-        // Stale session from a different account — clear it and reload
         localStorage.removeItem("docflow.auth.user");
         localStorage.removeItem("docflow.auth.accessToken");
         localStorage.removeItem("docflow.auth.refreshToken");
@@ -99,8 +98,9 @@ export function LoginPage() {
       }
       sessionStorage.setItem("skipAccountSetupCheck", "1");
       return <Navigate to={redirectUrl} replace />;
+    } else {
+      return <Navigate to="/app" replace />;
     }
-    return <Navigate to="/app" replace />;
   }
 
   const isRegister = mode === "register";

@@ -33,7 +33,18 @@ export class WorkspacesRepository {
 
   async createDefaultWorkspace(params: CreateWorkspaceParams): Promise<WorkspaceSummary> {
     const now = new Date().toISOString();
-    const slug = slugifyWorkspaceName(params.workspaceName);
+    let slug = slugifyWorkspaceName(params.workspaceName);
+
+    // Ensure slug uniqueness by appending a short ID suffix if needed
+    const existing = await this.supabase
+      .from('workspaces')
+      .select('workspace_id')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (existing.data) {
+      slug = `${slug.slice(0, 50)}-${uuidv4().slice(0, 8)}`;
+    }
 
     const { error: workspaceError } = await this.supabase.from('workspaces').insert({
       workspace_id: params.workspaceId,
