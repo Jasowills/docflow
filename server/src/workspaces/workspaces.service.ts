@@ -127,6 +127,50 @@ export class WorkspacesService {
     };
   }
 
+  async leaveWorkspace(
+    userId: string,
+    workspaceId: string,
+  ): Promise<{ switchedToWorkspaceId: string | null }> {
+    // Get the user's current default workspace
+    const user = await this.usersRepository.findByUserId(userId);
+    if (!user) {
+      throw new BadRequestException('User not found.');
+    }
+
+    // Prevent the only owner from leaving
+    const memberRole = await this.repository.getMemberRole(workspaceId, userId);
+    if (!memberRole) {
+      throw new BadRequestException('You are not a member of this workspace.');
+    }
+
+    if (memberRole === 'owner') {
+      const ownerCount = await this.repository.getOwnerCount(workspaceId);
+      if (ownerCount <= 1) {
+        throw new BadRequestException(
+          'Cannot leave workspace: you are the only owner. Transfer ownership first.',
+        );
+      }
+    }
+
+    // Remove the user from the workspace
+    await this.repository.removeMember(workspaceId, userId);
+
+    // If this was the user's default workspace, find another one they belong to
+    let switchedToWorkspaceId: string | null = null;
+    if (user.defaultWorkspaceId === workspaceId) {
+      const memberships = await this.repository.listUserMemberships(userId);
+      if (memberships.length > 0) {
+        switchedToWorkspaceId = memberships[0].workspaceId;
+        await this.usersRepository.updateDefaultWorkspace(userId, switchedToWorkspaceId);
+      } else {
+        // User has no more workspaces — this shouldn't normally happen since
+        // everyone has at least their own workspace, but handle it gracefully
+      }
+    }
+
+    return { switchedToWorkspaceId };
+  }
+
   async getInvitationDetails(token: string): Promise<{
     invitationId: string;
     workspaceId: string;
@@ -163,8 +207,6 @@ export class WorkspacesService {
     userEmail: string,
     userDisplayName: string,
   ): Promise<WorkspaceSummary> {
-    this.logger.log(`acceptInvitation called: userId=${userId}, email=${userEmail}, displayName=${userDisplayName}`);
-
     const invitation = await this.repository.findInvitationByToken(token);
 
     if (!invitation) {
@@ -196,14 +238,11 @@ export class WorkspacesService {
 
     // Verify the authenticated user actually exists in the database
     const existingUser = await this.usersRepository.findByUserId(userId);
-    this.logger.log(`findByUserId(${userId}) returned: ${existingUser ? `email=${existingUser.email}, onboardingState=${JSON.stringify(existingUser.onboardingState)}` : 'NULL'}`);
     if (!existingUser) {
       throw new BadRequestException(
         'Your account could not be found. Please sign in again and retry.',
       );
     }
-
-    this.logger.log(`acceptInvitation: userId=${userId}, email=${userEmail}, displayName=${userDisplayName}, onboardingState=${JSON.stringify(existingUser.onboardingState)}`);
 
     // Check the user isn't already a member of this workspace
     const existingMembers = await this.repository.listMembers(invitation.workspaceId);
@@ -228,13 +267,8 @@ export class WorkspacesService {
     // Mark invitation as accepted
     await this.repository.acceptInvitation(invitation.workspaceId, invitation.invitationId);
 
-    // Update user's default workspace to the invited workspace
-    await this.usersRepository.updateDefaultWorkspace(userId, invitation.workspaceId);
-
-    // Clear needsAccountSetup so the user isn't redirected to account setup
-    this.logger.log(`About to clearAccountSetupRequired for userId=${userId}`);
+    // Clear needsAccountSetup if present (Google OAuth registrations set this)
     await this.usersRepository.clearAccountSetupRequired(userId);
-    this.logger.log(`clearAccountSetupRequired complete for userId=${userId}`);
 
     const workspace = await this.repository.findSummaryById(invitation.workspaceId);
     if (!workspace) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { UserContext, WorkspaceSummary } from '@docflow/shared';
 import { CurrentUser, Public, Roles } from '../auth/decorators';
@@ -95,5 +95,16 @@ export class WorkspacesController {
       user.email,
       user.displayName,
     );
+  }
+
+  @Delete('current/leave')
+  @ApiOperation({ summary: 'Leave the current workspace' })
+  leaveWorkspace(
+    @CurrentUser() user: UserContext,
+  ) {
+    if (!user.workspaceId) {
+      throw new BadRequestException('No active workspace.');
+    }
+    return this.workspacesService.leaveWorkspace(user.userId, user.workspaceId);
   }
 }

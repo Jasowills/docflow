@@ -67,6 +67,7 @@ export function SettingsPage() {
     inviteWorkspaceMember,
     updateWorkspaceMemberRole,
     revokeWorkspaceInvitation,
+    leaveWorkspace,
     getConfig,
     deleteAccount,
   } = useApi();
@@ -345,6 +346,40 @@ export function SettingsPage() {
                     ))
                   )}
                 </div>
+
+                {workspace && workspace.members.find((m) => m.userId === user?.userId)?.role !== "owner" ? (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-4">
+                    <p className="text-sm font-medium text-foreground">Leave workspace</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Remove yourself from this workspace. You will no longer have access to its recordings, documents, and settings.
+                    </p>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="mt-3"
+                      onClick={async () => {
+                        try {
+                          await leaveWorkspace();
+                          showAppToast({
+                            title: "Left workspace",
+                            message: `You have left ${workspace.name}.`,
+                            variant: "success",
+                          });
+                          // Redirect to dashboard to load the new default workspace
+                          window.location.href = "/app/dashboard";
+                        } catch (err) {
+                          showAppToast({
+                            title: "Failed to leave workspace",
+                            message: err instanceof Error ? err.message : "Something went wrong.",
+                            variant: "error",
+                          });
+                        }
+                      }}
+                    >
+                      Leave {workspace.name}
+                    </Button>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           ) : null}

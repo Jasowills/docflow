@@ -12,7 +12,7 @@ interface Membership {
 }
 
 export function WorkspaceSwitcher() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshSession } = useAuth();
   const { listMemberships, switchWorkspace } = useApi();
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -31,12 +31,13 @@ export function WorkspaceSwitcher() {
     return () => document.removeEventListener("mousedown", handler);
   }, [isOpen]);
 
+  // Always fetch memberships on mount so the switcher is visible
   useEffect(() => {
-    if (!isOpen || memberships.length > 0) return;
+    if (memberships.length > 0) return;
     listMemberships()
       .then((result) => setMemberships(result))
       .catch(() => {});
-  }, [isOpen, memberships.length, listMemberships]);
+  }, [memberships.length, listMemberships]);
 
   const handleSwitch = useCallback(
     async (workspaceId: string) => {
@@ -44,13 +45,14 @@ export function WorkspaceSwitcher() {
       setIsSwitching(workspaceId);
       try {
         await switchWorkspace(workspaceId);
-        await refreshUser();
+        // Reissue JWT with the new workspaceId
+        await refreshSession();
         window.location.reload();
       } catch {
         setIsSwitching(null);
       }
     },
-    [user?.workspaceId, isSwitching, switchWorkspace, refreshUser],
+    [user?.workspaceId, isSwitching, switchWorkspace, refreshSession],
   );
 
   const currentWorkspace = memberships.find(
@@ -58,19 +60,7 @@ export function WorkspaceSwitcher() {
   );
   const currentName = currentWorkspace?.workspaceName || user?.workspaceName || "DocFlow";
 
-  if (memberships.length <= 1) {
-    return (
-      <div>
-        <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.26em] text-primary/75">
-          Workspace
-        </p>
-        <h2 className="mt-2 text-xl font-semibold tracking-tight text-foreground">
-          {currentName}
-        </h2>
-      </div>
-    );
-  }
-
+  // Always show the dropdown (even with 1 workspace, user can see their context)
   return (
     <div>
       <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.26em] text-primary/75">

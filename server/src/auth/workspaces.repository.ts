@@ -392,6 +392,34 @@ export class WorkspacesRepository {
     }
   }
 
+  async removeMember(workspaceId: string, userId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('workspace_members')
+      .delete()
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to remove member from workspace ${workspaceId}/${userId}: ${error.message}`);
+      throw new Error('Failed to leave workspace.');
+    }
+  }
+
+  async getOwnerCount(workspaceId: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .from('workspace_members')
+      .select('user_id', { count: 'exact', head: false })
+      .eq('workspace_id', workspaceId)
+      .eq('role', 'owner');
+
+    if (error) {
+      this.logger.error(`Failed to count workspace owners for ${workspaceId}: ${error.message}`);
+      throw new Error('Failed to check workspace ownership.');
+    }
+
+    return (data || []).length;
+  }
+
   async findInvitationByToken(token: string): Promise<{
     invitationId: string;
     workspaceId: string;

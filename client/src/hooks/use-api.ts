@@ -287,6 +287,17 @@ export function useApi() {
     [api],
   );
 
+  const leaveWorkspace = useCallback(
+    () =>
+      api<{ switchedToWorkspaceId: string | null }>(
+        "/workspaces/current/leave",
+        {
+          method: "DELETE",
+        },
+      ),
+    [api],
+  );
+
   const getDashboardSummary = useCallback(
     () => api<DashboardSummary>("/dashboard/summary"),
     [api],
@@ -461,6 +472,7 @@ export function useApi() {
     acceptWorkspaceInvitation,
     listMemberships,
     switchWorkspace,
+    leaveWorkspace,
     // Documents
     generateDocuments,
     listDocuments,
