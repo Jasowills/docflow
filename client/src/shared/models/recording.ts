@@ -89,6 +89,7 @@ export interface RecordingDocument extends Recording {
   userId: string;
   uploadedAtUtc: string;
   lastModifiedAtUtc?: string;
+  workspaceId?: string;
 }
 
 /** Lightweight summary returned by recordings list endpoints */

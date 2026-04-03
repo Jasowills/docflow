@@ -164,9 +164,9 @@ export class RecordingsService {
     if (!recording) {
       throw new NotFoundException(`Recording ${recordingId} not found`);
     }
-    if (recording.userId !== user.userId) {
-      // Only allow viewing recordings you own (cross-workspace protection)
-      throw new ForbiddenException('You do not have access to this recording.');
+    // Recordings are scoped to the workspace they were uploaded in
+    if (recording.workspaceId && user.workspaceId && recording.workspaceId !== user.workspaceId) {
+      throw new NotFoundException(`Recording ${recordingId} not found`);
     }
     return recording;
   }

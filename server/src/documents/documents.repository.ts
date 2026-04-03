@@ -78,6 +78,7 @@ export class DocumentsRepository {
       recordingName: String(data.recording_name || ''),
       productArea: String(data.product_area || ''),
       folder: typeof data.folder === 'string' ? data.folder : undefined,
+      workspaceId: typeof data.workspace_id === 'string' ? data.workspace_id : undefined,
     };
   }
 

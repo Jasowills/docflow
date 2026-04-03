@@ -36,6 +36,7 @@ export interface GeneratedDocument {
   recordingName: string;
   productArea: string;
   folder?: string;
+  workspaceId?: string;
 }
 
 /** Request to generate documentation */

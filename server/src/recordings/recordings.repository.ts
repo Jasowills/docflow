@@ -147,6 +147,7 @@ export class RecordingsRepository {
       uploadedAtUtc: String(row.uploaded_at_utc || ''),
       lastModifiedAtUtc:
         typeof row.last_modified_at_utc === 'string' ? row.last_modified_at_utc : undefined,
+      workspaceId: typeof row.workspace_id === 'string' ? row.workspace_id : undefined,
     };
   }
 }

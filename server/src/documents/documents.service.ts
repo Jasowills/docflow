@@ -246,6 +246,10 @@ export class DocumentsService {
     if (!doc) {
       throw new NotFoundException(`Document ${documentId} not found`);
     }
+    // Documents are scoped to the workspace they were generated in
+    if (doc.workspaceId && user.workspaceId && doc.workspaceId !== user.workspaceId) {
+      throw new NotFoundException(`Document ${documentId} not found`);
+    }
     return doc;
   }
 
