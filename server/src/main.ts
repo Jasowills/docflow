@@ -137,5 +137,10 @@ function isAllowedCorsOrigin(
     return true;
   }
 
+  // Allow any Vercel deployment preview URL
+  if (/^https:\/\/.*\.vercel\.app$/.test(origin)) {
+    return true;
+  }
+
   return false;
 }
