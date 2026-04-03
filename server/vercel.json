@@ -12,11 +12,23 @@
       "dest": "dist/main.js"
     }
   ],
-  "headers": {
-    "/api/realtime/events": {
-      "Cache-Control": "no-cache, no-transform",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no"
+  "headers": [
+    {
+      "source": "/api/realtime/events",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-transform"
+        },
+        {
+          "key": "Connection",
+          "value": "keep-alive"
+        },
+        {
+          "key": "X-Accel-Buffering",
+          "value": "no"
+        }
+      ]
     }
-  }
+  ]
 }
