@@ -7,6 +7,7 @@ interface ExtensionUploadTokenClaims {
   sub: string;
   email: string;
   name: string;
+  workspaceId: string;
   type: 'extension_upload';
 }
 
@@ -22,6 +23,7 @@ export class UploadTokenService {
       sub: user.userId,
       email: user.email,
       name: user.displayName || user.email,
+      workspaceId: user.workspaceId || '',
       type: 'extension_upload',
     };
 
@@ -65,6 +67,7 @@ export class UploadTokenService {
         userId: decoded.sub,
         email: decoded.email,
         displayName: decoded.name,
+        workspaceId: decoded.workspaceId || undefined,
         roles: [],
       };
     } catch {
