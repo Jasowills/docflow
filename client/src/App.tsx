@@ -27,6 +27,8 @@ import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
 import { TermsOfServicePage } from "./pages/TermsOfServicePage";
 import { InvitePage } from "./pages/InvitePage";
 import { JoinWorkspacePage } from "./pages/JoinWorkspacePage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
+import { PendingVerificationPage } from "./pages/PendingVerificationPage";
 import { Spinner } from "./components/ui/spinner";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -88,6 +90,8 @@ export default function App() {
         <Route path="/account-setup" element={<AccountSetupPage />} />
         <Route path="/invite" element={<InvitePage />} />
         <Route path="/join-workspace" element={<JoinWorkspacePage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/pending-verification" element={<PendingVerificationPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/terms" element={<TermsOfServicePage />} />
         <Route

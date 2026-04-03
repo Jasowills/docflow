@@ -113,17 +113,23 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       if (isRegister) {
-        await register({
+        const result = await register({
           displayName: displayName.trim(),
           email: email.trim(),
           password,
           accountType,
           teamName: accountType === "team" ? teamName.trim() : undefined,
         });
+        // Check if email verification is required
+        if (result && "verificationPending" in result) {
+          sessionStorage.setItem("pendingVerificationEmail", email.trim());
+          window.location.href = "/pending-verification";
+          return;
+        }
       } else {
         await login({ email: email.trim(), password });
       }
-      // Redirect after registration
+      // Redirect after normal registration
       const finalRedirect = redirectUrl || sessionStorage.getItem("authRedirectUrl");
       if (finalRedirect) {
         sessionStorage.removeItem("authRedirectUrl");

@@ -22,12 +22,14 @@ export interface AuthUser {
   workspaceName?: string;
   onboardingCompletedAt?: string;
   onboardingState?: Record<string, unknown>;
+  emailVerified?: boolean;
 }
 
 interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user: AuthUser;
+  verificationPending?: boolean;
 }
 
 interface RegisterPayload {
@@ -50,7 +52,7 @@ interface AuthContextValue {
   login: (payload?: LoginPayload) => Promise<void>;
   loginWithGoogle: (clientId: string, callbackUrl: string) => void;
   handleGoogleCallback: (code: string) => Promise<void>;
-  register: (payload?: RegisterPayload) => Promise<void>;
+  register: (payload?: RegisterPayload) => Promise<AuthResponse | void>;
   logout: () => void;
   getAccessToken: () => Promise<string>;
   refreshUser: () => Promise<void>;
@@ -122,6 +124,10 @@ function JwtAuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Registration details are required.");
       }
       const response = await fetchJson<AuthResponse>("/auth/register", payload);
+      if (response.verificationPending) {
+        // Account created but requires email verification — don't persist auth
+        return response;
+      }
       persistAuth(response);
     },
     [persistAuth],

@@ -16,4 +16,7 @@ export interface AuthUserRecord {
   lastLoginAtUtc?: string;
   onboardingCompletedAt?: string;
   onboardingState?: Record<string, unknown>;
+  emailVerified: boolean;
+  emailVerificationToken?: string;
+  emailVerificationExpiresAt?: string;
 }

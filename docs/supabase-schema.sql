@@ -14,7 +14,10 @@ create table if not exists public.docflow_users (
 
 alter table public.docflow_users
   add column if not exists onboarding_completed_at timestamptz,
-  add column if not exists onboarding_state jsonb not null default '{}'::jsonb;
+  add column if not exists onboarding_state jsonb not null default '{}'::jsonb,
+  add column if not exists email_verified boolean not null default false,
+  add column if not exists email_verification_token text,
+  add column if not exists email_verification_expires_at timestamptz;
 
 create table if not exists public.workspaces (
   workspace_id text primary key,
@@ -136,7 +139,7 @@ create table if not exists public.recordings (
   events jsonb not null default '[]'::jsonb,
   speech_transcripts jsonb not null default '[]'::jsonb,
   screenshots jsonb not null default '[]'::jsonb,
-  user_id text not null references public.docflow_users(user_id),
+  user_id text,
   workspace_id text references public.workspaces(workspace_id),
   uploaded_at_utc timestamptz not null default timezone('utc', now()),
   last_modified_at_utc timestamptz,
@@ -289,6 +292,10 @@ alter table public.workspace_invitations
 -- Migrate existing 'viewer' members to 'editor'
 update public.workspace_members set role = 'editor' where role = 'viewer';
 update public.workspace_invitations set role = 'editor' where role = 'viewer';
+
+-- Make recordings.user_id nullable for account deletion preservation
+alter table public.recordings
+  alter column user_id drop not null;
 
 -- ────────────────────────────────────────────────────────────
 -- Migrations: add workspace_id to recordings and documents

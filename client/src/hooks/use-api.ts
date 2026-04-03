@@ -298,6 +298,15 @@ export function useApi() {
     [api],
   );
 
+  const resendVerification = useCallback(
+    (email?: string) =>
+      api<void>("/auth/resend-verification", {
+        method: "POST",
+        body: email ? { email } : undefined,
+      }),
+    [api],
+  );
+
   const getDashboardSummary = useCallback(
     () => api<DashboardSummary>("/dashboard/summary"),
     [api],
@@ -473,6 +482,7 @@ export function useApi() {
     listMemberships,
     switchWorkspace,
     leaveWorkspace,
+    resendVerification,
     // Documents
     generateDocuments,
     listDocuments,

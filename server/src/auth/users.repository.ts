@@ -27,6 +27,21 @@ export class UsersRepository {
     return data ? this.mapRow(data as Record<string, unknown>) : null;
   }
 
+  async findByVerificationToken(token: string): Promise<AuthUserRecord | null> {
+    const { data, error } = await this.supabase
+      .from("docflow_users")
+      .select("*")
+      .eq("email_verification_token", token)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to find user by verification token: ${error.message}`);
+      return null;
+    }
+
+    return data ? this.mapRow(data as Record<string, unknown>) : null;
+  }
+
   async findByExternalIdentity(
     provider: AuthUserRecord["externalProvider"],
     externalSubject: string,
@@ -82,6 +97,9 @@ export class UsersRepository {
       last_login_at_utc: user.lastLoginAtUtc || null,
       onboarding_completed_at: user.onboardingCompletedAt || null,
       onboarding_state: user.onboardingState || {},
+      email_verified: user.emailVerified || false,
+      email_verification_token: user.emailVerificationToken || null,
+      email_verification_expires_at: user.emailVerificationExpiresAt || null,
     });
 
     if (error) {
@@ -264,7 +282,58 @@ export class UsersRepository {
     }
   }
 
+  async setEmailVerificationToken(
+    userId: string,
+    token: string,
+    expiresAt: string,
+  ): Promise<void> {
+    const { error } = await this.supabase
+      .from("docflow_users")
+      .update({
+        email_verification_token: token,
+        email_verification_expires_at: expiresAt,
+      })
+      .eq("user_id", userId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to set email verification token for ${userId}: ${error.message}`,
+      );
+      throw mapSupabaseUserError(error.message, "set email verification token");
+    }
+  }
+
+  async verifyEmail(userId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("docflow_users")
+      .update({
+        email_verified: true,
+        email_verification_token: null,
+        email_verification_expires_at: null,
+      })
+      .eq("user_id", userId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to verify email for ${userId}: ${error.message}`,
+      );
+      throw mapSupabaseUserError(error.message, "verify email");
+    }
+  }
+
   async delete(userId: string): Promise<void> {
+    // Nullify foreign keys that were changed from ON DELETE CASCADE
+    // so the user can be deleted while preserving their data
+    await this.supabase
+      .from('recordings')
+      .update({ user_id: null })
+      .eq('user_id', userId);
+
+    await this.supabase
+      .from('documents')
+      .update({ created_by: null })
+      .eq('created_by', userId);
+
     const { error } = await this.supabase
       .from("docflow_users")
       .delete()
@@ -314,6 +383,15 @@ export class UsersRepository {
         row.onboarding_state && typeof row.onboarding_state === "object"
           ? (row.onboarding_state as Record<string, unknown>)
           : {},
+      emailVerified: !!row.email_verified,
+      emailVerificationToken:
+        typeof row.email_verification_token === "string"
+          ? row.email_verification_token
+          : undefined,
+      emailVerificationExpiresAt:
+        typeof row.email_verification_expires_at === "string"
+          ? row.email_verification_expires_at
+          : undefined,
     };
   }
 }

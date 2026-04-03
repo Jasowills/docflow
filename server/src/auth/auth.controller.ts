@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser, Public } from "./decorators";
 import { AuthService } from "./auth.service";
@@ -144,6 +144,29 @@ export class AuthController {
   @ApiOperation({ summary: "Delete the authenticated user's account" })
   deleteAccount(@CurrentUser() user: UserContext) {
     return this.authService.deleteAccount(user.userId);
+  }
+
+  @Public()
+  @Get("verify-email")
+  @ApiOperation({ summary: "Verify email address with a token" })
+  async verifyEmail(@Query("token") token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  @Public()
+  @Post("resend-verification")
+  @ApiOperation({ summary: "Resend email verification email" })
+  async resendVerification(
+    @CurrentUser() user?: UserContext,
+    @Body() body?: { email?: string },
+  ) {
+    if (user) {
+      return this.authService.resendVerification(user.userId);
+    }
+    if (!body?.email) {
+      throw new BadRequestException('Email is required.');
+    }
+    return this.authService.resendVerificationByEmail(body.email);
   }
 }
 

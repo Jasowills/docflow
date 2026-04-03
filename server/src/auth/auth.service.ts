@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from "@nestjs/common";
 import { sign, verify, type Secret, type SignOptions } from "jsonwebtoken";
@@ -12,6 +13,7 @@ import { UsersRepository } from "./users.repository";
 import { hashPassword, verifyPassword } from "./password.util";
 import type { LoginDto, RegisterDto } from "./dto/auth.dto";
 import { WorkspacesRepository } from "./workspaces.repository";
+import { EmailService } from "../common/services/email.service";
 
 interface RefreshTokenClaims {
   sub: string;
@@ -21,9 +23,12 @@ interface RefreshTokenClaims {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly workspacesRepository: WorkspacesRepository,
+    private readonly emailService: EmailService,
     private readonly config: AppConfig,
   ) {}
 
@@ -47,6 +52,8 @@ export class AuthService {
       dto.accountType === "team"
         ? dto.teamName!.trim()
         : buildPersonalWorkspaceName(dto.displayName, email);
+    const verificationToken = uuidv4();
+    const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24h
     const user: AuthUserRecord = {
       userId,
       email,
@@ -59,6 +66,9 @@ export class AuthService {
       createdAtUtc: now,
       lastLoginAtUtc: now,
       onboardingState: {},
+      emailVerified: false,
+      emailVerificationToken: verificationToken,
+      emailVerificationExpiresAt: verificationExpiresAt,
     };
 
     await this.usersRepository.insert(user);
@@ -70,7 +80,32 @@ export class AuthService {
       accountType: dto.accountType,
       workspaceName,
     });
-    return this.buildAuthResponse(user, workspace);
+
+    // Send verification email
+    void this.sendVerificationEmail(userId, email, dto.displayName.trim(), verificationToken);
+
+    // Return verification pending instead of full auth — user must verify first
+    return {
+      verificationPending: true,
+      email,
+      message: 'Account created. Please check your email to verify your account.',
+    };
+  }
+
+  private async sendVerificationEmail(
+    userId: string,
+    email: string,
+    displayName: string,
+    token: string,
+  ): Promise<void> {
+    const verificationUrl = `${this.config.docflowWebBaseUrl}/verify-email?token=${token}`;
+    await this.emailService.sendVerificationEmail({
+      to: email,
+      displayName,
+      verificationUrl,
+    }).catch((err) => {
+      this.logger.warn(`Failed to send verification email to ${email}: ${err instanceof Error ? err.message : String(err)}`);
+    });
   }
 
   async login(dto: LoginDto) {
@@ -180,6 +215,7 @@ export class AuthService {
         createdAtUtc: now,
         lastLoginAtUtc: now,
         onboardingState: { needsAccountSetup: true },
+        emailVerified: true, // Google-verified emails are trusted
       };
 
       await this.usersRepository.insert(newUser);
@@ -229,6 +265,7 @@ export class AuthService {
       workspaceName: workspace?.name,
       onboardingCompletedAt: user.onboardingCompletedAt,
       onboardingState: user.onboardingState || {},
+      emailVerified: user.emailVerified,
     };
 
     return response;
@@ -259,6 +296,72 @@ export class AuthService {
     });
 
     return this.me(userId);
+  }
+
+  async verifyEmail(token: string): Promise<{ verified: boolean; message: string }> {
+    // Find user by verification token
+    const user = await this.usersRepository.findByVerificationToken(token);
+    if (!user) {
+      throw new BadRequestException('Invalid or expired verification token.');
+    }
+
+    // Check expiry
+    if (user.emailVerificationExpiresAt) {
+      const expiresAt = new Date(user.emailVerificationExpiresAt).getTime();
+      if (expiresAt < Date.now()) {
+        throw new BadRequestException('Verification token has expired. Please request a new verification email.');
+      }
+    }
+
+    await this.usersRepository.verifyEmail(user.userId);
+    return { verified: true, message: 'Email verified successfully.' };
+  }
+
+  async resendVerification(userId: string): Promise<void> {
+    const user = await this.usersRepository.findByUserId(userId);
+    if (!user) {
+      throw new BadRequestException('User not found.');
+    }
+    if (user.emailVerified) {
+      throw new BadRequestException('Email is already verified.');
+    }
+
+    const token = uuidv4();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    await this.usersRepository.setEmailVerificationToken(user.userId, token, expiresAt);
+
+    void this.sendVerificationEmail(
+      user.userId,
+      user.email,
+      user.displayName,
+      token,
+    ).catch((err) => {
+      this.logger.warn(`Failed to resend verification email: ${err instanceof Error ? err.message : String(err)}`);
+    });
+  }
+
+  async resendVerificationByEmail(email: string): Promise<void> {
+    const user = await this.usersRepository.findByEmail(email);
+    if (!user) {
+      // Don't leak whether the email exists
+      return;
+    }
+    if (user.emailVerified) {
+      throw new BadRequestException('Email is already verified.');
+    }
+
+    const token = uuidv4();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    await this.usersRepository.setEmailVerificationToken(user.userId, token, expiresAt);
+
+    void this.sendVerificationEmail(
+      user.userId,
+      user.email,
+      user.displayName,
+      token,
+    ).catch((err) => {
+      this.logger.warn(`Failed to resend verification email: ${err instanceof Error ? err.message : String(err)}`);
+    });
   }
 
   async deleteAccount(userId: string): Promise<void> {
@@ -468,6 +571,7 @@ export class AuthService {
         createdAtUtc: now,
         lastLoginAtUtc: now,
         onboardingState: {},
+        emailVerified: true, // Logto already verifies emails
       };
 
       await this.usersRepository.insert(createdUser);
