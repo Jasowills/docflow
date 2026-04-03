@@ -29,6 +29,7 @@ import {
 } from "../../lib/extension-bridge";
 import { APP_TOAST_EVENT, type AppToastDetail } from "../../lib/app-toast";
 import { pushDebugTrace } from "../../lib/debug-trace";
+import { WorkspaceSwitcher } from "../WorkspaceSwitcher";
 
 type AppToastItem = {
   id: string;
@@ -316,17 +317,7 @@ export function Layout() {
         <div className="hidden md:block">
           <img src={logo} alt="DOCFLOW" className="h-8 w-auto object-contain" />
         </div>
-        <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.26em] text-primary/75">
-          Workspace
-        </p>
-        <h2 className="mt-2 text-xl font-semibold tracking-tight text-foreground">
-          {user?.workspaceName || "DocFlow"}
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          {user?.accountType === "team"
-            ? "Shared operations for product, QA, and delivery teams."
-            : "Personal operations for workflow capture and generation."}
-        </p>
+        <WorkspaceSwitcher />
       </div>
 
       <nav className="grid gap-1 p-4">

@@ -40,3 +40,4 @@ packages/extension/src/Inter-Italic-VariableFont_opsz,wght.ttf
 packages/extension/Routectrl-recorder/static/
 .vercel
 .env*.local
+.qwen

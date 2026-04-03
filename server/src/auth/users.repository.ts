@@ -216,6 +216,54 @@ export class UsersRepository {
     }
   }
 
+  async updateDefaultWorkspace(
+    userId: string,
+    defaultWorkspaceId: string,
+  ): Promise<void> {
+    const { error } = await this.supabase
+      .from("docflow_users")
+      .update({ default_workspace_id: defaultWorkspaceId })
+      .eq("user_id", userId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to update default workspace for ${userId}: ${error.message}`,
+      );
+      throw mapSupabaseUserError(error.message, "update default workspace");
+    }
+  }
+
+  async clearAccountSetupRequired(userId: string): Promise<void> {
+    const { data, error } = await this.supabase
+      .from("docflow_users")
+      .select("onboarding_state")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Failed to read onboarding state for ${userId}: ${error.message}`,
+      );
+      throw mapSupabaseUserError(error.message, "clear account setup");
+    }
+
+    const currentState = data?.onboarding_state as Record<string, unknown> | null;
+    const { needsAccountSetup: _, ...rest } = currentState || {};
+
+    const updateState = rest || {};
+    const { error: updateError } = await this.supabase
+      .from("docflow_users")
+      .update({ onboarding_state: updateState })
+      .eq("user_id", userId);
+
+    if (updateError) {
+      this.logger.error(
+        `Failed to clear account setup for ${userId}: ${updateError.message}`,
+      );
+      throw mapSupabaseUserError(updateError.message, "clear account setup");
+    }
+  }
+
   async delete(userId: string): Promise<void> {
     const { error } = await this.supabase
       .from("docflow_users")

@@ -42,6 +42,20 @@ export function GoogleCallbackPage() {
   }, [searchParams, handleGoogleCallback]);
 
   if (!isProcessing && isAuthenticated) {
+    const storedRedirect = sessionStorage.getItem("authRedirectUrl");
+    const inviteToken = sessionStorage.getItem("invitationToken");
+    if (storedRedirect && inviteToken) {
+      sessionStorage.removeItem("authRedirectUrl");
+      sessionStorage.setItem("skipAccountSetupCheck", "1");
+      window.location.href = `/join-workspace?token=${encodeURIComponent(inviteToken)}`;
+      return null;
+    }
+    if (storedRedirect) {
+      sessionStorage.removeItem("authRedirectUrl");
+      sessionStorage.setItem("skipAccountSetupCheck", "1");
+      window.location.href = storedRedirect;
+      return null;
+    }
     return <Navigate to="/app" replace />;
   }
 

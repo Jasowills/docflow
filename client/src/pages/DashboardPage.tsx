@@ -5,12 +5,14 @@ import {
   ArrowRight,
   Download,
   FileText,
+  Plus,
   Sparkles,
   Upload,
   Users,
 } from "lucide-react";
 import type { DashboardSummary } from "@docflow/shared";
 import { useApi } from "../hooks/use-api";
+import { useAuth } from "../auth/auth-context";
 import { useClientDataStore } from "../state/client-data-store";
 import {
   Card,
@@ -26,6 +28,8 @@ import { Spinner } from "../components/ui/spinner";
 export function DashboardPage() {
   const { getDashboardSummary, getLatestExtensionRelease } = useApi();
   const { extensionRelease, ensureExtensionRelease } = useClientDataStore();
+  const { user } = useAuth();
+  const { inviteWorkspaceMember } = useApi();
   const headerRef = useRef<HTMLDivElement | null>(null);
   const getDashboardSummaryRef = useRef(getDashboardSummary);
   const getLatestExtensionReleaseRef = useRef(getLatestExtensionRelease);
@@ -411,6 +415,11 @@ export function DashboardPage() {
             </CardContent>
           </Card>
 
+          <InviteMembersCard
+            canInvite={!!user?.roles?.some((r) => r === "owner" || r === "admin")}
+            onInvite={inviteWorkspaceMember}
+          />
+
           <Card>
             <CardHeader>
               <CardTitle>Setup status</CardTitle>
@@ -697,6 +706,96 @@ function ActivityCard({
             </Link>
           ))
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function InviteMembersCard({
+  canInvite,
+  onInvite,
+}: {
+  canInvite: boolean;
+  onInvite: (request: { email: string; role: "admin" | "editor" }) => Promise<unknown>;
+}) {
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"admin" | "editor">("editor");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!canInvite) return null;
+
+  const handleSubmit = async () => {
+    setError(null);
+    setResult(null);
+    if (!email.trim()) {
+      setError("Email is required.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onInvite({ email: email.trim(), role });
+      setResult(`${email} invited as ${role}.`);
+      setEmail("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send invitation.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          Invite members
+        </CardTitle>
+        <CardDescription>
+          Add someone to the workspace by email.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Email
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="teammate@example.com"
+            className="h-9 w-full rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none focus:border-primary"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Role
+          </label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as "admin" | "editor")}
+            className="h-9 w-full rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none focus:border-primary"
+          >
+            <option value="editor">Editor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <Button
+          className="w-full"
+          onClick={() => void handleSubmit()}
+          disabled={isSubmitting}
+        >
+          <Plus className="h-4 w-4" />
+          {isSubmitting ? "Sending..." : "Send invitation"}
+        </Button>
+        {result ? (
+          <p className="text-xs text-emerald-400">{result}</p>
+        ) : null}
+        {error ? (
+          <p className="text-xs text-destructive">{error}</p>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -51,6 +51,12 @@ const settingsSections: Array<{
   { key: "configuration", label: "Configuration", icon: Settings2 },
 ];
 
+function getVisibleSections(userRoles?: string[]) {
+  const isAdmin = !!userRoles?.some((r) => r === "owner" || r === "admin");
+  if (isAdmin) return settingsSections;
+  return settingsSections.filter((s) => s.key !== "configuration");
+}
+
 export function SettingsPage() {
   const { user, refreshUser } = useAuth();
   const { logout } = useAuth();
@@ -78,9 +84,10 @@ export function SettingsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const requestedSection = searchParams.get("section") as SettingsSection | null;
-  const section = settingsSections.some((item) => item.key === requestedSection)
+  const visibleSections = getVisibleSections(user?.roles);
+  const section = visibleSections.some((item) => item.key === requestedSection)
     ? (requestedSection as SettingsSection)
-    : "workspace";
+    : visibleSections[0]?.key || "workspace";
   const canManageWorkspace = !!user?.roles?.some((role) => role === "owner" || role === "admin");
 
   const loadPage = useCallback(async () => {
@@ -130,7 +137,7 @@ export function SettingsPage() {
       return;
     }
     try {
-      const invitation = await inviteWorkspaceMember({ email: inviteEmail.trim(), role: 'viewer' });
+      const invitation = await inviteWorkspaceMember({ email: inviteEmail.trim(), role: 'editor' });
       setWorkspace((current) =>
         current ? { ...current, invitations: [invitation, ...current.invitations] } : current,
       );
@@ -183,7 +190,7 @@ export function SettingsPage() {
 
       <div className="app-settings-shell">
         <aside className="app-settings-nav">
-          {settingsSections.map((item) => {
+          {visibleSections.map((item) => {
             const Icon = item.icon;
             const active = section === item.key;
             return (
@@ -272,13 +279,12 @@ export function SettingsPage() {
                               value={member.role}
                               onChange={(event) =>
                                 void updateWorkspaceMemberRole(member.userId, {
-                                  role: event.target.value as "owner" | "admin" | "editor" | "viewer",
+                                  role: event.target.value as "owner" | "admin" | "editor",
                                 }).then(() => void loadPage())
                               }
                             >
                               <option value="admin">admin</option>
                               <option value="editor">editor</option>
-                              <option value="viewer">viewer</option>
                             </select>
                           ) : null}
                         </div>

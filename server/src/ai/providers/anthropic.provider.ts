@@ -45,7 +45,7 @@ export class AnthropicProvider implements ITextGenerationProvider {
     });
 
     const textBlock = response.content.find(
-      (block): block is { type: 'text'; text: string } => block.type === 'text',
+      (block: Anthropic.ContentBlock): block is { type: 'text'; text: string } => block.type === 'text',
     );
     return {
       content: textBlock?.type === 'text' ? textBlock.text : '',

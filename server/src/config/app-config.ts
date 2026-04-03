@@ -309,4 +309,30 @@ export class AppConfig {
   get resendApiKey(): string {
     return this.configService.get<string>("RESEND_API_KEY", "");
   }
+
+  get smtpHost(): string {
+    return this.configService.get<string>("SMTP_HOST", "");
+  }
+
+  get smtpPort(): number | undefined {
+    const port = this.configService.get<string>("SMTP_PORT", "");
+    return port ? parseInt(port, 10) : undefined;
+  }
+
+  get smtpSecure(): boolean {
+    const val = this.configService.get<string>("SMTP_SECURE", "false");
+    return val === "true";
+  }
+
+  get smtpUser(): string {
+    return this.configService.get<string>("SMTP_USER", "");
+  }
+
+  get smtpPass(): string {
+    return this.configService.get<string>("SMTP_PASS", "");
+  }
+
+  get smtpFrom(): string {
+    return this.configService.get<string>("SMTP_FROM", "");
+  }
 }

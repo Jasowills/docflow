@@ -36,7 +36,7 @@ create table if not exists public.workspace_members (
   user_id text not null references public.docflow_users(user_id) on delete cascade,
   email text not null,
   display_name text not null,
-  role text not null check (role in ('owner', 'admin', 'editor', 'viewer')),
+  role text not null check (role in ('owner', 'admin', 'editor')),
   joined_at_utc timestamptz not null default timezone('utc', now()),
   primary key (workspace_id, user_id)
 );
@@ -45,7 +45,7 @@ create table if not exists public.workspace_invitations (
   invitation_id text primary key,
   workspace_id text not null references public.workspaces(workspace_id) on delete cascade,
   email text not null,
-  role text not null check (role in ('admin', 'editor', 'viewer')),
+  role text not null check (role in ('admin', 'editor')),
   invited_by_user_id text not null,
   invited_at_utc timestamptz not null default timezone('utc', now()),
   accepted_at_utc timestamptz,
@@ -116,7 +116,7 @@ create table if not exists public.test_plan_runs (
   target_environment text,
   notes text,
   created_at_utc timestamptz not null default timezone('utc', now()),
-  created_by text not null references public.docflow_users(user_id) on delete cascade,
+  created_by text not null,
   started_at_utc timestamptz,
   completed_at_utc timestamptz,
   total_tests integer,
@@ -136,7 +136,7 @@ create table if not exists public.recordings (
   events jsonb not null default '[]'::jsonb,
   speech_transcripts jsonb not null default '[]'::jsonb,
   screenshots jsonb not null default '[]'::jsonb,
-  user_id text not null references public.docflow_users(user_id) on delete cascade,
+  user_id text not null references public.docflow_users(user_id),
   uploaded_at_utc timestamptz not null default timezone('utc', now()),
   last_modified_at_utc timestamptz,
   event_count integer not null default 0,
@@ -161,7 +161,7 @@ create table if not exists public.documents (
   content text not null,
   locale text not null default 'en-AU',
   created_at_utc timestamptz not null default timezone('utc', now()),
-  created_by text not null references public.docflow_users(user_id) on delete cascade,
+  created_by text not null,
   created_by_name text,
   last_modified_at_utc timestamptz,
   last_modified_by text,
@@ -225,3 +225,65 @@ create index if not exists idx_notification_reads_user_id
 
 create index if not exists idx_notification_reads_audit_log_id
   on public.notification_reads(audit_log_id);
+
+-- ────────────────────────────────────────────────────────────
+-- Migrations: relax cascade deletes so deleting a user preserves data
+-- ────────────────────────────────────────────────────────────
+
+-- Recordings: keep recordings when the creator deletes their account
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'recordings_user_id_fkey'
+  ) then
+    alter table public.recordings drop constraint recordings_user_id_fkey;
+    alter table public.recordings
+      add constraint recordings_user_id_fkey
+      foreign key (user_id) references public.docflow_users(user_id);
+  end if;
+end $$;
+
+-- Documents: keep documents when the author deletes their account
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'documents_created_by_fkey'
+  ) then
+    alter table public.documents drop constraint documents_created_by_fkey;
+    alter table public.documents
+      add constraint documents_created_by_fkey
+      foreign key (created_by) references public.docflow_users(user_id);
+  end if;
+end $$;
+
+-- Test plan runs: keep run history when a user deletes their account
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'test_plan_runs_created_by_fkey'
+  ) then
+    alter table public.test_plan_runs drop constraint test_plan_runs_created_by_fkey;
+    alter table public.test_plan_runs
+      add constraint test_plan_runs_created_by_fkey
+      foreign key (created_by) references public.docflow_users(user_id);
+  end if;
+end $$;
+
+-- ────────────────────────────────────────────────────────────
+-- Migrations: remove 'viewer' role
+-- ────────────────────────────────────────────────────────────
+
+alter table public.workspace_members
+  drop constraint if exists workspace_members_role_check,
+  add constraint workspace_members_role_check check (role in ('owner', 'admin', 'editor'));
+
+alter table public.workspace_invitations
+  drop constraint if exists workspace_invitations_role_check,
+  add constraint workspace_invitations_role_check check (role in ('admin', 'editor'));
+
+-- Migrate existing 'viewer' members to 'editor'
+update public.workspace_members set role = 'editor' where role = 'viewer';
+update public.workspace_invitations set role = 'editor' where role = 'viewer';

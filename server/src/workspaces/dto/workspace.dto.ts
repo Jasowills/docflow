@@ -6,14 +6,20 @@ export class InviteWorkspaceMemberDto {
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ enum: ['admin', 'editor', 'viewer'] })
-  @IsIn(['admin', 'editor', 'viewer'])
-  role!: 'admin' | 'editor' | 'viewer';
+  @ApiProperty({ enum: ['admin', 'editor'] })
+  @IsIn(['admin', 'editor'])
+  role!: 'admin' | 'editor';
 }
 
 export class UpdateWorkspaceMemberRoleDto {
-  @ApiProperty({ enum: ['owner', 'admin', 'editor', 'viewer'] })
+  @ApiProperty({ enum: ['owner', 'admin', 'editor'] })
   @IsString()
-  @IsIn(['owner', 'admin', 'editor', 'viewer'])
-  role!: 'owner' | 'admin' | 'editor' | 'viewer';
+  @IsIn(['owner', 'admin', 'editor'])
+  role!: 'owner' | 'admin' | 'editor';
+}
+
+export class SwitchWorkspaceDto {
+  @ApiProperty({ description: 'The workspace ID to switch to' })
+  @IsString()
+  workspaceId!: string;
 }

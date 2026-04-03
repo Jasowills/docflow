@@ -72,6 +72,7 @@ export class WorkspacesRepository {
       workspaceId: params.workspaceId,
       name: params.workspaceName,
       accountType: params.accountType,
+      createdByUserId: params.ownerUserId,
       githubInstallationId: undefined,
       githubConnectedAtUtc: undefined,
       githubAccountLogin: undefined,
@@ -81,7 +82,7 @@ export class WorkspacesRepository {
   async findSummaryById(workspaceId: string): Promise<WorkspaceSummary | null> {
     const { data, error } = await this.supabase
       .from('workspaces')
-      .select('workspace_id, name, account_type, github_installation_id, github_connected_at_utc, github_account_login')
+      .select('workspace_id, name, account_type, created_by_user_id, github_installation_id, github_connected_at_utc, github_account_login')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
@@ -96,6 +97,7 @@ export class WorkspacesRepository {
       workspaceId: data.workspace_id as string,
       name: data.name as string,
       accountType: data.account_type as AccountType,
+      createdByUserId: data.created_by_user_id as string,
       githubInstallationId:
         typeof data.github_installation_id === 'number' ? data.github_installation_id : undefined,
       githubConnectedAtUtc:
@@ -125,12 +127,44 @@ export class WorkspacesRepository {
   }
 
   async renameWorkspace(workspaceId: string, name: string): Promise<void> {
+    const current = await this.findSummaryById(workspaceId);
+    if (!current) {
+      this.logger.error(`Workspace ${workspaceId} not found for rename`);
+      throw new Error('Failed to rename workspace.');
+    }
+
+    const newName = name.trim();
+
+    // Skip if the name is already set
+    if (current.name === newName) {
+      return;
+    }
+
+    let newSlug = slugifyWorkspaceName(newName);
+
+    // If the target slug is already taken by another workspace, append a short suffix
+    const slugConflict = await this.supabase
+      .from('workspaces')
+      .select('workspace_id')
+      .eq('slug', newSlug)
+      .neq('workspace_id', workspaceId)
+      .maybeSingle();
+
+    if (slugConflict.error) {
+      this.logger.error(`Failed to check slug availability: ${slugConflict.error.message}`);
+      throw new Error('Failed to rename workspace.');
+    }
+
+    if (slugConflict.data) {
+      newSlug = `${newSlug.slice(0, 60)}-${uuidv4().slice(0, 8)}`;
+    }
+
     const now = new Date().toISOString();
     const { error } = await this.supabase
       .from('workspaces')
       .update({
-        name: name.trim(),
-        slug: slugifyWorkspaceName(name),
+        name: newName,
+        slug: newSlug,
         updated_at_utc: now,
       })
       .eq('workspace_id', workspaceId);
@@ -189,6 +223,36 @@ export class WorkspacesRepository {
       role: row.role as WorkspaceMember['role'],
       joinedAtUtc: String(row.joined_at_utc),
     }));
+  }
+
+  async listUserMemberships(userId: string): Promise<{
+    workspaceId: string;
+    workspaceName: string;
+    accountType: AccountType;
+    role: WorkspaceMember['role'];
+    joinedAtUtc: string;
+  }[]> {
+    const { data, error } = await this.supabase
+      .from('workspace_members')
+      .select('workspace_id, email, display_name, role, joined_at_utc, workspaces(workspace_id, name, account_type)')
+      .eq('user_id', userId)
+      .order('joined_at_utc', { ascending: false });
+
+    if (error) {
+      this.logger.error(`Failed to list memberships for ${userId}: ${error.message}`);
+      throw new Error('Failed to load workspace memberships.');
+    }
+
+    return (data || []).map((row) => {
+      const ws = (row.workspaces as unknown as { workspace_id: string; name: string; account_type: string } | null);
+      return {
+        workspaceId: ws?.workspace_id ? String(ws.workspace_id) : String(row.workspace_id),
+        workspaceName: ws?.name ? String(ws.name) : 'Unknown',
+        accountType: (ws?.account_type as AccountType) || 'individual',
+        role: row.role as WorkspaceMember['role'],
+        joinedAtUtc: String(row.joined_at_utc),
+      };
+    });
   }
 
   async getMemberRole(workspaceId: string, userId: string): Promise<WorkspaceMember['role'] | null> {
@@ -314,6 +378,91 @@ export class WorkspacesRepository {
     if (error) {
       this.logger.error(`Failed to revoke invitation ${invitationId}: ${error.message}`);
       throw new Error('Failed to revoke workspace invitation.');
+    }
+  }
+
+  async findInvitationByToken(token: string): Promise<{
+    invitationId: string;
+    workspaceId: string;
+    email: string;
+    role: WorkspaceInvitation['role'];
+    invitedByUserId: string;
+    invitedAtUtc: string;
+    acceptedAtUtc?: string;
+    status: WorkspaceInvitation['status'];
+    workspaceName: string;
+    inviterDisplayName: string;
+  } | null> {
+    const { data, error } = await this.supabase
+      .from('workspace_invitations')
+      .select('invitation_id, workspace_id, email, role, invited_by_user_id, invited_at_utc, accepted_at_utc, status, workspaces(name)')
+      .eq('invitation_id', token)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to fetch invitation by token: ${error.message}`);
+      throw new Error('Failed to load invitation.');
+    }
+
+    if (!data) return null;
+
+    // Fetch inviter display name
+    const { data: inviterData } = await this.supabase
+      .from('docflow_users')
+      .select('display_name')
+      .eq('user_id', data.invited_by_user_id)
+      .maybeSingle();
+
+    return {
+      invitationId: String(data.invitation_id),
+      workspaceId: String(data.workspace_id),
+      email: String(data.email),
+      role: data.role as WorkspaceInvitation['role'],
+      invitedByUserId: String(data.invited_by_user_id),
+      invitedAtUtc: String(data.invited_at_utc),
+      acceptedAtUtc: typeof data.accepted_at_utc === 'string' ? data.accepted_at_utc : undefined,
+      status: data.status as WorkspaceInvitation['status'],
+      workspaceName: ((data.workspaces as unknown as { name: string } | null)?.name) || 'Unknown',
+      inviterDisplayName: inviterData?.display_name ? String(inviterData.display_name) : 'Someone',
+    };
+  }
+
+  async acceptInvitation(workspaceId: string, invitationId: string): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await this.supabase
+      .from('workspace_invitations')
+      .update({ status: 'accepted', accepted_at_utc: now })
+      .eq('workspace_id', workspaceId)
+      .eq('invitation_id', invitationId);
+
+    if (error) {
+      this.logger.error(`Failed to accept invitation ${invitationId}: ${error.message}`);
+      throw new Error('Failed to accept invitation.');
+    }
+  }
+
+  async addMemberFromInvitation(
+    invitation: {
+      workspaceId: string;
+      email: string;
+      role: WorkspaceInvitation['role'];
+    },
+    userId: string,
+    displayName: string,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await this.supabase.from('workspace_members').insert({
+      workspace_id: invitation.workspaceId,
+      user_id: userId,
+      email: invitation.email,
+      display_name: displayName,
+      role: invitation.role,
+      joined_at_utc: now,
+    });
+
+    if (error) {
+      this.logger.error(`Failed to add member from invitation: ${error.message}`);
+      throw new Error('Failed to add workspace member.');
     }
   }
 

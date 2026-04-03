@@ -1,9 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { UserContext } from '@docflow/shared';
-import { CurrentUser, Roles } from '../auth/decorators';
+import type { UserContext, WorkspaceSummary } from '@docflow/shared';
+import { CurrentUser, Public, Roles } from '../auth/decorators';
 import { RolesGuard } from '../auth/roles.guard';
-import { InviteWorkspaceMemberDto, UpdateWorkspaceMemberRoleDto } from './dto/workspace.dto';
+import { InviteWorkspaceMemberDto, SwitchWorkspaceDto, UpdateWorkspaceMemberRoleDto } from './dto/workspace.dto';
+import { AcceptInvitationDto } from './dto/invitation.dto';
 import { WorkspacesService } from './workspaces.service';
 
 @ApiTags('Workspaces')
@@ -17,6 +18,21 @@ export class WorkspacesController {
   @ApiOperation({ summary: 'Get the current workspace details' })
   getCurrent(@CurrentUser() user: UserContext) {
     return this.workspacesService.getWorkspace(user.workspaceId);
+  }
+
+  @Get('memberships')
+  @ApiOperation({ summary: 'List all workspaces the current user belongs to' })
+  listMemberships(@CurrentUser() user: UserContext) {
+    return this.workspacesService.listUserMemberships(user.userId);
+  }
+
+  @Post('switch')
+  @ApiOperation({ summary: 'Switch the current user to a different workspace' })
+  switchWorkspace(
+    @CurrentUser() user: UserContext,
+    @Body() body: SwitchWorkspaceDto,
+  ) {
+    return this.workspacesService.switchWorkspace(user.userId, body.workspaceId);
   }
 
   @Post('current/invitations')
@@ -58,5 +74,26 @@ export class WorkspacesController {
     @Param('invitationId') invitationId: string,
   ) {
     return this.workspacesService.revokeInvitation(user.workspaceId, invitationId);
+  }
+
+  @Public()
+  @Get('invitations/:token')
+  @ApiOperation({ summary: 'Get invitation details by token' })
+  getInvitationDetails(@Param('token') token: string) {
+    return this.workspacesService.getInvitationDetails(token);
+  }
+
+  @Post('invitations/accept')
+  @ApiOperation({ summary: 'Accept a workspace invitation' })
+  acceptInvitation(
+    @CurrentUser() user: UserContext,
+    @Body() body: AcceptInvitationDto,
+  ): Promise<WorkspaceSummary> {
+    return this.workspacesService.acceptInvitation(
+      body.token,
+      user.userId,
+      user.email,
+      user.displayName,
+    );
   }
 }

@@ -10,8 +10,8 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Spinner } from '../components/ui/spinner';
 
-const INVITABLE_ROLES: WorkspaceInvitation['role'][] = ['admin', 'editor', 'viewer'];
-const MEMBER_ROLES: WorkspaceMember['role'][] = ['owner', 'admin', 'editor', 'viewer'];
+const INVITABLE_ROLES: WorkspaceInvitation['role'][] = ['admin', 'editor'];
+const MEMBER_ROLES: WorkspaceMember['role'][] = ['owner', 'admin', 'editor'];
 
 export function WorkspacePage() {
   const { user } = useAuth();
@@ -23,7 +23,7 @@ export function WorkspacePage() {
   } = useApi();
   const [workspace, setWorkspace] = useState<WorkspaceDetails | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<WorkspaceInvitation['role']>('viewer');
+  const [inviteRole, setInviteRole] = useState<WorkspaceInvitation['role']>('editor');
   const [loading, setLoading] = useState(true);
   const [submittingInvite, setSubmittingInvite] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function WorkspacePage() {
           : previous,
       );
       setInviteEmail('');
-      setInviteRole('viewer');
+      setInviteRole('editor');
     } catch (inviteError) {
       setError(inviteError instanceof Error ? inviteError.message : 'Unable to send invitation.');
     } finally {

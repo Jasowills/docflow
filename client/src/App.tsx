@@ -25,11 +25,27 @@ import { GettingStartedPage } from "./pages/GettingStartedPage";
 import { AccountSetupPage } from "./pages/AccountSetupPage";
 import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
 import { TermsOfServicePage } from "./pages/TermsOfServicePage";
+import { InvitePage } from "./pages/InvitePage";
+import { JoinWorkspacePage } from "./pages/JoinWorkspacePage";
 import { Spinner } from "./components/ui/spinner";
+
+function DebugPanel({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="fixed top-2 left-2 z-[100] max-h-80 w-[22rem] overflow-auto rounded-md border border-cyan-500/40 bg-black/90 p-3 font-mono text-[11px] text-cyan-300">
+      <div className="mb-1 font-bold text-cyan-200">DEBUG: App Router</div>
+      <pre className="whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+
+  if (import.meta.env.DEV) {
+    console.log("[ProtectedRoute] path:", location.pathname, "isAuth:", isAuthenticated, "needsSetup:", !!(user?.onboardingState as Record<string, unknown>)?.needsAccountSetup);
+  }
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
@@ -47,13 +63,29 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
   const needsAccountSetup = !!(user?.onboardingState as Record<string, unknown>)
     ?.needsAccountSetup;
-  if (needsAccountSetup) {
+  const skipAccountSetupCheck =
+    location.state?.skipAccountSetupCheck === true ||
+    sessionStorage.getItem("skipAccountSetupCheck") === "1";
+  if (needsAccountSetup && !skipAccountSetupCheck) {
     return <Navigate to="/account-setup" replace />;
+  }
+  // Clear the skip flag after it's used once
+  if (skipAccountSetupCheck && sessionStorage.getItem("skipAccountSetupCheck") === "1") {
+    sessionStorage.removeItem("skipAccountSetupCheck");
   }
   const isOnboardingRoute = location.pathname.startsWith("/app/onboarding");
   const hasCompletedOnboarding = !!user?.onboardingCompletedAt;
   const cameFromGuide = location.state?.fromGuide === true;
   if (hasCompletedOnboarding && isOnboardingRoute && !cameFromGuide) {
+    return <Navigate to="/app/dashboard" replace />;
+  }
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const isAdmin = !!user?.roles?.some((r) => r === "owner" || r === "admin");
+  if (!isAdmin) {
     return <Navigate to="/app/dashboard" replace />;
   }
   return <>{children}</>;
@@ -68,6 +100,8 @@ export default function App() {
         <Route path="/callback" element={<AuthCallbackPage />} />
         <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
         <Route path="/account-setup" element={<AccountSetupPage />} />
+        <Route path="/invite" element={<InvitePage />} />
+        <Route path="/join-workspace" element={<JoinWorkspacePage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/terms" element={<TermsOfServicePage />} />
         <Route
@@ -105,7 +139,14 @@ export default function App() {
             element={<Navigate to="/app/dashboard" replace />}
           />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="admin/config" element={<AdminConfigPage />} />
+          <Route
+            path="admin/config"
+            element={
+              <AdminRoute>
+                <AdminConfigPage />
+              </AdminRoute>
+            }
+          />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

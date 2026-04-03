@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Navigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
 import { useApi } from "../hooks/use-api";
 import { Button } from "../components/ui/button";
@@ -18,9 +18,20 @@ type Mode = "login" | "register";
 type AccountType = "individual" | "team";
 
 export function LoginPage() {
-  const { isAuthenticated, login, loginWithGoogle, register } = useAuth();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get("redirect");
+  const isInvitationFlow = searchParams.get("invitation") === "1";
+  const inviteEmail = searchParams.get("inviteEmail") || "";
+  const urlMode = searchParams.get("mode");
+  // Extract token from redirect URL if present
+  const inviteToken = useMemo(() => {
+    if (!redirectUrl) return null;
+    const match = redirectUrl.match(/token=([^&]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  }, [redirectUrl]);
+  const { isAuthenticated, user, login, loginWithGoogle, register } = useAuth();
   const { getAuthProviders } = useApi();
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode] = useState<Mode>(urlMode === "register" ? "register" : "login");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,6 +42,34 @@ export function LoginPage() {
   const [providerConfig, setProviderConfig] =
     useState<AuthProviderConfig | null>(null);
   const [providerConfigLoaded, setProviderConfigLoaded] = useState(false);
+
+  // Clear stale auth state when entering invitation flow to prevent
+  // "account not found" errors from deleted/expired accounts
+  useEffect(() => {
+    if (isInvitationFlow) {
+      // Store the token so we can auto-accept after registration
+      if (inviteToken) {
+        sessionStorage.setItem("invitationToken", inviteToken);
+      }
+      const storedUser = localStorage.getItem("docflow.auth.user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser) as { userId?: string; email?: string };
+          const inviteEmailLower = inviteEmail.toLowerCase();
+          // If the stored user's email doesn't match the invite email, clear it
+          if (parsed.email && parsed.email.toLowerCase() !== inviteEmailLower) {
+            localStorage.removeItem("docflow.auth.user");
+            localStorage.removeItem("docflow.auth.accessToken");
+            localStorage.removeItem("docflow.auth.refreshToken");
+          }
+        } catch {
+          localStorage.removeItem("docflow.auth.user");
+          localStorage.removeItem("docflow.auth.accessToken");
+          localStorage.removeItem("docflow.auth.refreshToken");
+        }
+      }
+    }
+  }, [isInvitationFlow, inviteEmail]);
 
   useEffect(() => {
     getAuthProviders()
@@ -45,6 +84,22 @@ export function LoginPage() {
   }, [getAuthProviders]);
 
   if (isAuthenticated) {
+    // Invitation flow: redirect back to invite page, but only if the
+    // logged-in user's email matches the invitation email. Otherwise
+    // clear stale auth and force a full reload so the login form renders.
+    if (isInvitationFlow && redirectUrl) {
+      const emailsMatch = user?.email?.toLowerCase() === inviteEmail.toLowerCase();
+      if (!emailsMatch) {
+        // Stale session from a different account — clear it and reload
+        localStorage.removeItem("docflow.auth.user");
+        localStorage.removeItem("docflow.auth.accessToken");
+        localStorage.removeItem("docflow.auth.refreshToken");
+        window.location.reload();
+        return null;
+      }
+      sessionStorage.setItem("skipAccountSetupCheck", "1");
+      return <Navigate to={redirectUrl} replace />;
+    }
     return <Navigate to="/app" replace />;
   }
 
@@ -68,6 +123,18 @@ export function LoginPage() {
       } else {
         await login({ email: email.trim(), password });
       }
+      // Redirect after registration
+      const finalRedirect = redirectUrl || sessionStorage.getItem("authRedirectUrl");
+      if (finalRedirect) {
+        sessionStorage.removeItem("authRedirectUrl");
+        if (isInvitationFlow && inviteToken) {
+          // Auto-accept invitation by redirect to join-workspace page
+          sessionStorage.setItem("skipAccountSetupCheck", "1");
+          window.location.href = `/join-workspace?token=${encodeURIComponent(inviteToken)}`;
+        } else {
+          window.location.href = finalRedirect;
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
       setIsSubmitting(false);
@@ -76,6 +143,10 @@ export function LoginPage() {
 
   const handleGoogleAction = () => {
     if (providerConfig?.googleClientId && providerConfig?.googleCallbackUrl) {
+      // Store redirect URL for after Google OAuth completes
+      if (redirectUrl) {
+        sessionStorage.setItem("authRedirectUrl", redirectUrl);
+      }
       loginWithGoogle(
         providerConfig.googleClientId,
         providerConfig.googleCallbackUrl,
@@ -97,9 +168,17 @@ export function LoginPage() {
               </CardTitle>
               <CardDescription className="mx-auto max-w-md text-sm leading-6">
                 {isRegister
-                  ? "Choose how you'll use DocFlow and get set up."
+                  ? isInvitationFlow
+                    ? "Create an account to accept the workspace invitation."
+                    : "Choose how you'll use DocFlow and get set up."
                   : "Sign in to access your workspace and documents."}
               </CardDescription>
+              {isInvitationFlow && inviteEmail ? (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-center">
+                  <p className="text-xs text-muted-foreground">Sign in as</p>
+                  <p className="text-sm font-medium text-foreground">{inviteEmail}</p>
+                </div>
+              ) : null}
             </div>
             <div className="inline-flex self-center rounded-sm border border-border bg-background/50 p-1">
               <button
@@ -171,7 +250,7 @@ export function LoginPage() {
               </div>
             ) : null}
 
-            {isRegister && providerConfigLoaded ? (
+            {isRegister && providerConfigLoaded && !isInvitationFlow ? (
               <div className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Full name</Label>
@@ -216,6 +295,17 @@ export function LoginPage() {
                     />
                   </div>
                 ) : null}
+              </div>
+            ) : null}
+
+            {isRegister && providerConfigLoaded && isInvitationFlow ? (
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Full name</Label>
+                <Input
+                  id="displayName"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
               </div>
             ) : null}
 

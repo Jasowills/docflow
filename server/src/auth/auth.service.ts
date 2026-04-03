@@ -218,7 +218,7 @@ export class AuthService {
     const workspace = await this.resolveWorkspace(user);
     const roles = await this.resolveWorkspaceRoles(user);
 
-    return {
+    const response = {
       userId: user.userId,
       email: user.email,
       displayName: user.displayName,
@@ -230,6 +230,8 @@ export class AuthService {
       onboardingCompletedAt: user.onboardingCompletedAt,
       onboardingState: user.onboardingState || {},
     };
+
+    return response;
   }
 
   async updateOnboarding(
@@ -265,8 +267,13 @@ export class AuthService {
       throw new UnauthorizedException("User not found.");
     }
 
+    // Only delete the workspace if the user is its original creator.
+    // Invited users should leave the workspace intact.
     if (user.defaultWorkspaceId) {
-      await this.workspacesRepository.deleteWorkspace(user.defaultWorkspaceId);
+      const workspace = await this.workspacesRepository.findSummaryById(user.defaultWorkspaceId);
+      if (workspace && workspace.createdByUserId === userId) {
+        await this.workspacesRepository.deleteWorkspace(user.defaultWorkspaceId);
+      }
     }
 
     await this.usersRepository.delete(userId);

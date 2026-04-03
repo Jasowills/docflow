@@ -15,7 +15,7 @@ export interface WorkspaceMember {
   userId: string;
   email: string;
   displayName: string;
-  role: 'owner' | 'admin' | 'editor' | 'viewer';
+  role: 'owner' | 'admin' | 'editor';
   joinedAtUtc: string;
 }
 
@@ -23,7 +23,7 @@ export interface WorkspaceInvitation {
   invitationId: string;
   workspaceId: string;
   email: string;
-  role: 'admin' | 'editor' | 'viewer';
+  role: 'admin' | 'editor';
   invitedByUserId: string;
   invitedAtUtc: string;
   acceptedAtUtc?: string;
@@ -34,6 +34,7 @@ export interface WorkspaceSummary {
   workspaceId: string;
   name: string;
   accountType: AccountType;
+  createdByUserId: string;
   githubInstallationId?: number;
   githubConnectedAtUtc?: string;
   githubAccountLogin?: string;
@@ -50,9 +51,9 @@ export interface UpdateWorkspaceRequest {
 
 export interface InviteWorkspaceMemberRequest {
   email: string;
-  role: 'admin' | 'editor' | 'viewer';
+  role: 'admin' | 'editor';
 }
 
 export interface UpdateWorkspaceMemberRoleRequest {
-  role: 'owner' | 'admin' | 'editor' | 'viewer';
+  role: 'owner' | 'admin' | 'editor';
 }

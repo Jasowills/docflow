@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as nodemailer from 'nodemailer';
 import { AppConfig } from '../../config/app-config';
 
 export interface SendInvitationEmailParams {
@@ -11,19 +12,47 @@ export interface SendInvitationEmailParams {
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
+  private transporter: nodemailer.Transporter | null = null;
 
   constructor(private readonly config: AppConfig) {}
+
+  private getTransporter(): nodemailer.Transporter | null {
+    if (this.transporter) return this.transporter;
+
+    const host = this.config.smtpHost;
+    const port = this.config.smtpPort;
+    const secure = this.config.smtpSecure;
+    const user = this.config.smtpUser;
+    const pass = this.config.smtpPass;
+
+    if (!host || !user || !pass) {
+      this.logger.warn('SMTP not configured (missing SMTP_HOST, SMTP_USER, or SMTP_PASS). Skipping invitation email.');
+      return null;
+    }
+
+    this.transporter = nodemailer.createTransport({
+      host,
+      port: port || 587,
+      secure: secure,
+      auth: {
+        user,
+        pass,
+      },
+    });
+
+    return this.transporter;
+  }
 
   async sendInvitationEmail(params: SendInvitationEmailParams): Promise<boolean> {
     const { to, workspaceName, inviterName, invitationToken } = params;
 
-    const apiKey = this.config.resendApiKey;
-    if (!apiKey) {
-      this.logger.warn('RESEND_API_KEY not configured. Skipping invitation email.');
+    const transporter = this.getTransporter();
+    if (!transporter) {
       return false;
     }
 
     const invitationUrl = `${this.config.docflowWebBaseUrl}/invite?token=${invitationToken}`;
+    const from = this.config.smtpFrom || `DocFlow <${this.config.smtpUser}>`;
 
     const html = `
 <!DOCTYPE html>
@@ -98,29 +127,15 @@ If you didn't expect this invitation, you can safely ignore this email.
 `;
 
     try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          from: 'DocFlow <onboarding@resend.dev>',
-          to: [to],
-          subject: `You've been invited to join ${workspaceName}`,
-          html,
-          text,
-        }),
+      await transporter.sendMail({
+        from,
+        to,
+        subject: `You've been invited to join ${workspaceName}`,
+        html,
+        text,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(`Failed to send invitation email: ${response.status} - ${errorText}`);
-        return false;
-      }
-
-      const result = (await response.json()) as { id?: string };
-      this.logger.log(`Invitation email sent to ${to} (${result.id || 'ok'})`);
+      this.logger.log(`Invitation email sent to ${to}`);
       return true;
     } catch (error) {
       this.logger.error(`Error sending invitation email: ${error instanceof Error ? error.message : String(error)}`);

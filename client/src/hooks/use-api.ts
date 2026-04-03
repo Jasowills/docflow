@@ -29,6 +29,8 @@ import type {
   TestPlan,
   TestPlanDetail,
   WorkspaceDetails,
+  WorkspaceSummary,
+  WorkspaceMember,
   InviteWorkspaceMemberRequest,
   UpdateWorkspaceMemberRoleRequest,
   UpdateWorkspaceRequest,
@@ -237,6 +239,54 @@ export function useApi() {
     [api],
   );
 
+  const getInvitationDetails = useCallback(
+    (token: string) =>
+      publicApi<{
+        invitationId: string;
+        workspaceId: string;
+        workspaceName: string;
+        email: string;
+        role: string;
+        inviterDisplayName: string;
+        status: string;
+        isExpired: boolean;
+      }>(`/workspaces/invitations/${token}`),
+    [publicApi],
+  );
+
+  const acceptWorkspaceInvitation = useCallback(
+    (token: string) =>
+      api<WorkspaceSummary>("/workspaces/invitations/accept", {
+        method: "POST",
+        body: { token },
+      }),
+    [api],
+  );
+
+  const listMemberships = useCallback(
+    () =>
+      api<{
+        workspaceId: string;
+        workspaceName: string;
+        accountType: string;
+        role: WorkspaceMember["role"];
+        joinedAtUtc: string;
+      }[]>("/workspaces/memberships"),
+    [api],
+  );
+
+  const switchWorkspace = useCallback(
+    (workspaceId: string) =>
+      api<{ workspaceId: string; workspaceName: string; role: string }>(
+        "/workspaces/switch",
+        {
+          method: "POST",
+          body: { workspaceId },
+        },
+      ),
+    [api],
+  );
+
   const getDashboardSummary = useCallback(
     () => api<DashboardSummary>("/dashboard/summary"),
     [api],
@@ -407,6 +457,10 @@ export function useApi() {
     inviteWorkspaceMember,
     updateWorkspaceMemberRole,
     revokeWorkspaceInvitation,
+    getInvitationDetails,
+    acceptWorkspaceInvitation,
+    listMemberships,
+    switchWorkspace,
     // Documents
     generateDocuments,
     listDocuments,
