@@ -1,6 +1,6 @@
 {
   "name": "@docflow/extension",
-  "version": "1.0.16",
+  "version": "1.0.16.1",
   "private": true,
   "description": "DocFlow Recorder browser extension for capturing website and web app workflows",
   "scripts": {

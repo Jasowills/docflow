@@ -467,7 +467,7 @@ function mergeNotifications(incoming: NotificationItem[], existing: Notification
 }
 
 function toAuditNotification(entry: AuditLogEntry): NotificationItem {
-  const actor = deriveDisplayName(entry.userEmail);
+  const actor = (entry as unknown as { userName?: string }).userName || deriveDisplayName(entry.userEmail);
   const resourceLabel = entry.resourceType.replace(/_/g, ' ');
   const actionLabel = humanizeAction(entry.action);
   const objectName = deriveObjectName(entry);

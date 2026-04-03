@@ -119,7 +119,7 @@ export function Layout() {
     setToastItems((prev) => [
       ...nextRealtimeItems.reverse().map((item) => ({
         id: item.id,
-        title: item.actorName ? `${item.actorName} ${item.title}`.trim() : item.title,
+        title: item.title,
         message: item.message,
         variant: "info" as const,
       })),

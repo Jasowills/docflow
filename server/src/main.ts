@@ -2,7 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import express from "express";
 import { AppModule } from "./app.module";
@@ -17,6 +17,14 @@ async function bootstrap() {
   // Allow larger payloads (recordings can include screenshots + transcript blobs).
   app.use(express.json({ limit: "30mb" }));
   app.use(express.urlencoded({ limit: "30mb", extended: true }));
+
+  // Accept raw gzip bodies on the upload endpoint (bypasses Vercel 4.5MB payload limit).
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.post(
+    "/api/recordings/extension-upload-raw",
+    express.raw({ type: "application/octet-stream", limit: "50mb" }),
+    (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
+  );
 
   // Security
   app.use(

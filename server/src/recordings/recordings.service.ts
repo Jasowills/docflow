@@ -4,10 +4,12 @@ import {
   NotFoundException,
   Logger,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { RecordingsRepository } from './recordings.repository';
 import { ScreenshotStorageService } from './screenshot-storage.service';
 import { AuditService } from '../common/services/audit.service';
+import { UploadTokenService } from '../auth/upload-token.service';
 import { UploadRecordingDto } from './dto/upload-recording.dto';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import type {
@@ -27,7 +29,16 @@ export class RecordingsService {
     private readonly screenshotStorage: ScreenshotStorageService,
     private readonly auditService: AuditService,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly uploadTokenService: UploadTokenService,
   ) {}
+
+  validateUploadToken(token: string): UserContext {
+    try {
+      return this.uploadTokenService.parseUploadToken(token);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired upload token');
+    }
+  }
 
   async upload(
     dto: UploadRecordingDto,
@@ -73,6 +84,7 @@ export class RecordingsService {
       action: 'upload_recording',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'recording',
       resourceId: dto.metadata.recordingId,
       details: {
@@ -202,6 +214,7 @@ export class RecordingsService {
       action: 'delete_recording',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'recording',
       resourceId: recordingId,
     });

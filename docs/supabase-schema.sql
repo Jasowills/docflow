@@ -201,11 +201,16 @@ create table if not exists public.audit_log (
   action text not null,
   user_id text not null,
   user_email text not null,
+  user_name text,
   resource_type text not null,
   resource_id text,
   details jsonb,
   timestamp timestamptz not null default timezone('utc', now())
 );
+
+-- Add user_name column if it doesn't exist
+alter table public.audit_log
+  add column if not exists user_name text;
 
 create index if not exists idx_audit_log_timestamp
   on public.audit_log(timestamp desc);

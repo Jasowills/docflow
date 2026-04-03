@@ -353,15 +353,26 @@ btnUpload.addEventListener('click', async () => {
         }
       }
 
-      setUploadProgress(45, 'Uploading recording...');
-      const res = await postJsonWithUploadProgress(
-        `${settings.apiBaseUrl}/api/recordings/extension-upload`,
+      setUploadProgress(45, 'Compressing...');
+      const uploadPayload = toBackendUploadPayload(sourceRecording);
+      
+      // Gzip compress to bypass Vercel 4.5MB limit
+      const jsonStr = JSON.stringify(uploadPayload);
+      const cs = new CompressionStream('gzip');
+      const writer = cs.writable.getWriter();
+      writer.write(new TextEncoder().encode(jsonStr));
+      writer.close();
+      const compressedBuffer = await new Response(cs.readable).arrayBuffer();
+      
+      setUploadProgress(48, 'Uploading recording...');
+      const res = await postGzippedWithUploadProgress(
+        `${settings.apiBaseUrl}/api/recordings/extension-upload-raw`,
         settings.bearerToken,
-        payload,
+        compressedBuffer,
         (loaded, total) => {
           if (!total || total <= 0) return;
           const portion = loaded / total;
-          const pct = 45 + Math.round(portion * 50);
+          const pct = 48 + Math.round(portion * 47);
           setUploadProgress(Math.min(95, pct), 'Uploading recording...');
         },
       );
@@ -605,6 +616,39 @@ async function postJsonWithUploadProgress(
     };
 
     xhr.send(body);
+  });
+}
+
+async function postGzippedWithUploadProgress(
+  url: string,
+  uploadToken: string,
+  compressedBuffer: ArrayBuffer,
+  onProgress?: (loadedBytes: number, totalBytes: number) => void,
+): Promise<{ ok: boolean; status: number; statusText: string; bodyText: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.setRequestHeader('Content-Encoding', 'gzip');
+    xhr.setRequestHeader('X-Upload-Token', uploadToken);
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      onProgress?.(event.loaded, event.total);
+    };
+
+    xhr.onerror = () => reject(new Error('Network error while uploading recording'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out'));
+    xhr.onload = () => {
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        statusText: xhr.statusText,
+        bodyText: xhr.responseText || '',
+      });
+    };
+
+    xhr.send(compressedBuffer);
   });
 }
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DocFlow",
-  "version": "1.0.0.16",
+  "version": "1.0.16.1",
   "description": "Capture workflows, generate docs with AI, and manage your documentation workspace.",
   "permissions": [
     "activeTab",

@@ -38,6 +38,7 @@ export class AdminService {
       action: 'update_global_prompt',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'config',
       details: { promptLength: prompt.length },
     });
@@ -69,6 +70,7 @@ export class AdminService {
       action: 'upsert_document_type',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'config',
       resourceId: dto.key,
       details: { name: dto.name, isActive: dto.isActive },
@@ -93,6 +95,7 @@ export class AdminService {
       action: 'delete_document_type',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'config',
       resourceId: key,
     });
@@ -123,6 +126,7 @@ export class AdminService {
       action: 'upsert_folder_config',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'config',
       resourceId: dto.key,
       details: {
@@ -146,6 +150,7 @@ export class AdminService {
       action: 'delete_folder_config',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'config',
       resourceId: key,
     });
@@ -192,6 +197,7 @@ export class AdminService {
       action: 'upload_folder_preview_image',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'config',
       resourceId: folderKey || 'misc',
       details: {

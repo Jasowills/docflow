@@ -156,6 +156,7 @@ export class DocumentsService {
       action: 'generate_documentation',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'document',
       details: {
         recordingId: recording.metadata.recordingId,
@@ -279,6 +280,7 @@ export class DocumentsService {
       action: 'move_document_folder',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'document',
       resourceId: documentId,
       details: {
@@ -310,6 +312,7 @@ export class DocumentsService {
       action: 'delete_document',
       userId: user.userId,
       userEmail: user.email,
+      userName: user.displayName,
       resourceType: 'document',
       resourceId: documentId,
     });

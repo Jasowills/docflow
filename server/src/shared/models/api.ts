@@ -57,6 +57,7 @@ export interface AuditLogEntry {
   action: string;
   userId: string;
   userEmail: string;
+  userName: string;
   resourceType: string;
   resourceId?: string;
   details?: Record<string, unknown>;
