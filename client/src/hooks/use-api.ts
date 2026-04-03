@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createApiClient, createPublicApiClient } from "../services/api-client";
+import { getApiBaseUrl } from "../config/runtime-config";
 import { useAccessToken } from "../auth/use-access-token";
 import type {
   Recording,
