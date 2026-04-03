@@ -137,6 +137,7 @@ create table if not exists public.recordings (
   speech_transcripts jsonb not null default '[]'::jsonb,
   screenshots jsonb not null default '[]'::jsonb,
   user_id text not null references public.docflow_users(user_id),
+  workspace_id text references public.workspaces(workspace_id),
   uploaded_at_utc timestamptz not null default timezone('utc', now()),
   last_modified_at_utc timestamptz,
   event_count integer not null default 0,
@@ -167,7 +168,8 @@ create table if not exists public.documents (
   last_modified_by text,
   recording_name text not null,
   product_area text not null,
-  folder text
+  folder text,
+  workspace_id text references public.workspaces(workspace_id)
 );
 
 create index if not exists idx_documents_created_at_utc
@@ -287,3 +289,28 @@ alter table public.workspace_invitations
 -- Migrate existing 'viewer' members to 'editor'
 update public.workspace_members set role = 'editor' where role = 'viewer';
 update public.workspace_invitations set role = 'editor' where role = 'viewer';
+
+-- ────────────────────────────────────────────────────────────
+-- Migrations: add workspace_id to recordings and documents
+-- ────────────────────────────────────────────────────────────
+
+alter table public.recordings
+  add column if not exists workspace_id text references public.workspaces(workspace_id);
+
+alter table public.documents
+  add column if not exists workspace_id text references public.workspaces(workspace_id);
+
+-- Backfill workspace_id from the user's default workspace for existing rows
+do $$
+declare
+  r record;
+  ws_id text;
+begin
+  for r in select user_id from public.docflow_users loop
+    select default_workspace_id into ws_id from public.docflow_users where user_id = r.user_id;
+    if ws_id is not null then
+      update public.recordings set workspace_id = ws_id where user_id = r.user_id and workspace_id is null;
+      update public.documents set workspace_id = ws_id where created_by = r.user_id and workspace_id is null;
+    end if;
+  end loop;
+end $$;

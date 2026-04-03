@@ -17,8 +17,8 @@ export class RecordingsRepository {
     private readonly supabase: SupabaseClient,
   ) {}
 
-  async insert(recording: RecordingDocument): Promise<void> {
-    const { error } = await this.supabase.from('recordings').insert({
+  async insert(recording: RecordingDocument, workspaceId?: string): Promise<void> {
+    const payload: Record<string, unknown> = {
       recording_id: recording.metadata.recordingId,
       recording_name: recording.metadata.name,
       product_area: recording.metadata.productArea,
@@ -32,7 +32,10 @@ export class RecordingsRepository {
       event_count: recording.events.length,
       transcript_count: recording.speechTranscripts.length,
       screenshot_count: (recording.screenshots || []).length,
-    });
+    };
+    if (workspaceId) payload.workspace_id = workspaceId;
+
+    const { error } = await this.supabase.from('recordings').insert(payload);
     if (error) {
       this.logger.error(`Failed to save recording ${recording.metadata.recordingId}: ${error.message}`);
       throw new Error('Failed to save recording.');
@@ -72,7 +75,7 @@ export class RecordingsRepository {
 
   async findAll(
     query: RecordingListQuery,
-    userIds?: string[],
+    workspaceId?: string,
   ): Promise<PaginatedResponse<RecordingSummary>> {
     const page = query.page || 1;
     const pageSize = Math.min(query.pageSize || 20, 100);
@@ -85,7 +88,7 @@ export class RecordingsRepository {
       })
       .order('uploaded_at_utc', { ascending: false });
 
-    if (userIds?.length) request = request.in('user_id', userIds);
+    if (workspaceId) request = request.eq('workspace_id', workspaceId);
     if (query.search) request = request.ilike('recording_name', `%${query.search.trim()}%`);
     if (query.productArea) request = request.eq('product_area', query.productArea);
 

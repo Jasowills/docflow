@@ -10,7 +10,6 @@ import { ScreenshotStorageService } from './screenshot-storage.service';
 import { AuditService } from '../common/services/audit.service';
 import { UploadRecordingDto } from './dto/upload-recording.dto';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
-import { WorkspacesRepository } from '../auth/workspaces.repository';
 import type {
   RecordingDocument,
   UserContext,
@@ -28,7 +27,6 @@ export class RecordingsService {
     private readonly screenshotStorage: ScreenshotStorageService,
     private readonly auditService: AuditService,
     private readonly realtimeGateway: RealtimeGateway,
-    private readonly workspacesRepository: WorkspacesRepository,
   ) {}
 
   async upload(
@@ -62,7 +60,7 @@ export class RecordingsService {
       uploadedAtUtc: new Date().toISOString(),
     };
 
-    await this.repository.insert(doc);
+    await this.repository.insert(doc, user.workspaceId);
 
     this.realtimeGateway.emitRecordingPersisted(user.userId, {
       recordingId: doc.metadata.recordingId,
@@ -162,10 +160,13 @@ export class RecordingsService {
     recordingId: string,
     user: UserContext,
   ): Promise<RecordingDocument> {
-    const scopeUserIds = await this.resolveScopeUserIds(user);
-    const recording = await this.repository.findByIdentifier(recordingId, scopeUserIds);
+    const recording = await this.repository.findByRecordingId(recordingId);
     if (!recording) {
       throw new NotFoundException(`Recording ${recordingId} not found`);
+    }
+    if (recording.userId !== user.userId) {
+      // Only allow viewing recordings you own (cross-workspace protection)
+      throw new ForbiddenException('You do not have access to this recording.');
     }
     return recording;
   }
@@ -174,13 +175,11 @@ export class RecordingsService {
     query: RecordingListQuery,
     user: UserContext,
   ): Promise<PaginatedResponse<RecordingSummary>> {
-    const scopeUserIds = await this.resolveScopeUserIds(user);
-    return this.repository.findAll(query, scopeUserIds);
+    return this.repository.findAll(query, user.workspaceId);
   }
 
   async delete(recordingId: string, user: UserContext): Promise<void> {
-    const scopeUserIds = await this.resolveScopeUserIds(user);
-    const existing = await this.repository.findByIdentifier(recordingId, scopeUserIds);
+    const existing = await this.repository.findByRecordingId(recordingId);
     if (!existing) {
       throw new NotFoundException(`Recording ${recordingId} not found`);
     }
@@ -206,16 +205,6 @@ export class RecordingsService {
       resourceType: 'recording',
       resourceId: recordingId,
     });
-  }
-
-  private async resolveScopeUserIds(user: UserContext): Promise<string[]> {
-    if (!user.workspaceId) {
-      return [user.userId];
-    }
-
-    const members = await this.workspacesRepository.listMembers(user.workspaceId);
-    const userIds = members.map((member) => member.userId).filter(Boolean);
-    return userIds.length > 0 ? userIds : [user.userId];
   }
 }
 

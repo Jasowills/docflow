@@ -21,10 +21,10 @@ export class DocumentsRepository {
     await this.insertMany([doc]);
   }
 
-  async insertMany(docs: GeneratedDocument[]): Promise<void> {
+  async insertMany(docs: GeneratedDocument[], workspaceId?: string): Promise<void> {
     if (docs.length === 0) return;
-    const { error } = await this.supabase.from('documents').insert(
-      docs.map((doc) => ({
+    const rows = docs.map((doc) => {
+      const row: Record<string, unknown> = {
         document_id: doc.documentId,
         recording_id: doc.recordingId,
         document_type: doc.documentType,
@@ -39,25 +39,23 @@ export class DocumentsRepository {
         recording_name: doc.recordingName,
         product_area: doc.productArea,
         folder: doc.folder || null,
-      })),
-    );
+      };
+      if (workspaceId) row.workspace_id = workspaceId;
+      return row;
+    });
+    const { error } = await this.supabase.from('documents').insert(rows);
     if (error) {
       this.logger.error(`Failed to save documents: ${error.message}`);
       throw new Error('Failed to save generated documents.');
     }
   }
 
-  async findById(documentId: string, userIds?: string[]): Promise<GeneratedDocument | null> {
-    let request = this.supabase
+  async findById(documentId: string): Promise<GeneratedDocument | null> {
+    const { data, error } = await this.supabase
       .from('documents')
       .select('*')
-      .eq('document_id', documentId);
-
-    if (userIds?.length) {
-      request = request.in('created_by', userIds);
-    }
-
-    const { data, error } = await request.maybeSingle();
+      .eq('document_id', documentId)
+      .maybeSingle();
     if (error) {
       this.logger.error(`Failed to load document ${documentId}: ${error.message}`);
       throw new Error('Failed to load document.');
@@ -85,7 +83,7 @@ export class DocumentsRepository {
 
   async findAll(
     query: DocumentListQuery,
-    userIds?: string[],
+    workspaceId?: string,
   ): Promise<PaginatedResponse<DocumentSummary>> {
     const page = query.page || 1;
     const pageSize = Math.min(query.pageSize || 20, 100);
@@ -99,7 +97,7 @@ export class DocumentsRepository {
       )
       .order('created_at_utc', { ascending: false });
 
-    if (userIds?.length) request = request.in('created_by', userIds);
+    if (workspaceId) request = request.eq('workspace_id', workspaceId);
     if (query.documentType) request = request.eq('document_type', query.documentType);
     if (query.productArea) request = request.eq('product_area', query.productArea);
     if (query.folder) request = request.eq('folder', query.folder.trim());
@@ -193,9 +191,8 @@ export class DocumentsRepository {
     documentId: string,
     folder: string,
     modifiedBy: string,
-    userIds?: string[],
   ): Promise<GeneratedDocument | null> {
-    let request = this.supabase
+    const { error } = await this.supabase
       .from('documents')
       .update({
         folder,
@@ -203,16 +200,10 @@ export class DocumentsRepository {
         last_modified_by: modifiedBy,
       })
       .eq('document_id', documentId);
-
-    if (userIds?.length) {
-      request = request.in('created_by', userIds);
-    }
-
-    const { error } = await request;
     if (error) {
       this.logger.error(`Failed to update document folder ${documentId}: ${error.message}`);
       throw new Error('Failed to update document folder.');
     }
-    return this.findById(documentId, userIds);
+    return this.findById(documentId);
   }
 }

@@ -15,7 +15,6 @@ import { PromptBuilderService } from './prompt-builder.service';
 import { AdminService } from '../admin/admin.service';
 import { AuditService } from '../common/services/audit.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
-import { WorkspacesRepository } from '../auth/workspaces.repository';
 import {
   TEXT_GENERATION_PROVIDER,
   ITextGenerationProvider,
@@ -40,7 +39,6 @@ export class DocumentsService {
     private readonly adminService: AdminService,
     private readonly auditService: AuditService,
     private readonly realtimeGateway: RealtimeGateway,
-    private readonly workspacesRepository: WorkspacesRepository,
     @Inject(TEXT_GENERATION_PROVIDER)
     private readonly aiProvider: ITextGenerationProvider,
   ) {}
@@ -50,10 +48,8 @@ export class DocumentsService {
     user: UserContext,
   ): Promise<GeneratedDocument[]> {
     // 1. Load recording
-    const scopeUserIds = await this.resolveScopeUserIds(user);
-    const recording = await this.recordingsRepository.findByIdentifier(
+    const recording = await this.recordingsRepository.findByRecordingId(
       dto.recordingId,
-      scopeUserIds,
     );
     if (!recording) {
       throw new NotFoundException(
@@ -145,7 +141,7 @@ export class DocumentsService {
     }
 
     // 4. Persist all generated documents
-    await this.documentsRepository.insertMany(generatedDocs);
+    await this.documentsRepository.insertMany(generatedDocs, user.workspaceId);
     for (const doc of generatedDocs) {
       this.realtimeGateway.emitDocumentPersisted(user.userId, {
         documentId: doc.documentId,
@@ -246,8 +242,7 @@ export class DocumentsService {
   }
 
   async getById(documentId: string, user: UserContext): Promise<GeneratedDocument> {
-    const scopeUserIds = await this.resolveScopeUserIds(user);
-    const doc = await this.documentsRepository.findById(documentId, scopeUserIds);
+    const doc = await this.documentsRepository.findById(documentId);
     if (!doc) {
       throw new NotFoundException(`Document ${documentId} not found`);
     }
@@ -258,8 +253,7 @@ export class DocumentsService {
     user: UserContext,
     query: DocumentListQuery,
   ): Promise<PaginatedResponse<DocumentSummary>> {
-    const scopeUserIds = await this.resolveScopeUserIds(user);
-    return this.documentsRepository.findAll(query, scopeUserIds);
+    return this.documentsRepository.findAll(query, user.workspaceId);
   }
 
   async updateFolder(
@@ -268,12 +262,10 @@ export class DocumentsService {
     user: UserContext,
   ): Promise<GeneratedDocument> {
     const normalizedFolder = this.normalizeFolderName(folderName);
-    const scopeUserIds = await this.resolveScopeUserIds(user);
     const updated = await this.documentsRepository.updateFolder(
       documentId,
       normalizedFolder,
       user.userId,
-      scopeUserIds,
     );
     if (!updated) {
       throw new NotFoundException(`Document ${documentId} not found`);
@@ -295,8 +287,7 @@ export class DocumentsService {
   }
 
   async delete(documentId: string, user: UserContext): Promise<void> {
-    const scopeUserIds = await this.resolveScopeUserIds(user);
-    const existing = await this.documentsRepository.findById(documentId, scopeUserIds);
+    const existing = await this.documentsRepository.findById(documentId);
     if (!existing) {
       throw new NotFoundException(`Document ${documentId} not found`);
     }
@@ -331,17 +322,6 @@ export class DocumentsService {
     if (trimmed.toLowerCase() === 'unfiled') return 'Unfiled';
     return trimmed;
   }
-
-  private async resolveScopeUserIds(user: UserContext): Promise<string[]> {
-    if (!user.workspaceId) {
-      return [user.userId];
-    }
-
-    const members = await this.workspacesRepository.listMembers(user.workspaceId);
-    const userIds = members.map((member) => member.userId).filter(Boolean);
-    return userIds.length > 0 ? userIds : [user.userId];
-  }
-
 }
 
 function isOpenRouterBudgetError(error: unknown): boolean {
