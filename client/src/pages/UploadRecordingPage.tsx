@@ -155,7 +155,7 @@ export function UploadRecordingPage() {
   const TOKEN_REVALIDATE_INTERVAL_MS = 30000;
   const navigate = useNavigate();
   const location = useLocation();
-  const { uploadRecording, createExtensionUploadToken } = useApi();
+  const { uploadRecordingCompressed, createExtensionUploadToken } = useApi();
   const [recording, setRecording] = useState<Recording | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -262,7 +262,7 @@ export function UploadRecordingPage() {
     setUploading(true);
     setError(null);
     try {
-      await uploadRecording(recording);
+      await uploadRecordingCompressed(recording);
       setSuccess(true);
       setTimeout(() => navigate('/app/generate'), 1500);
     } catch (err: unknown) {

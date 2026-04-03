@@ -64,6 +64,47 @@ export function useApi() {
     [api],
   );
 
+  const uploadRecordingCompressed = useCallback(
+    async (recording: Recording) => {
+      // Get an upload token
+      const { token } = await api<{ token: string }>(
+        "/auth/extension-upload-token",
+        { method: "POST" },
+      );
+
+      // Gzip compress the payload
+      const jsonStr = JSON.stringify(recording);
+      const cs = new CompressionStream("gzip");
+      const writer = cs.writable.getWriter();
+      writer.write(new TextEncoder().encode(jsonStr));
+      writer.close();
+      const compressedBuffer = await new Response(cs.readable).arrayBuffer();
+
+      // Send to the raw upload endpoint (bypasses Vercel 4.5MB limit)
+      const apiBaseUrl = getApiBaseUrl();
+      const response = await fetch(
+        `${apiBaseUrl}/api/recordings/extension-upload-raw`,
+        {
+          method: "POST",
+          headers: {
+            "X-Upload-Token": token,
+            "Content-Type": "application/octet-stream",
+            "Content-Encoding": "gzip",
+          },
+          body: compressedBuffer,
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || "Upload failed");
+      }
+
+      return response.json() as Promise<RecordingDocument>;
+    },
+    [api],
+  );
+
   const listRecordings = useCallback(
     (query?: RecordingListQuery) => {
       const params = new URLSearchParams();
@@ -451,6 +492,7 @@ export function useApi() {
   return {
     // Recordings
     uploadRecording,
+    uploadRecordingCompressed,
     listRecordings,
     getRecording,
     deleteRecording,
