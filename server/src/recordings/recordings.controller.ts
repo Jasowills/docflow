@@ -73,20 +73,20 @@ export class RecordingsController {
     }
 
     let body: Buffer;
-    if (req.headers['content-encoding'] === 'gzip' || req.headers['content-type'] === 'application/octet-stream') {
-      // Raw binary from express.raw() or gzipped body
-      body = req.body as Buffer;
-      if (!Buffer.isBuffer(body)) {
-        throw new BadRequestException('Expected binary request body');
-      }
-    } else {
-      throw new BadRequestException('Expected gzip or binary request body');
+    if (!Buffer.isBuffer(req.body)) {
+      throw new BadRequestException('Expected binary request body');
     }
+    body = req.body;
 
-    // Decompress gzip if needed
+    // Decompress gzip if present, otherwise treat as raw JSON.
+    // Check gzip magic bytes (1f 8b) to determine format.
     let jsonBody: string;
-    if (req.headers['content-encoding'] === 'gzip') {
-      jsonBody = gunzipSync(body).toString('utf8');
+    if (body.length >= 2 && body[0] === 0x1f && body[1] === 0x8b) {
+      try {
+        jsonBody = gunzipSync(body).toString('utf8');
+      } catch {
+        throw new BadRequestException('Failed to decompress gzip payload');
+      }
     } else {
       jsonBody = body.toString('utf8');
     }
