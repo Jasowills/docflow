@@ -165,7 +165,7 @@ create table if not exists public.documents (
   content text not null,
   locale text not null default 'en-AU',
   created_at_utc timestamptz not null default timezone('utc', now()),
-  created_by text not null,
+  created_by text,
   created_by_name text,
   last_modified_at_utc timestamptz,
   last_modified_by text,
@@ -297,15 +297,25 @@ update public.workspace_invitations set role = 'editor' where role = 'viewer';
 alter table public.recordings
   alter column user_id drop not null;
 
+-- Make documents.created_by nullable for account deletion preservation
+alter table public.documents
+  alter column created_by drop not null;
+
+-- Drop old FK on documents.created_by that prevents account deletion
+alter table public.documents
+  drop constraint if exists documents_created_by_fkey;
+
 -- ────────────────────────────────────────────────────────────
 -- Migrations: add workspace_id to recordings and documents
 -- ────────────────────────────────────────────────────────────
 
-alter table public.recordings
-  add column if not exists workspace_id text references public.workspaces(workspace_id);
+-- Drop existing constraints first to allow clean re-add
+alter table public.recordings drop constraint if exists recordings_workspace_id_fkey;
+alter table public.documents drop constraint if exists documents_workspace_id_fkey;
 
-alter table public.documents
-  add column if not exists workspace_id text references public.workspaces(workspace_id);
+-- Add columns (safe if they already exist)
+alter table public.recordings add column if not exists workspace_id text;
+alter table public.documents add column if not exists workspace_id text;
 
 -- Backfill workspace_id from the user's default workspace for existing rows
 do $$
@@ -313,11 +323,39 @@ declare
   r record;
   ws_id text;
 begin
-  for r in select user_id from public.docflow_users loop
+  for r in select distinct user_id from public.recordings where workspace_id is null loop
     select default_workspace_id into ws_id from public.docflow_users where user_id = r.user_id;
     if ws_id is not null then
       update public.recordings set workspace_id = ws_id where user_id = r.user_id and workspace_id is null;
-      update public.documents set workspace_id = ws_id where created_by = r.user_id and workspace_id is null;
     end if;
   end loop;
+
+  for r in select distinct created_by from public.documents where workspace_id is null and created_by is not null loop
+    select default_workspace_id into ws_id from public.docflow_users where user_id = r.created_by;
+    if ws_id is not null then
+      update public.documents set workspace_id = ws_id where created_by = r.created_by and workspace_id is null;
+    end if;
+  end loop;
+end $$;
+
+-- Add FK constraints (NOT VALID so existing data is not checked)
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'recordings_workspace_id_fkey'
+  ) then
+    alter table public.recordings
+      add constraint recordings_workspace_id_fkey
+      foreign key (workspace_id) references public.workspaces(workspace_id)
+      not valid;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'documents_workspace_id_fkey'
+  ) then
+    alter table public.documents
+      add constraint documents_workspace_id_fkey
+      foreign key (workspace_id) references public.workspaces(workspace_id)
+      not valid;
+  end if;
 end $$;
