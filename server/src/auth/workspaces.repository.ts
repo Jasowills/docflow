@@ -187,6 +187,17 @@ export class WorkspacesRepository {
   }
 
   async deleteWorkspace(workspaceId: string): Promise<void> {
+    // Nullify workspace references on recordings and documents so they persist
+    await this.supabase
+      .from('recordings')
+      .update({ workspace_id: null })
+      .eq('workspace_id', workspaceId);
+
+    await this.supabase
+      .from('documents')
+      .update({ workspace_id: null })
+      .eq('workspace_id', workspaceId);
+
     const { error } = await this.supabase
       .from('workspaces')
       .delete()

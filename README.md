@@ -1,175 +1,91 @@
 # DocFlow
 
-DocFlow is a workflow capture and documentation platform for websites and web applications. It records browser flows with a companion extension, turns those recordings into structured documents, and keeps the output organized inside a shared workspace.
+Workflow capture and documentation for teams. Record how your web apps work, generate guides and test cases from those recordings, and keep everything organized in shared workspaces.
 
-Current product flow:
+## What it does
 
-- capture browser workflows with the DocFlow Recorder extension
-- upload and manage recordings
-- generate guides, tutorials, test cases, and release notes
-- review and organize documents
-- manage workspace members and invitations
+1. **Record** — Use the DocFlow Recorder browser extension (Chrome/Edge) to capture clicks, navigation, form input, and screenshots while using any web app.
+2. **Upload** — Push recordings to the server from the extension or through the web app upload form.
+3. **Generate** — Pick a recording, choose a document type (guide, tutorial, test case, release note), and let AI produce the draft.
+4. **Organize** — View, search, and file generated documents in workspace folders.
+5. **Collaborate** — Invite teammates with role-based access (owner, admin, editor) across multiple workspaces.
 
 ## Stack
 
-- `client/`: React + Vite + Tailwind
-- `server/`: NestJS API
-- `extension/`: DocFlow Recorder browser extension
-- persistence: Supabase for users, workspaces, memberships, invitations, GitHub connections, and related workspace data
-- legacy repositories still in use for some recordings, documents, config, and extension release data
-- auth: JWT and Logto are both supported
-- AI: OpenRouter is the current primary path, with provider support in place for Azure OpenAI, OpenAI, and Anthropic
+| Layer | Tech |
+|-------|------|
+| Frontend | React + Vite + Tailwind CSS |
+| API | NestJS (Node) |
+| Database | Supabase (PostgreSQL) |
+| AI | OpenRouter (Azure OpenAI, OpenAI, Anthropic also supported) |
+| Email | Nodemailer + SMTP (Gmail app password) |
+| Auth | JWT (email/password + Google OAuth) with email verification |
+| Extension | Chromium extension (Manifest V3) |
 
-## Repository Layout
+## Repo layout
 
-```text
-DocFlow/
-|-- client/
-|-- server/
-|-- extension/
-|-- docs/
-|-- scripts/
-|-- .env.example
-`-- README.md
+```
+client/     — React web app
+server/     — NestJS API
+extension/  — DocFlow Recorder browser extension
+docs/       — Supabase schema SQL
+scripts/    — Utility scripts (schema migration, screenshots)
 ```
 
-## What Works Now
+## Getting started
 
-- browser recording upload flow
-- generated document pipeline
-- documents list and detail views
-- dashboard and workspace activity summary
-- workspace member management and invitations
-- dual auth mode support with JWT and Logto
-- extension build and release publishing flow
+### Prerequisites
 
-## Current Boundaries
+- Node.js 20+
+- A Supabase project
+- An AI provider key (OpenRouter is easiest)
+- SMTP credentials if you want invitation/verification emails to work
 
-- recordings, documents, config, and some extension release persistence still use inherited legacy repositories
-- GitHub and Test Plans backend foundations exist, but those product surfaces are not part of the current main UI flow
-- mobile capture is planned, not implemented
-
-## Prerequisites
-
-- Node.js `20+`
-- npm
-- a Supabase project
-- AI provider credentials
-- Logto credentials if you want to run in Logto mode
-
-## Setup
-
-### 1. Install dependencies
+### 1. Install
 
 ```bash
 npm run install:all
 ```
 
-### 2. Create local env files
+### 2. Set up env files
 
 ```bash
-copy .env.example .env
-copy server\.env.example server\.env
-copy client\.env.example client\.env
-copy extension\.env.example extension\.env
+cp .env.example .env
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+cp extension/.env.example extension/.env
 ```
 
-Fill in the values for your local environment.
+Fill in your Supabase keys, AI provider key, and SMTP details in the server `.env`. See `.env.example` for the full list.
 
-Important root and server values:
-
-- `DOCFLOW_API_BASE_URL`
-- `DOCFLOW_WEB_BASE_URL`
-- `AUTH_PROVIDER`
-- `SUPABASE_URL`
-- `SUPABASE_DB_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_STORAGE_BUCKET`
-- `OPENROUTER_API_KEY`
-- `EXTENSION_UPLOAD_TOKEN_SECRET`
-- `EXTENSION_PUBLISH_SECRET`
-
-Important client values:
-
-- `VITE_AUTH_MODE`
-- `VITE_API_BASE_URL`
-- `VITE_LOGTO_ENDPOINT`
-- `VITE_LOGTO_APP_ID`
-- `VITE_LOGTO_API_RESOURCE`
-
-Important extension values:
-
-- `DOCFLOW_API_BASE_URL`
-- `EXTENSION_PUBLISH_SECRET`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_STORAGE_BUCKET`
-
-## Database Setup
-
-Apply the current Supabase schema before running the app:
+### 3. Run the schema migration
 
 ```bash
 npm run migrate:supabase
 ```
 
-Schema source:
-
-- [docs/supabase-schema.sql](/C:/Users/JasonAmadi/OneDrive%20-%20Marklite/Desktop/DocFlow/docs/supabase-schema.sql)
-
-## Local Development
-
-Run the API and client together:
+### 4. Start the dev servers
 
 ```bash
 npm run dev
 ```
 
-Useful scripts:
-
-- `npm run dev:server`
-- `npm run dev:client`
-- `npm run build:client`
-- `npm run build:server`
-- `npm run build:extension`
+Client opens on `http://localhost:5173`, API on `http://localhost:3001`.
 
 ## Extension
 
-Build the extension:
+Build and load unpacked in Chrome/Edge from `extension/dist`:
 
 ```bash
 npm run build:extension
 ```
 
-The extension output is built from [extension/package.json](/C:/Users/JasonAmadi/OneDrive%20-%20Marklite/Desktop/DocFlow/extension/package.json) and can be loaded unpacked in Chrome or Edge from the generated `extension/dist` folder.
+## Deployment
 
-Publish a release:
+The client and server each deploy to Vercel independently. The server's `vercel.json` uses `@vercel/node` to compile TypeScript on the fly. Client is a static SPA build.
 
-```bash
-npm --prefix extension run build:publish
-```
+## Current status
 
-That flow:
+**Working:** recording upload, document generation, document views, dashboard, workspace management, multi-workspace support with switching, member invitations, email verification, role-based access (owner/admin/editor).
 
-- bumps the extension version
-- builds the release package
-- uploads the artifact
-- publishes the release through the DocFlow API
-- restores the original version files automatically if publish fails
-
-## Auth Modes
-
-### JWT mode
-
-Use:
-
-- `AUTH_PROVIDER=jwt`
-- `VITE_AUTH_MODE=jwt`
-
-
-## Notes
-
-
-- The main user-facing product flow is centered on recording, generating, and documenting.
-
+**Partially built:** GitHub integration backend exists, test plans backend exists — neither has a full UI yet.
