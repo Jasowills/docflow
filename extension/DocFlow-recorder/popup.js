@@ -57,7 +57,6 @@ const btnClearToken = mustGetElement('btnClearToken');
 const authStatusEl = document.getElementById('authStatus');
 let durationInterval = null;
 let settings = { ...DEFAULT_SETTINGS };
-let lastAudioWavBase64 = null;
 let uploadInFlight = false;
 async function init() {
     await loadSettings();
@@ -154,7 +153,6 @@ btnStart.addEventListener('click', async () => {
 btnStop.addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'STOP_RECORDING' }, (resp) => {
         if (resp?.ok) {
-            lastAudioWavBase64 = typeof resp?.audioWavBase64 === 'string' ? resp.audioWavBase64 : null;
             showStoppedUI(resp.recording?.events?.length ?? 0);
         }
     });
@@ -200,58 +198,37 @@ btnUpload.addEventListener('click', async () => {
             const sourceRecording = resp.recording;
             const payload = toBackendUploadPayload(sourceRecording);
             let transcriptWarning = null;
-            const micWasEnabled = sourceRecording.metadata?.captureMicrophone !== false;
-            let audioWavBase64 = typeof resp?.audioWavBase64 === 'string' && resp.audioWavBase64.length > 0
-                ? resp.audioWavBase64
-                : (lastAudioWavBase64 || '');
-            if (micWasEnabled && !audioWavBase64) {
-                await delay(350);
-                const retryResp = await sendMessageAsync({
-                    type: 'DOWNLOAD_RECORDING',
-                });
-                audioWavBase64 =
-                    typeof retryResp?.audioWavBase64 === 'string' && retryResp.audioWavBase64.length > 0
-                        ? retryResp.audioWavBase64
-                        : '';
-            }
-            if (!micWasEnabled) {
-                transcriptWarning = 'Microphone was off. Uploading without transcript.';
-            }
-            else if (!audioWavBase64) {
-                transcriptWarning = 'Mic audio was not captured. Uploading without transcript.';
+            // Use browser SpeechRecognition transcripts (captured live during recording)
+            if (sourceRecording.speechTranscript && sourceRecording.speechTranscript.length > 0) {
+                payload.speechTranscripts = sourceRecording.speechTranscript.map((seg) => ({
+                    timestampMs: seg.startMs ?? 0,
+                    speaker: 'host',
+                    text: seg.text?.trim() || '',
+                })).filter((seg) => seg.text.length > 0);
             }
             else {
-                try {
-                    setUploadProgress(20, 'Transcribing audio...');
-                    const language = localeInput.value.trim() || 'en-US';
-                    const transcribed = await transcribeWithAzureSpeech(settings.apiBaseUrl, settings.bearerToken, audioWavBase64, language);
-                    if (transcribed.length > 0) {
-                        payload.speechTranscripts = transcribed;
-                    }
-                    else {
-                        transcriptWarning = 'Azure Speech returned no transcript segments. Uploading without transcript.';
-                    }
+                const micWasEnabled = sourceRecording.metadata?.captureMicrophone !== false;
+                if (!micWasEnabled) {
+                    transcriptWarning = 'Microphone was off. Uploading without transcript.';
                 }
-                catch (transcriptErr) {
-                    const message = transcriptErr instanceof Error ? transcriptErr.message : 'Audio transcription failed';
-                    transcriptWarning = `${message}. Uploading without transcript.`;
+                else {
+                    transcriptWarning = 'No speech detected. Uploading without transcript.';
                 }
             }
-            setUploadProgress(45, 'Compressing...');
-            const uploadPayload = toBackendUploadPayload(sourceRecording);
+            setUploadProgress(30, 'Compressing...');
             // Gzip compress to bypass Vercel 4.5MB limit
-            const jsonStr = JSON.stringify(uploadPayload);
+            const jsonStr = JSON.stringify(payload);
             const cs = new CompressionStream('gzip');
             const writer = cs.writable.getWriter();
             writer.write(new TextEncoder().encode(jsonStr));
             writer.close();
             const compressedBuffer = await new Response(cs.readable).arrayBuffer();
-            setUploadProgress(48, 'Uploading recording...');
+            setUploadProgress(35, 'Uploading recording...');
             const res = await postGzippedWithUploadProgress(`${settings.apiBaseUrl}/api/recordings/extension-upload-raw`, settings.bearerToken, compressedBuffer, (loaded, total) => {
                 if (!total || total <= 0)
                     return;
                 const portion = loaded / total;
-                const pct = 48 + Math.round(portion * 47);
+                const pct = 35 + Math.round(portion * 60);
                 setUploadProgress(Math.min(95, pct), 'Uploading recording...');
             });
             if (res.status === 401) {
@@ -528,53 +505,6 @@ function sendMessageAsync(message) {
             resolve(resp);
         });
     });
-}
-async function transcribeWithAzureSpeech(apiBaseUrl, token, audioWavBase64, language) {
-    const audioBytes = base64ToUint8Array(audioWavBase64);
-    const formData = new FormData();
-    formData.append('audio', new Blob([audioBytes], { type: 'audio/wav' }), 'recording.wav');
-    const response = await fetch(`${apiBaseUrl}/api/speech/transcribe?language=${encodeURIComponent(language)}`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-    });
-    if (!response.ok) {
-        const raw = await response.text().catch(() => '');
-        let parsedMessage = '';
-        try {
-            const parsed = JSON.parse(raw);
-            parsedMessage = parsed.message || parsed.error || '';
-        }
-        catch {
-            parsedMessage = raw;
-        }
-        const message = parsedMessage || response.statusText || 'Audio transcription failed';
-        console.error('Azure Speech transcription request failed', {
-            status: response.status,
-            statusText: response.statusText,
-            body: raw,
-            language,
-        });
-        throw new Error(`Audio transcription failed (${response.status}): ${message}`);
-    }
-    const body = (await response.json());
-    return (body.segments ?? [])
-        .filter((segment) => typeof segment.text === 'string' && segment.text.trim().length > 0)
-        .map((segment) => ({
-        timestampMs: segment.timestampMs ?? 0,
-        speaker: segment.speaker || 'host',
-        text: segment.text.trim(),
-    }));
-}
-function base64ToUint8Array(base64) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
 }
 function toBackendUploadPayload(source) {
     const metadata = source.metadata ?? {};

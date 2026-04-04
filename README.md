@@ -4,8 +4,8 @@ Workflow capture and documentation for teams. Record how your web apps work, gen
 
 ## What it does
 
-1. **Record** — Use the DocFlow Recorder browser extension (Chrome/Edge) to capture clicks, navigation, form input, and screenshots while using any web app.
-2. **Upload** — Push recordings to the server from the extension or through the web app upload form.
+1. **Record** — Use the DocFlow Recorder browser extension (Chrome/Edge) to capture clicks, navigation, form input, screenshots, and API calls while using any web app.
+2. **Upload** — Push recordings to the server from the extension (direct) or through the web app upload form.
 3. **Generate** — Pick a recording, choose a document type (guide, tutorial, test case, release note), and let AI produce the draft.
 4. **Organize** — View, search, and file generated documents in workspace folders.
 5. **Collaborate** — Invite teammates with role-based access (owner, admin, editor) across multiple workspaces.
@@ -29,7 +29,7 @@ client/     — React web app
 server/     — NestJS API
 extension/  — DocFlow Recorder browser extension
 docs/       — Supabase schema SQL
-scripts/    — Utility scripts (schema migration, screenshots)
+scripts/    — Utility scripts
 ```
 
 ## Getting started
@@ -39,7 +39,7 @@ scripts/    — Utility scripts (schema migration, screenshots)
 - Node.js 20+
 - A Supabase project
 - An AI provider key (OpenRouter is easiest)
-- SMTP credentials if you want invitation/verification emails to work
+- SMTP credentials for invitation/verification emails
 
 ### 1. Install
 
@@ -56,7 +56,7 @@ cp client/.env.example client/.env
 cp extension/.env.example extension/.env
 ```
 
-Fill in your Supabase keys, AI provider key, and SMTP details in the server `.env`. See `.env.example` for the full list.
+Fill in your Supabase keys, AI provider key, and SMTP details. See `.env.example` for the full list.
 
 ### 3. Run the schema migration
 
@@ -70,7 +70,7 @@ npm run migrate:supabase
 npm run dev
 ```
 
-Client opens on `http://localhost:5173`, API on `http://localhost:3001`.
+Client on `http://localhost:5173`, API on `http://localhost:3001`.
 
 ## Extension
 
@@ -82,10 +82,12 @@ npm run build:extension
 
 ## Deployment
 
-The client and server each deploy to Vercel independently. The server's `vercel.json` uses `@vercel/node` to compile TypeScript on the fly. Client is a static SPA build.
+Client and server deploy to Vercel independently. Server uses `@vercel/node` for on-the-fly TypeScript compilation.
 
-## Current status
+## Features
 
-**Working:** recording upload, document generation, document views, dashboard, workspace management, multi-workspace support with switching, member invitations, email verification, role-based access (owner/admin/editor).
+**Fully working:** recording capture and upload, AI document generation, document views and folder management, dashboard, workspace management and switching, member invitations with email, email verification on signup, multi-workspace membership, role-based access (owner/admin/editor), gzip-compressed uploads (bypasses Vercel 4.5MB limit), account deletion with data preservation.
 
-**Partially built:** GitHub integration backend exists, test plans backend exists — neither has a full UI yet.
+**Backend ready, UI not wired up:** GitHub integration (full API + UI component exists but routes redirect), test plans (full CRUD backend + UI components exist but routes redirect).
+
+**Partially built:** test plan runs (manual tracking only, no automated execution), realtime notifications (SSE infrastructure exists but no client consumer).

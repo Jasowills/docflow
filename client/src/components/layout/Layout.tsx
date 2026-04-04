@@ -2,24 +2,24 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
+  ChevronDown,
   ChevronsRight,
   FileText,
   LayoutDashboard,
   List,
   LogOut,
   Menu,
-  
   Settings,
   Sparkles,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "../../auth/auth-context";
+import { useApi } from "../../hooks/use-api";
 import { Button } from "../ui/button";
 import logo from "../../assets/docflow-logo-dark.svg";
 import { useRealtimeNotificationsStore } from "../../state/realtime-store";
 import { SESSION_EXPIRED_EVENT } from "../../auth/session-events";
-import { useApi } from "../../hooks/use-api";
 import { getApiBaseUrl } from "../../config/runtime-config";
 import {
   EXTENSION_CONNECTED_UNTIL_KEY,
@@ -70,8 +70,8 @@ function ensureAudioUnlockListener() {
 }
 
 export function Layout() {
-  const { user, logout } = useAuth();
-  const { createExtensionUploadToken } = useApi();
+  const { user, logout, getAccessToken } = useAuth();
+  const { createExtensionUploadToken, listMemberships, switchWorkspace } = useApi();
   const location = useLocation();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAllNotificationsRead } = useRealtimeNotificationsStore();
@@ -86,6 +86,93 @@ export function Layout() {
   const sessionExpiryHandledRef = useRef(false);
   const extensionRefreshInFlightRef = useRef(false);
   const pendingExtensionExpiryUtcRef = useRef<string | null>(null);
+
+  // ── Workspace switcher state ─────────────────────────────────────
+  const [wsOpen, setWsOpen] = useState(false);
+  const [wsMemberships, setWsMemberships] = useState<{ workspaceId: string; workspaceName: string; role: string }[]>([]);
+  const wsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!wsOpen || wsMemberships.length > 0) return;
+    listMemberships().then(setWsMemberships).catch(() => {});
+  }, [wsOpen, wsMemberships.length, listMemberships]);
+
+  useEffect(() => {
+    if (!wsOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (wsRef.current && !wsRef.current.contains(e.target as Node)) setWsOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [wsOpen]);
+
+  const handleWorkspaceSwitch = async (workspaceId: string) => {
+    if (workspaceId === user?.workspaceId) return;
+    try {
+      await switchWorkspace(workspaceId);
+      await getAccessToken();
+      window.location.reload();
+    } catch {
+      // silent
+    }
+  };
+
+  // ── Real-time SSE notifications ──────────────────────────────────
+  useEffect(() => {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = async () => {
+      try {
+        const token = await getAccessToken();
+        es = new EventSource(`${apiBaseUrl}/api/realtime/events?token=${encodeURIComponent(token)}`);
+
+        es.onopen = () => {
+          reconnectTimer = null;
+        };
+
+        es.addEventListener("recording.persisted", (e) => {
+          const data = JSON.parse(e.data) as { name?: string; productArea?: string };
+          setToastItems((prev) => [
+            {
+              id: `rec:${Date.now()}`,
+              title: "Recording uploaded",
+              message: data.name || "New recording available",
+              variant: "success" as const,
+            },
+            ...prev,
+          ].slice(0, 4));
+        });
+
+        es.addEventListener("document.persisted", (e) => {
+          const data = JSON.parse(e.data) as { documentTitle?: string; documentType?: string };
+          setToastItems((prev) => [
+            {
+              id: `doc:${Date.now()}`,
+              title: "Document generated",
+              message: data.documentTitle || `${data.documentType || "New"} document ready`,
+              variant: "info" as const,
+            },
+            ...prev,
+          ].slice(0, 4));
+        });
+
+        es.onerror = () => {
+          if (es) es.close();
+          reconnectTimer = setTimeout(connect, 5000);
+        };
+      } catch {
+        reconnectTimer = setTimeout(connect, 10000);
+      }
+    };
+
+    connect();
+    return () => {
+      if (es) es.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [getAccessToken]);
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -408,13 +495,49 @@ export function Layout() {
                 >
                   <Menu className="h-4 w-4" />
                 </Button>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary/80">
-                    DocFlow Ops
-                  </p>
-                  <h1 className="text-base font-semibold tracking-tight text-foreground md:text-lg">
-                    {user?.workspaceName || "Workspace"}
-                  </h1>
+                <div ref={wsRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setWsOpen(!wsOpen)}
+                    className="flex items-center gap-1.5 rounded-md border border-border/60 bg-background/60 px-3 py-1.5 text-left text-sm transition hover:border-primary/40"
+                  >
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/70">
+                        DocFlow Ops
+                      </p>
+                      <p className="text-sm font-semibold tracking-tight text-foreground leading-tight">
+                        {user?.workspaceName || "Workspace"}
+                      </p>
+                    </div>
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                  {wsOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-md border border-border/80 bg-card/95 p-1 shadow-lg backdrop-blur">
+                      {wsMemberships.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-muted-foreground">Loading workspaces…</p>
+                      ) : (
+                        wsMemberships.map((m) => {
+                          const isActive = m.workspaceId === user?.workspaceId;
+                          return (
+                            <button
+                              key={m.workspaceId}
+                              type="button"
+                              disabled={isActive}
+                              onClick={() => void handleWorkspaceSwitch(m.workspaceId)}
+                              className={`flex w-full items-center justify-between rounded px-2.5 py-2 text-left text-sm transition ${
+                                isActive
+                                  ? "bg-primary/10 text-foreground"
+                                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                              } disabled:cursor-not-allowed disabled:opacity-50`}
+                            >
+                              <span className="truncate">{m.workspaceName}</span>
+                              <span className="ml-2 text-[10px] text-muted-foreground">{m.role}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

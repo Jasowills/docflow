@@ -29,6 +29,10 @@ import { InvitePage } from "./pages/InvitePage";
 import { JoinWorkspacePage } from "./pages/JoinWorkspacePage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { PendingVerificationPage } from "./pages/PendingVerificationPage";
+import { GithubPage } from "./pages/GithubPage";
+import { WorkspacePage } from "./pages/WorkspacePage";
+import { TestPlansPage } from "./pages/TestPlansPage";
+import { TestPlanDetailPage } from "./pages/TestPlanDetailPage";
 import { Spinner } from "./components/ui/spinner";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -112,22 +116,10 @@ export default function App() {
           <Route path="generate" element={<GenerateDocPage />} />
           <Route path="documents" element={<DocumentsListPage />} />
           <Route path="documents/:id" element={<DocumentDetailPage />} />
-          <Route
-            path="workspace"
-            element={<Navigate to="/app/settings?section=workspace" replace />}
-          />
-          <Route
-            path="github"
-            element={<Navigate to="/app/dashboard" replace />}
-          />
-          <Route
-            path="test-plans"
-            element={<Navigate to="/app/dashboard" replace />}
-          />
-          <Route
-            path="test-plans/:id"
-            element={<Navigate to="/app/dashboard" replace />}
-          />
+          <Route path="workspace" element={<WorkspacePage />} />
+          <Route path="github" element={<GithubPage />} />
+          <Route path="test-plans" element={<TestPlansPage />} />
+          <Route path="test-plans/:id" element={<TestPlanDetailPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route
             path="admin/config"

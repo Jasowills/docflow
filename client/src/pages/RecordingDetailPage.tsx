@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/auth-context';
 import { useApi } from '../hooks/use-api';
@@ -18,8 +18,30 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../components/ui/alert-dialog';
-import { ArrowLeft, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Play, Pause, SkipBack, SkipForward, Trash2 } from 'lucide-react';
 import type { RecordingDocument, RecordingEvent } from '@docflow/shared';
+
+const EVENT_COLORS: Record<string, string> = {
+  navigation: '#6366f1',
+  click: '#22c55e',
+  input: '#f59e0b',
+  custom: '#6b7280',
+};
+
+function getScreenshotForEvent(events: RecordingEvent[], screenshots: RecordingDocument['screenshots'], eventIndex: number) {
+  if (!screenshots || screenshots.length === 0) return null;
+  const eventTime = events[eventIndex]?.timestampMs ?? 0;
+  let best: RecordingDocument['screenshots'][number] | null = null;
+  let bestDiff = Infinity;
+  for (const shot of screenshots) {
+    const diff = Math.abs(shot.timestampMs - eventTime);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = shot;
+    }
+  }
+  return best;
+}
 
 export function RecordingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,10 +76,45 @@ export function RecordingDetailPage() {
     return () => window.clearTimeout(timer);
   }, [deleteToast]);
 
-  const eventPreview = useMemo(
-    () => (recording?.events || []).slice(0, 200),
-    [recording?.events],
-  );
+  const events = useMemo(() => recording?.events || [], [recording]);
+  const screenshots = useMemo(() => recording?.screenshots || [], [recording]);
+
+  // ── Playback state ─────────────────────────────────────────────
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackIndex, setPlaybackIndex] = useState(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+  }, []);
+
+  const playNextEvent = useCallback((index: number) => {
+    clearTimer();
+    if (index >= events.length - 1) { setIsPlaying(false); setPlaybackIndex(events.length - 1); return; }
+    const delay = Math.max(200, ((events[index + 1].timestampMs - events[index].timestampMs) / playbackSpeed));
+    timerRef.current = setTimeout(() => { setPlaybackIndex(index + 1); playNextEvent(index + 1); }, delay);
+  }, [events, playbackSpeed, clearTimer]);
+
+  const startPlayback = useCallback(() => {
+    if (isPlaying) { clearTimer(); setIsPlaying(false); return; }
+    if (playbackIndex >= events.length - 1) { setPlaybackIndex(0); }
+    setIsPlaying(true);
+    playNextEvent(playbackIndex >= events.length - 1 ? 0 : playbackIndex);
+  }, [isPlaying, playbackIndex, events.length, playNextEvent, clearTimer]);
+
+  const skipTo = useCallback((index: number) => {
+    clearTimer();
+    setPlaybackIndex(Math.max(0, Math.min(index, events.length - 1)));
+    if (isPlaying) playNextEvent(Math.max(0, Math.min(index, events.length - 1)));
+  }, [clearTimer, isPlaying, playNextEvent, events.length]);
+
+  useEffect(() => () => clearTimer(), [clearTimer]);
+
+  const currentEvent = events[playbackIndex];
+  const currentScreenshot = getScreenshotForEvent(events, screenshots, playbackIndex);
+  const screenshotSrc = currentScreenshot?.imageUrl || currentScreenshot?.imageDataUrl || '';
+
   const currentUserId = user?.userId || '';
   const currentUserEmail = user?.email || '';
   const canDeleteRecording =
@@ -96,6 +153,10 @@ export function RecordingDetailPage() {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  const totalDuration = events.length > 0 ? events[events.length - 1].timestampMs - events[0].timestampMs : 0;
+  const currentTime = currentEvent?.timestampMs ?? 0;
+  const progress = totalDuration > 0 ? ((currentTime - events[0].timestampMs) / totalDuration) * 100 : 0;
 
   if (loading) {
     return (
@@ -194,36 +255,143 @@ export function RecordingDetailPage() {
                   <thead className="sticky top-0 bg-background border-b">
                     <tr className="text-left">
                       <th className="px-3 py-2">#</th>
-                      <th className="px-3 py-2">Time (ms)</th>
+                      <th className="px-3 py-2">Time</th>
                       <th className="px-3 py-2">Type</th>
                       <th className="px-3 py-2">Details</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {eventPreview.map((event, index) => (
-                      <tr key={`${event.timestampMs}-${index}`} className="border-b last:border-0">
-                        <td className="px-3 py-2 text-muted-foreground">{index + 1}</td>
-                        <td className="px-3 py-2 tabular-nums">{event.timestampMs}</td>
-                        <td className="px-3 py-2">
-                          <Badge variant="outline">{event.type}</Badge>
-                        </td>
-                        <td className="px-3 py-2 text-muted-foreground">
-                          {compactEventText(event)}
-                        </td>
-                      </tr>
-                    ))}
+                    {events.map((event, index) => {
+                      const isActive = isPlaying && index === playbackIndex;
+                      return (
+                        <tr
+                          key={`${event.timestampMs}-${index}`}
+                          className={`border-b last:border-0 transition-colors cursor-pointer ${
+                            isActive ? 'bg-primary/10' : 'hover:bg-muted/50'
+                          }`}
+                          onClick={() => skipTo(index)}
+                        >
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {isActive ? (
+                              <span className="inline-block w-2 h-2 rounded-full bg-primary mr-1 animate-pulse" />
+                            ) : null}
+                            {index + 1}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">{formatTime(event.timestampMs)}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant="outline">{event.type}</Badge>
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {compactEventText(event)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
-            {recording.events.length > eventPreview.length && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Showing first {eventPreview.length} events. Download JSON for full event stream.
-              </p>
-            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Playback Panel ──────────────────────────────────── */}
+      {events.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Recording Playback</CardTitle>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => skipTo(0)} disabled={playbackIndex === 0}>
+                  <SkipBack className="h-4 w-4" />
+                </Button>
+                <Button variant={isPlaying ? "default" : "outline"} size="icon" className="h-9 w-9" onClick={startPlayback}>
+                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => skipTo(events.length - 1)} disabled={playbackIndex >= events.length - 1}>
+                  <SkipForward className="h-4 w-4" />
+                </Button>
+                <select
+                  value={playbackSpeed}
+                  onChange={(e) => setPlaybackSpeed(parseFloat(e.target.value))}
+                  className="ml-2 h-8 rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value={0.5}>0.5×</option>
+                  <option value={1}>1×</option>
+                  <option value={2}>2×</option>
+                  <option value={5}>5×</option>
+                </select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {/* Screenshot display */}
+            <div className="relative aspect-video bg-muted rounded-lg overflow-hidden border mb-4 flex items-center justify-center">
+              {screenshotSrc ? (
+                <img src={screenshotSrc} alt="Recording frame" className="w-full h-full object-contain" />
+              ) : (
+                <p className="text-sm text-muted-foreground">No screenshots captured</p>
+              )}
+              {currentEvent && (
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                  <Badge style={{ backgroundColor: EVENT_COLORS[currentEvent.type] || '#6b7280', color: '#fff' }} className="text-xs">
+                    {currentEvent.type}
+                  </Badge>
+                  <span className="text-xs text-white/80 bg-black/50 px-2 py-0.5 rounded">
+                    {formatTime(currentEvent.timestampMs)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Timeline scrubber */}
+            <div className="relative">
+              <div
+                className="h-2 rounded-full bg-muted cursor-pointer overflow-hidden"
+                onClick={(e) => {
+                  if (events.length < 2) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const pct = (e.clientX - rect.left) / rect.width;
+                  const targetTime = events[0].timestampMs + pct * totalDuration;
+                  let idx = 0;
+                  for (let i = 0; i < events.length; i++) {
+                    if (events[i].timestampMs <= targetTime) idx = i;
+                  }
+                  skipTo(idx);
+                }}
+              >
+                <div className="h-full bg-primary transition-all duration-150" style={{ width: `${progress}%` }} />
+                {/* Event dots on timeline */}
+                <div className="absolute inset-0 flex items-center">
+                  {events.map((ev, i) => {
+                    const pct = totalDuration > 0 ? ((ev.timestampMs - events[0].timestampMs) / totalDuration) * 100 : 0;
+                    return (
+                      <div
+                        key={i}
+                        className="absolute w-1.5 h-1.5 rounded-full cursor-pointer hover:scale-150 transition-transform"
+                        style={{ left: `${pct}%`, backgroundColor: EVENT_COLORS[ev.type] || '#6b7280' }}
+                        title={`${ev.type} — ${formatTime(ev.timestampMs)}`}
+                        onClick={(e) => { e.stopPropagation(); skipTo(i); }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Event info */}
+            {currentEvent && (
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Event {playbackIndex + 1} of {events.length} — <span style={{ color: EVENT_COLORS[currentEvent.type] }}>{currentEvent.type}</span>
+                  {currentEvent.url && <> at <code className="text-xs">{truncate(currentEvent.url, 60)}</code></>}
+                </span>
+                <span className="text-muted-foreground tabular-nums">{formatTime(currentEvent.timestampMs)}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -301,6 +469,17 @@ export function RecordingDetailPage() {
       </Card>
     </div>
   );
+}
+
+function formatTime(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max) + '…' : s;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
