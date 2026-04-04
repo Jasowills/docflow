@@ -404,7 +404,6 @@ export function Layout() {
         <div className="hidden md:block">
           <img src={logo} alt="DOCFLOW" className="h-8 w-auto object-contain" />
         </div>
-        <WorkspaceSwitcher />
       </div>
 
       <nav className="grid gap-1 p-4">
